@@ -10,24 +10,20 @@ using OpenTK.Windowing.GraphicsLibraryFramework;
 using System.Diagnostics;
 using static Minecraft_Clone.Graphics.VBO;
 using static Minecraft_Clone.Graphics.VertexUtils;
+using static Minecraft_Clone.Graphics.SkyRender;
 
 namespace Minecraft_Clone
 {
     class Game : GameWindow
     {
-        //paths
-        string vertexPath = "";
-        string fragmentPath = "";
-
         // Render Pipeline
         VAO vao;
         IBO ibo;
         Shader blockShader;
         Texture blockTexture;
+        SkyRender skyRender;
 
-        int skyVAO;
-        int skyVBO;
-        Shader skyShader;
+        int seed = 69420;
 
         Camera camera;
 
@@ -53,6 +49,7 @@ namespace Minecraft_Clone
         {
             this.width = width;
             this.height = height;
+            skyRender = new SkyRender();
         }
 
         protected override void OnLoad()
@@ -60,13 +57,8 @@ namespace Minecraft_Clone
             base.OnLoad();
             GL.ClearColor(0.0f, 0.0f, 1.0f, 1.0f);
 
-            //for (int i = 0; i < chunk.blocks.Length; i++)
-            //{
-            //    chunk.blocks[i] = new Block(BlockType.DIRT);
-            //}
-
-            PerlinNoise noise = new PerlinNoise();
-            Random rnd = new Random();
+            PerlinNoise noise = new PerlinNoise(seed);
+            Random rnd = new Random(seed);
 
             for(int x = 0; x < Chunk.CHUNKSIZE; x++)
             {
@@ -118,56 +110,9 @@ namespace Minecraft_Clone
             vao.Bind();
             ibo.Bind();
 
-            InitSky();
+            skyRender.InitSky();
         }
 
-        public void InitSky()
-        {
-            skyVAO = GL.GenVertexArray();
-            skyVBO = GL.GenBuffer();
-            skyShader = new Shader("../../../Shaders/sky.vert", "../../../Shaders/sky.frag");
-
-            float[] skyVerts = {
-                -1f, -1f,
-                3f, -1f,
-                -1f,  3f
-            };
-
-            GL.BindVertexArray(skyVAO);
-            GL.BindBuffer(BufferTarget.ArrayBuffer, skyVBO);
-            GL.BufferData(BufferTarget.ArrayBuffer, skyVerts.Length * sizeof(float), skyVerts, BufferUsageHint.StaticDraw);
-
-            GL.EnableVertexAttribArray(0);
-            GL.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2 * sizeof(float), 0);
-
-        }
-
-        public void RenderSky()
-        {
-            skyShader.Bind();
-            GL.Disable(EnableCap.DepthTest);
-
-            // Compute inverse view-projection matrix
-            Matrix4 inverseVP = Matrix4.Invert(camera.GetProjectionMatrix() * camera.GetViewMatrix());
-            int loc = GL.GetUniformLocation(skyShader.ID, "inverseVP");
-            GL.UniformMatrix4(loc, true, ref inverseVP);
-
-
-            Matrix4 view = camera.GetViewMatrix();
-            Vector3 forward = new Vector3(-view.M13, -view.M23, -view.M33); // or from your own camera.forward
-            float cameraViewY = forward.Y; // y-component of camera's look direction
-
-            loc = GL.GetUniformLocation(skyShader.ID, "cameraViewY");
-            GL.Uniform1(loc, cameraViewY);
-
-
-            // Draw fullscreen triangle
-            GL.BindVertexArray(skyVAO);
-            GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
-
-            GL.Enable(EnableCap.DepthTest); // Re-enable for world rendering
-            skyShader.UnBind();
-        }
         
         protected override void OnRenderFrame(FrameEventArgs args)
         {
@@ -181,7 +126,7 @@ namespace Minecraft_Clone
             Matrix4 projection = camera.GetProjectionMatrix();
 
             // draw the sky
-            RenderSky();
+            skyRender.RenderSky(camera);
 
             // draw the chunk
 
@@ -196,8 +141,6 @@ namespace Minecraft_Clone
             GL.UniformMatrix4(modelLocation, true, ref model);
             GL.UniformMatrix4(viewLocation, true, ref view);
             GL.UniformMatrix4(projectionLocation, true, ref projection);
-
-            
 
             GL.DrawElements(
                 PrimitiveType.Triangles,
@@ -288,17 +231,16 @@ namespace Minecraft_Clone
             ibo.Delete();
             blockShader.Dispose();
             blockTexture.Delete();
+            skyRender.Dispose();
         }
         
     }
-
-    
 
     class Program
     {
         static void Main(string[] args)
         {
-            var game = new Game(800, 450, "game");
+            var game = new Game(1280, 720, "game");
             game.Run();
         }
     }

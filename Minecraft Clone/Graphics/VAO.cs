@@ -4,7 +4,7 @@ using OpenTK.Graphics.OpenGL4;
 
 namespace Minecraft_Clone.Graphics
 {
-    internal class VAO
+    public class VAO
     {
         public int ID;
 

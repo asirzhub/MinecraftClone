@@ -4,7 +4,7 @@ using OpenTK.Windowing.GraphicsLibraryFramework;
 
 namespace Minecraft_Clone
 {
-    internal class Camera
+    public class Camera
     {
         // camera properties
         private float speed = 5f;
@@ -14,9 +14,9 @@ namespace Minecraft_Clone
 
         public Vector3 position;
 
-        Vector3 right = Vector3.UnitX;
-        Vector3 up = Vector3.UnitY; // we define Y as going up, not Z. but you can.
-        Vector3 front = -Vector3.UnitZ;
+        public Vector3 right = Vector3.UnitX;
+        public Vector3 up = Vector3.UnitY; // we define Y as going up, not Z. but you can.
+        public Vector3 front = -Vector3.UnitZ;
 
         private float pitch;
         private float yaw;

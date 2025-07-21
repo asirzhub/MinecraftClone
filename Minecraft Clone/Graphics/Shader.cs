@@ -3,6 +3,7 @@ using OpenTK.Windowing.Desktop;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using System;
+using OpenTK.Mathematics;
 
 namespace Minecraft_Clone.Graphics
 {
@@ -66,6 +67,60 @@ namespace Minecraft_Clone.Graphics
         public void Bind() => GL.UseProgram(ID);
         public void UnBind() => GL.UseProgram(0);
         public void Delete() => GL.DeleteShader(ID);
+
+        public void SetMatrix4(string name, Matrix4 value)
+        {
+            int loc = GL.GetUniformLocation(ID, name);
+            if (loc == -1)
+                Console.WriteLine($"[Shader Warning] Uniform '{name}' not found in shader {ID}.");
+            else
+                GL.UniformMatrix4(loc, true, ref value);
+        }
+        public void SetMatrix3(string name, Matrix3 value)
+        {
+            int loc = GL.GetUniformLocation(ID, name);
+            if (loc == -1)
+                Console.WriteLine($"[Shader Warning] Uniform '{name}' not found in shader {ID}.");
+            else
+                GL.UniformMatrix3(loc, true, ref value);
+        }
+
+        public void SetFloat(string name, float value)
+        {
+            int loc = GL.GetUniformLocation(ID, name);
+            if (loc == -1)
+                Console.WriteLine($"[Shader Warning] Uniform '{name}' not found in shader {ID}.");
+            else
+                GL.Uniform1(loc, value);
+        }
+
+        public void SetInt(string name, int value)
+        {
+            int loc = GL.GetUniformLocation(ID, name);
+            if (loc == -1)
+                Console.WriteLine($"[Shader Warning] Uniform '{name}' not found in shader {ID}.");
+            else
+                GL.Uniform1(loc, value);
+        }
+
+        public void SetVector3(string name, Vector3 value)
+        {
+            int loc = GL.GetUniformLocation(ID, name);
+            if (loc == -1)
+                Console.WriteLine($"[Shader Warning] Uniform '{name}' not found in shader {ID}.");
+            else
+                GL.Uniform3(loc, value);
+        }
+
+        public void SetVector4(string name, Vector4 value)
+        {
+            int loc = GL.GetUniformLocation(ID, name);
+            if (loc == -1)
+                Console.WriteLine($"[Shader Warning] Uniform '{name}' not found in shader {ID}.");
+            else
+                GL.Uniform4(loc, value);
+        }
+
 
         // we also need to clean up the ID after the class dies
         // we can't do it in the finalizer due to "OOLP"
