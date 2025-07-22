@@ -6,23 +6,23 @@ namespace Minecraft_Clone.Graphics
     public class VertexUtils
     {
         // to squash human-readable vertex into a float array to send to gpu
-        public static float[] FlattenVertices(List<Vertex> vertices, int stride = 8)
+        public static List<float> FlattenVertices(List<Vertex> vertices, int stride = 8)
         {
-            float[] data = new float[vertices.Count * stride];
+            List<float> data = new List<float>();
 
             for (int i = 0; i < vertices.Count; i++)
             {
                 var v = vertices[i];
                 int baseIndex = i * stride;
 
-                data[baseIndex + 0] = v.Position.X;
-                data[baseIndex + 1] = v.Position.Y;
-                data[baseIndex + 2] = v.Position.Z;
-                data[baseIndex + 3] = v.TexCoord.X;
-                data[baseIndex + 4] = v.TexCoord.Y;
-                data[baseIndex + 5] = v.Normal.X;
-                data[baseIndex + 6] = v.Normal.Y;
-                data[baseIndex + 7] = v.Normal.Z;
+                data.Add(v.Position.X);
+                data.Add(v.Position.Y);
+                data.Add(v.Position.Z);
+                data.Add(v.TexCoord.X);
+                data.Add(v.TexCoord.Y);
+                data.Add(v.Normal.X);
+                data.Add(v.Normal.Y);
+                data.Add(v.Normal.Z);
             }
 
             return data;

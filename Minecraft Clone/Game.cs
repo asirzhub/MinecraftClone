@@ -1,29 +1,29 @@
 ﻿using Minecraft_Clone.Graphics;
 using Minecraft_Clone.Rendering;
 using Minecraft_Clone.World;
-using OpenTK.Compute.OpenCL;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
-using System.Diagnostics;
-using static Minecraft_Clone.Graphics.VBO;
 using static Minecraft_Clone.Graphics.VertexUtils;
-using static Minecraft_Clone.Graphics.SkyRender;
+using ErrorCode = OpenTK.Graphics.OpenGL4.ErrorCode;
 
 namespace Minecraft_Clone
 {
     class Game : GameWindow
     {
         // Render Pipeline
-        VAO vao;
-        IBO ibo;
+        VAO solidVao;
+        IBO solidIbo;
+        VAO waterVao;
+        IBO waterIbo;
         Shader blockShader;
         Texture blockTexture;
         SkyRender skyRender;
 
         int seed = 69420;
+        float noiseScale = 0.02f;
 
         Camera camera;
 
@@ -34,9 +34,10 @@ namespace Minecraft_Clone
         private double frameTimeAccumulator = 0.0;
         private int frameCount = 0;
 
-        // temporary world data
-        Chunk chunk = new Chunk(0, 0, 0);
-        float noiseScale = 0.1f;
+        // world data
+        ChunkWorld world;
+        private Task generationTask;
+        private bool rebuildWorld = true;
 
         public Game(int width, int height, string title) : base(GameWindowSettings.Default, new NativeWindowSettings()
         {
@@ -50,39 +51,13 @@ namespace Minecraft_Clone
             this.width = width;
             this.height = height;
             skyRender = new SkyRender();
+            world = new ChunkWorld(seed, noiseScale);
         }
 
         protected override void OnLoad()
         {
             base.OnLoad();
             GL.ClearColor(0.0f, 0.0f, 1.0f, 1.0f);
-
-            PerlinNoise noise = new PerlinNoise(seed);
-            Random rnd = new Random(seed);
-
-            for(int x = 0; x < Chunk.CHUNKSIZE; x++)
-            {
-                for (int z = 0; z < Chunk.CHUNKSIZE; z++)
-                {
-                    float height = noise.Noise(x*noiseScale, z*noiseScale) * Chunk.CHUNKSIZE;
-                    for (int y = 0; y < Chunk.CHUNKSIZE; y++)
-                    {
-                        if (y < height - 4)
-                        {
-                            chunk.SetBlock(x, y, z, BlockType.STONE);
-                        }
-                        else if (y < height-1)
-                        {
-                            chunk.SetBlock(x, y, z, BlockType.DIRT);
-                        }
-                        else if (y < height)
-                        {
-                            chunk.SetBlock(x, y, z, BlockType.GRASS);
-                        }
-                        else chunk.SetBlock(x, y, z, BlockType.AIR);
-                    }
-                }
-            }
 
             blockShader = new Shader("../../../Shaders/default.vert", "../../../Shaders/default.frag");
             blockShader.Bind();
@@ -91,100 +66,225 @@ namespace Minecraft_Clone
 
             // some clean-up stuff
             time = 0f;
-            camera = new Camera(width, height, -2f * Vector3.UnitX);
+            camera = new Camera(width, height, -20f * Vector3.UnitX);
             CursorState = CursorState.Grabbed;
 
             VSync = VSyncMode.On;
             GL.Enable(EnableCap.DepthTest);
 
-            ChunkMesher.GenerateMesh(chunk, out var verts, out List<uint> indices);
-            float[] vData = FlattenVertices(verts);
+            var cts = new CancellationTokenSource();
 
-            blockShader.Bind();
-            blockTexture.Bind();   
-            
-            var result = UploadMesh(vData, indices); // need a magic function...
-            vao = result.vao;
-            ibo = result.ibo;
+            var progress = new Progress<float>(p =>
+                Console.Title = $"Generating world… {p:P0}"
+            );
 
-            vao.Bind();
-            ibo.Bind();
+            generationTask = world.GenerateWorldAsync(
+                origin: new Vector3i(0, 1, 0),
+                size: new Vector3i(8, 3, 8),
+                seaLevel: 0,
+                dirtThickness: 3,
+                progress: progress,
+                token: cts.Token
+            ); // start the world gen, it'll be rendered later
 
             skyRender.InitSky();
+
+            // allow water and stuff to be transparent
+            GL.Enable(EnableCap.Blend);
+            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+
         }
 
-        
+
         protected override void OnRenderFrame(FrameEventArgs args)
         {
             base.OnRenderFrame(args);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             time += (float)args.Time;
 
-            // placeholder values?
             Matrix4 model = Matrix4.Identity;
             Matrix4 view = camera.GetViewMatrix();
             Matrix4 projection = camera.GetProjectionMatrix();
 
-            // draw the sky
+            // Render sky first
             skyRender.RenderSky(camera);
 
-            // draw the chunk
+            if(rebuildWorld && generationTask.IsCompleted)
+            {
+                Console.WriteLine("this is the part where i'd upload to the gpu");
+                rebuildWorld = false;
+                BuildAndUploadAllChunks();
+            }
 
+            
+
+            // Draw SOLID blocks
+            if (solidIbo != null)
+            {
+                GL.DepthMask(true);             // enable depth write
+                GL.Disable(EnableCap.Blend);    // disable blending
+
+                blockShader.Bind();
+                blockTexture.Bind();
+
+                blockShader.SetMatrix4("model", model);
+                blockShader.SetMatrix4("view", view);
+                blockShader.SetMatrix4("projection", projection);
+
+                solidVao.Bind();
+                solidIbo.Bind();
+
+
+                GL.DrawElements(
+                    PrimitiveType.Triangles,
+                    solidIbo.length,
+                    DrawElementsType.UnsignedInt,
+                    0
+                );
+
+                var error = GL.GetError();
+                if (error != ErrorCode.NoError)
+                    Console.Write($"Solid OpenGL Error: {error}");
+            }
+
+            // draw WATER blocks (transparent pass)
+            if (waterIbo != null)
+            {
+                waterVao.Bind();
+                waterIbo.Bind();
+
+                GL.DepthMask(false);            // water wont write to depth buffer
+                GL.Enable(EnableCap.Blend);     // enable alpha blending
+                GL.BlendFunc(
+                    BlendingFactor.SrcAlpha,
+                    BlendingFactor.OneMinusSrcAlpha
+                );
+
+                blockShader.Bind();
+                blockTexture.Bind();
+
+                blockShader.SetMatrix4("model", model);
+                blockShader.SetMatrix4("view", view);
+                blockShader.SetMatrix4("projection", projection);
+
+                GL.DrawElements(
+                    PrimitiveType.Triangles,
+                    waterIbo.length,
+                    DrawElementsType.UnsignedInt,
+                    0
+                );
+                var error = GL.GetError();
+                if (error != ErrorCode.NoError)
+                    Console.Write($"Water OpenGL Error: {error}");
+
+                GL.Disable(EnableCap.Blend);
+                GL.DepthMask(true);
+            }
+            
+            float[] triangleVerts = {
+                 0.0f,  0.5f, 0f,  0f, 0f, 0f,0f,0f,
+                -0.5f, -0.5f, 0f,  0f, 1f, 0f,0f,0f,
+                 0.5f, -0.5f, 0f,  1f, 1f, 0f,0f,0f
+            };
+            uint[] triangleIndices = { 0, 1, 2 };
+            var triVao =  new VAO();
+            var triVbo = new VBO(triangleVerts);
+            var triIbo = new IBO(triangleIndices.ToList());
+
+            triVao.Bind();
+            triVbo.Bind();
+            triIbo.Bind();
             blockShader.Bind();
-            vao.Bind();
-            ibo.Bind();
 
-            int modelLocation = GL.GetUniformLocation(blockShader.ID, "model");
-            int viewLocation = GL.GetUniformLocation(blockShader.ID, "view");
-            int projectionLocation = GL.GetUniformLocation(blockShader.ID, "projection");
+            Matrix4 model1 = Matrix4.Identity;
+            Matrix4 view1 = camera.GetViewMatrix();
+            Matrix4 projection1 = camera.GetProjectionMatrix();
 
-            GL.UniformMatrix4(modelLocation, true, ref model);
-            GL.UniformMatrix4(viewLocation, true, ref view);
-            GL.UniformMatrix4(projectionLocation, true, ref projection);
+            blockShader.SetMatrix4("model", model1);
+            blockShader.SetMatrix4("view", view1);
+            blockShader.SetMatrix4("projection", projection1);
 
             GL.DrawElements(
                 PrimitiveType.Triangles,
-                ibo.length,
+                triIbo.length,
                 DrawElementsType.UnsignedInt,
                 0
             );
-
+            
             SwapBuffers();
 
+            // track fps
             frameTimeAccumulator += args.Time;
             frameCount++;
 
             if (frameTimeAccumulator >= 0.25)
             {
-                Title = $"game - FPS: {frameCount*4}";
+                Title = $"game - FPS: {frameCount * 4}" ;
                 frameTimeAccumulator = 0.0;
                 frameCount = 0;
             }
-
-            // press escape to close this window or release mouse
-            if (KeyboardState.IsKeyPressed(Keys.Escape))
-            {
-                if(CursorState == CursorState.Grabbed)
-                {
-                    CursorState = CursorState.Normal;
-                }
-                else
-                {
-                    Close();
-                }
-            }
-            if (MouseState.IsButtonPressed(MouseButton.Left))
-            {
-                CursorState = CursorState.Normal;
-            }
         }
 
+        // TODO: async this
+        void BuildAndUploadAllChunks()
+        {
+            Console.WriteLine("Sending CPU Buffer to GPU");
+
+            var vDataList = new List<float>();
+            var iDataList = new List<uint>();
+            var waterVDataList = new List<float>();
+            var waterIDataList = new List<uint>();
+
+            uint baseVertex = 0, waterBaseVertex = 0;
+            foreach (var chunk in world.chunks)
+            {
+                ChunkMesher.GenerateMesh(
+                    chunk.Value,
+                    world,
+                    out var verts,
+                    out var indices,
+                    out var waterVerts,
+                    out var waterIndices
+                );
+
+                // SOLID
+                var vertexList = FlattenVertices(verts);
+                vDataList.AddRange(vertexList);
+                for (int i = 0; i < indices.Count; i++)
+                    iDataList.Add(indices[i] + baseVertex);
+                baseVertex += (uint)verts.Count;
+
+                // WATER
+                var waterVertexList = FlattenVertices(waterVerts);
+                waterVDataList.AddRange(waterVertexList);
+                for (int i = 0; i < waterIndices.Count; i++)
+                    waterIDataList.Add(waterIndices[i] + waterBaseVertex);
+                waterBaseVertex += (uint)waterVerts.Count;
+            }
+
+            float[] finalVertexData = vDataList.ToArray();
+            float[] finalWaterVertexData = waterVDataList.ToArray();
+
+            blockShader.Bind();
+            blockTexture.Bind();
+
+            // Solid
+            var result = UploadMesh(finalVertexData, iDataList);
+            solidVao = result.vao;
+            solidIbo = result.ibo;
+
+            // Water
+            var waterResult = UploadMesh(finalWaterVertexData, waterIDataList);
+            waterVao = waterResult.vao;
+            waterIbo = waterResult.ibo;
+
+            Console.WriteLine("Completed CPU Buffer to GPU");
+        }
+
+        // simplify vao/vbo/ibo into one function for a mesh
         public static (VAO vao, IBO ibo) UploadMesh(float[] vData, List<uint> indices)
         {
-            // Create and bind VAO
             VAO vao = new VAO();
-
-            // Create and bind VBO
             VBO vbo = new VBO(vData);
 
             // Link vertex attributes to VAO
@@ -213,7 +313,7 @@ namespace Minecraft_Clone
             camera.UpdateResolution(width, height);
         }
 
-        // called every frame. All updating happens here
+        // logic, non-rendering frame-by-frame stuff
         protected override void OnUpdateFrame(FrameEventArgs args)
         {
             MouseState mouse = MouseState;
@@ -221,14 +321,39 @@ namespace Minecraft_Clone
 
             base.OnUpdateFrame(args);
             camera.Update(input, mouse, args);
+
+            // press escape to close this window or release mouse
+            if (KeyboardState.IsKeyPressed(Keys.Escape))
+            {
+                if (CursorState == CursorState.Grabbed)
+                {
+                    CursorState = CursorState.Normal;
+                }
+                else
+                {
+                    Close();
+                }
+            }
+            if (MouseState.IsButtonPressed(MouseButton.Left))
+            {
+                CursorState = CursorState.Grabbed;
+            }
         }
 
         protected override void OnUnload()
         {
             base.OnUnload();
 
-            vao.Delete();
-            ibo.Delete();
+            if(solidVao != null)
+                solidVao.Delete();
+            if(solidIbo!=null)
+                solidIbo.Delete();
+
+            if (waterVao != null)
+                waterVao.Delete();
+            if (waterIbo != null)
+                waterIbo.Delete();
+            
             blockShader.Dispose();
             blockTexture.Delete();
             skyRender.Dispose();

@@ -11,5 +11,6 @@
         }
 
         public bool isAir => Type == BlockType.AIR; 
+        public bool isWater => Type == BlockType.WATER;
     }
 }

@@ -8,13 +8,19 @@ namespace Minecraft_Clone.Rendering
 {
     public static class ChunkMesher
     {
-        // input: a chunk
+        // input: a chunk, and the world chunks
         // output: list of vertices that only form the outer shell of said chunk
-        public static void GenerateMesh(Chunk chunk, out List<Vertex> vertices, out List<uint> indices)
+        public static void GenerateMesh(Chunk chunk, ChunkWorld world, out List<Vertex> vertices, out List<uint> indices,
+            out List<Vertex> waterVertices, out List<uint> waterIndices)
+
         {
             vertices = new List<Vertex>();
             indices = new List<uint>();
+            waterVertices = new List<Vertex>();
+            waterIndices = new List<uint>();
+
             uint vertexOffset = 0;
+            uint waterVertexOffset = 0;
 
             for (int x = 0; x < Chunk.CHUNKSIZE; x++)
             {
@@ -25,15 +31,47 @@ namespace Minecraft_Clone.Rendering
                         Block block = chunk.GetBlock(x, y, z);
                         if (block.isAir) continue;
 
-                        Vector3 blockPos = new(x, y, z);
+                        // Calculate the block's position in the world
+                        Vector3 blockPos = new Vector3(
+                            x + (float)chunk.chunkXIndex * (float)Chunk.CHUNKSIZE,
+                            y + (float)chunk.chunkYIndex * (float)Chunk.CHUNKSIZE,
+                            z + (float)chunk.chunkZIndex * (float)Chunk.CHUNKSIZE
+                        ); // local chunk coord + chunk index
 
                         bool[] visibility = new bool[6];
-                        visibility[0] = (z == Chunk.CHUNKSIZE - 1) || chunk.GetBlock(x, y, z + 1).isAir; // FRONT
-                        visibility[1] = (z == 0) || chunk.GetBlock(x, y, z - 1).isAir;                   // BACK
-                        visibility[2] = (x == 0) || chunk.GetBlock(x - 1, y, z).isAir;                   // LEFT
-                        visibility[3] = (x == Chunk.CHUNKSIZE - 1) || chunk.GetBlock(x + 1, y, z).isAir; // RIGHT
-                        visibility[4] = (y == Chunk.CHUNKSIZE - 1) || chunk.GetBlock(x, y + 1, z).isAir; // TOP
-                        visibility[5] = (y == 0) || chunk.GetBlock(x, y - 1, z).isAir;                   // BOTTOM
+
+                        int gx = chunk.chunkXIndex * Chunk.CHUNKSIZE + x;
+                        int gy = chunk.chunkYIndex * Chunk.CHUNKSIZE + y;
+                        int gz = chunk.chunkZIndex * Chunk.CHUNKSIZE + z;
+
+                        BlockType thisType = block.Type;
+                        bool isWater = block.isWater;
+
+                        Block blockFront = GetBlockGlobal(world, gx, gy, gz + 1);
+                        Block blockBack = GetBlockGlobal(world, gx, gy, gz - 1);
+                        Block blockLeft = GetBlockGlobal(world, gx - 1, gy, gz);
+                        Block blockRight = GetBlockGlobal(world, gx + 1, gy, gz);
+                        Block blockTop = GetBlockGlobal(world, gx, gy + 1, gz);
+                        Block blockBottom = GetBlockGlobal(world, gx, gy - 1, gz);
+
+                        if (isWater)
+                        {
+                            // Only show top face if air is above
+                            visibility[4] = blockTop.isAir;
+                            // Hide all other water faces
+                            visibility[0] = visibility[1] = visibility[2] = visibility[3] = visibility[5] = false;
+                        }
+                        else
+                        {
+                            // Solid block — show face if neighbor is air or water
+                            visibility[0] = blockFront.isAir || blockFront.isWater;    // FRONT
+                            visibility[1] = blockBack.isAir || blockBack.isWater;      // BACK
+                            visibility[2] = blockLeft.isAir || blockLeft.isWater;      // LEFT
+                            visibility[3] = blockRight.isAir || blockRight.isWater;    // RIGHT
+                            visibility[4] = blockTop.isAir || blockTop.isWater;        // TOP
+                            visibility[5] = blockBottom.isAir || blockBottom.isWater;  // BOTTOM
+                        }
+
 
                         foreach (CubeMesh.Face face in Enum.GetValues(typeof(CubeMesh.Face)))
                         {
@@ -48,26 +86,64 @@ namespace Minecraft_Clone.Rendering
                                 Vector2 tile = faceUVs[faceIndex];
                                 tile += v.TexCoord; // apply the corners
                                 Vector2 uvCoord = tile / 8f; // scale down to uv coordinates
-                                uvCoord.Y = 1.0f - uvCoord.Y; // flip y...?
-                                vertices.Add(new Vertex(v.Position + blockPos, uvCoord, v.Normal));
+                                uvCoord.Y = 1.0f - uvCoord.Y; // flip y because stbimagesharp trolls you hard
+                                if (thisType == BlockType.WATER)
+                                    waterVertices.Add(new Vertex(v.Position + blockPos, uvCoord, v.Normal));
+                                else
+                                    vertices.Add(new Vertex(v.Position + blockPos, uvCoord, v.Normal));
                             }
 
-                            // Add indices (two triangles: 0-1-2 and 2-3-0)
-                            indices.Add(vertexOffset + 0);
-                            indices.Add(vertexOffset + 1);
-                            indices.Add(vertexOffset + 2);
+                            if (thisType == BlockType.WATER) { 
+                                // Add indices (two triangles: 0-1-2 and 2-3-0)
+                                waterIndices.Add(waterVertexOffset + 0);
+                                waterIndices.Add(waterVertexOffset + 1);
+                                waterIndices.Add(waterVertexOffset + 2);
 
-                            indices.Add(vertexOffset + 2);
-                            indices.Add(vertexOffset + 3);
-                            indices.Add(vertexOffset + 0);
+                                waterIndices.Add(waterVertexOffset + 2);
+                                waterIndices.Add(waterVertexOffset + 3);
+                                waterIndices.Add(waterVertexOffset + 0);
+                                waterVertexOffset += 4;
+                            }
+                            else
+                            {
+                                // Add indices (two triangles: 0-1-2 and 2-3-0)
+                                indices.Add(vertexOffset + 0);
+                                indices.Add(vertexOffset + 1);
+                                indices.Add(vertexOffset + 2);
 
-                            vertexOffset += 4;
+                                indices.Add(vertexOffset + 2);
+                                indices.Add(vertexOffset + 3);
+                                indices.Add(vertexOffset + 0);
+                                vertexOffset += 4;
+                            }
+
                         }
                     }
                 }
             }
 
-            Console.WriteLine($"Verts: {vertices.Count}, Indices: {indices.Count}");
+            //Console.WriteLine($"In chunk with index {chunk.ChunkPosition()} is Verts: {vertices.Count}, Indices: {indices.Count}");
+        }
+
+        static Block GetBlockGlobal(ChunkWorld world, int globalX, int globalY, int globalZ)
+        {
+            Vector3i chunkIndex = new Vector3i(
+                globalX / Chunk.CHUNKSIZE,
+                globalY / Chunk.CHUNKSIZE,
+                globalZ / Chunk.CHUNKSIZE
+            );
+
+            if (globalX < 0 && globalX % Chunk.CHUNKSIZE != 0) chunkIndex.X--;
+            if (globalY < 0 && globalY % Chunk.CHUNKSIZE != 0) chunkIndex.Y--;
+            if (globalZ < 0 && globalZ % Chunk.CHUNKSIZE != 0) chunkIndex.Z--;
+
+            if (!world.chunks.TryGetValue(chunkIndex, out var neighborChunk)) return new Block(BlockType.AIR);
+
+            int lx = (globalX % Chunk.CHUNKSIZE + Chunk.CHUNKSIZE) % Chunk.CHUNKSIZE;
+            int ly = (globalY % Chunk.CHUNKSIZE + Chunk.CHUNKSIZE) % Chunk.CHUNKSIZE;
+            int lz = (globalZ % Chunk.CHUNKSIZE + Chunk.CHUNKSIZE) % Chunk.CHUNKSIZE;
+
+            return neighborChunk.GetBlock(lx, ly, lz);
         }
     }
 }
