@@ -72,13 +72,13 @@ namespace Minecraft_Clone
 
             Console.WriteLine("Going to convert world chunks into vertices");
 
-            world.GenerateWorldAbout((0, -1, 0), (8, 3, 8), -10, 3);
+            world.GenerateWorldAbout((0, 1, 0), (8, 3, 8), 0, 3);
 
             const int floatsPerVertex = 3 + 2 + 3; // your stride
             uint baseVertex = (uint)(vDataList.Count / floatsPerVertex);
             foreach (var chunk in world.chunks)
             {
-                ChunkMesher.GenerateMesh(chunk.Value, out var verts, out List<uint> indices);
+                ChunkMesher.GenerateMesh(chunk.Value, world, out var verts, out List<uint> indices);
                 var vertexList = FlattenVertices(verts);
                 // Append vertex data
                 vDataList.AddRange(vertexList);

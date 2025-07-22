@@ -43,7 +43,10 @@ namespace Minecraft_Clone.World
                                 for(int bz = 0; bz < Chunk.CHUNKSIZE; bz++)
                                 {
                                     Vector3i blockWorldPos = _chunk.ChunkPosition() * Chunk.CHUNKSIZE + (bx, by, bz);
-                                    int h = (int)(60 * noise.Noise(blockWorldPos.X * noiseScale, blockWorldPos.Z * noiseScale)) - 40;
+                                    int h = (int)(3000 * ((noise.Noise(blockWorldPos.X * noiseScale, blockWorldPos.Z * noiseScale))
+                                        * (0.5 * noise.Noise(blockWorldPos.Z * noiseScale / 2, blockWorldPos.X * noiseScale / 2))
+                                        * (0.25 * noise.Noise(blockWorldPos.X * noiseScale / 4, blockWorldPos.Z * noiseScale / 4))))-50;
+                                    
                                     if (blockWorldPos.Y == h) _chunk.SetBlock(bx, by, bz, BlockType.GRASS);
                                     else if (blockWorldPos.Y < h - dirtThickness) _chunk.SetBlock(bx, by, bz, BlockType.STONE);
                                     else if (blockWorldPos.Y < h) _chunk.SetBlock(bx, by, bz, BlockType.DIRT);

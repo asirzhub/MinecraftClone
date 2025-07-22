@@ -59,6 +59,7 @@ namespace Minecraft_Clone
             if (keyboard.IsKeyDown(Keys.D)) { position += right * speed * (float)e.Time; }
             if (keyboard.IsKeyDown(Keys.Space)) { position.Y += speed * (float)e.Time; }
             if (keyboard.IsKeyDown(Keys.LeftControl)) { position.Y -= speed * (float)e.Time; }
+            if (keyboard.IsKeyDown(Keys.LeftShift)) { speed = 15f; } else { speed = 5f; }
 
             if (firstMove)
             {
