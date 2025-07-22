@@ -8,7 +8,7 @@ namespace Minecraft_Clone.Rendering
 {
     public static class ChunkMesher
     {
-        // input: a chunk
+        // input: a chunk, and the world chunks
         // output: list of vertices that only form the outer shell of said chunk
         public static void GenerateMesh(Chunk chunk, ChunkWorld world, out List<Vertex> vertices, out List<uint> indices,
             out List<Vertex> waterVertices, out List<uint> waterIndices)
@@ -77,7 +77,6 @@ namespace Minecraft_Clone.Rendering
                         {
                             int faceIndex = (int)face;
                             if (!visibility[faceIndex]) continue;
-                            //Console.WriteLine($"Adding a face for the block at world coordinate: {blockPos}");
 
                             var faceVerts = CubeMesh.FaceVertices[face];
                             for (int i = 0; i < 4; i++)
@@ -123,7 +122,7 @@ namespace Minecraft_Clone.Rendering
                 }
             }
 
-            Console.WriteLine($"In chunk with index {chunk.ChunkPosition()} is Verts: {vertices.Count}, Indices: {indices.Count}");
+            //Console.WriteLine($"In chunk with index {chunk.ChunkPosition()} is Verts: {vertices.Count}, Indices: {indices.Count}");
         }
 
         static Block GetBlockGlobal(ChunkWorld world, int globalX, int globalY, int globalZ)
@@ -146,6 +145,5 @@ namespace Minecraft_Clone.Rendering
 
             return neighborChunk.GetBlock(lx, ly, lz);
         }
-
     }
 }

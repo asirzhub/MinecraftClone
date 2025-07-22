@@ -7,6 +7,7 @@ using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using static Minecraft_Clone.Graphics.VertexUtils;
+using ErrorCode = OpenTK.Graphics.OpenGL4.ErrorCode;
 
 namespace Minecraft_Clone
 {
@@ -35,6 +36,8 @@ namespace Minecraft_Clone
 
         // world data
         ChunkWorld world;
+        private Task generationTask;
+        private bool rebuildWorld = true;
 
         public Game(int width, int height, string title) : base(GameWindowSettings.Default, new NativeWindowSettings()
         {
@@ -69,20 +72,170 @@ namespace Minecraft_Clone
             VSync = VSyncMode.On;
             GL.Enable(EnableCap.DepthTest);
 
-            const int floatsPerVertex = 3 + 2 + 3; // stride
-            List<float> vDataList = new List<float>();
-            List<uint> iDataList = new List<uint>();
-            uint baseVertex = (uint)(vDataList.Count / floatsPerVertex);
+            var cts = new CancellationTokenSource();
 
-            List<float> waterVDataList = new List<float>();
-            List<uint> waterIDataList = new List<uint>();
-            uint waterBaseVertex = 0;
+            var progress = new Progress<float>(p =>
+                Console.Title = $"Generating world… {p:P0}"
+            );
 
-            // actually generate the world
-            world.GenerateWorldAbout((0, 1, 0), (8, 3, 8), 0, 3); // world.Chunks is now populated with terrain
+            generationTask = world.GenerateWorldAsync(
+                origin: new Vector3i(0, 1, 0),
+                size: new Vector3i(8, 3, 8),
+                seaLevel: 0,
+                dirtThickness: 3,
+                progress: progress,
+                token: cts.Token
+            ); // start the world gen, it'll be rendered later
 
-            Console.WriteLine("Going to convert world chunks into vertices");
+            skyRender.InitSky();
 
+            // allow water and stuff to be transparent
+            GL.Enable(EnableCap.Blend);
+            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+
+        }
+
+
+        protected override void OnRenderFrame(FrameEventArgs args)
+        {
+            base.OnRenderFrame(args);
+            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+            time += (float)args.Time;
+
+            Matrix4 model = Matrix4.Identity;
+            Matrix4 view = camera.GetViewMatrix();
+            Matrix4 projection = camera.GetProjectionMatrix();
+
+            // Render sky first
+            skyRender.RenderSky(camera);
+
+            if(rebuildWorld && generationTask.IsCompleted)
+            {
+                Console.WriteLine("this is the part where i'd upload to the gpu");
+                rebuildWorld = false;
+                BuildAndUploadAllChunks();
+            }
+
+            
+
+            // Draw SOLID blocks
+            if (solidIbo != null)
+            {
+                GL.DepthMask(true);             // enable depth write
+                GL.Disable(EnableCap.Blend);    // disable blending
+
+                blockShader.Bind();
+                blockTexture.Bind();
+
+                blockShader.SetMatrix4("model", model);
+                blockShader.SetMatrix4("view", view);
+                blockShader.SetMatrix4("projection", projection);
+
+                solidVao.Bind();
+                solidIbo.Bind();
+
+
+                GL.DrawElements(
+                    PrimitiveType.Triangles,
+                    solidIbo.length,
+                    DrawElementsType.UnsignedInt,
+                    0
+                );
+
+                var error = GL.GetError();
+                if (error != ErrorCode.NoError)
+                    Console.Write($"Solid OpenGL Error: {error}");
+            }
+
+            // draw WATER blocks (transparent pass)
+            if (waterIbo != null)
+            {
+                waterVao.Bind();
+                waterIbo.Bind();
+
+                GL.DepthMask(false);            // water wont write to depth buffer
+                GL.Enable(EnableCap.Blend);     // enable alpha blending
+                GL.BlendFunc(
+                    BlendingFactor.SrcAlpha,
+                    BlendingFactor.OneMinusSrcAlpha
+                );
+
+                blockShader.Bind();
+                blockTexture.Bind();
+
+                blockShader.SetMatrix4("model", model);
+                blockShader.SetMatrix4("view", view);
+                blockShader.SetMatrix4("projection", projection);
+
+                GL.DrawElements(
+                    PrimitiveType.Triangles,
+                    waterIbo.length,
+                    DrawElementsType.UnsignedInt,
+                    0
+                );
+                var error = GL.GetError();
+                if (error != ErrorCode.NoError)
+                    Console.Write($"Water OpenGL Error: {error}");
+
+                GL.Disable(EnableCap.Blend);
+                GL.DepthMask(true);
+            }
+            
+            float[] triangleVerts = {
+                 0.0f,  0.5f, 0f,  0f, 0f, 0f,0f,0f,
+                -0.5f, -0.5f, 0f,  0f, 1f, 0f,0f,0f,
+                 0.5f, -0.5f, 0f,  1f, 1f, 0f,0f,0f
+            };
+            uint[] triangleIndices = { 0, 1, 2 };
+            var triVao =  new VAO();
+            var triVbo = new VBO(triangleVerts);
+            var triIbo = new IBO(triangleIndices.ToList());
+
+            triVao.Bind();
+            triVbo.Bind();
+            triIbo.Bind();
+            blockShader.Bind();
+
+            Matrix4 model1 = Matrix4.Identity;
+            Matrix4 view1 = camera.GetViewMatrix();
+            Matrix4 projection1 = camera.GetProjectionMatrix();
+
+            blockShader.SetMatrix4("model", model1);
+            blockShader.SetMatrix4("view", view1);
+            blockShader.SetMatrix4("projection", projection1);
+
+            GL.DrawElements(
+                PrimitiveType.Triangles,
+                triIbo.length,
+                DrawElementsType.UnsignedInt,
+                0
+            );
+            
+            SwapBuffers();
+
+            // track fps
+            frameTimeAccumulator += args.Time;
+            frameCount++;
+
+            if (frameTimeAccumulator >= 0.25)
+            {
+                Title = $"game - FPS: {frameCount * 4}" ;
+                frameTimeAccumulator = 0.0;
+                frameCount = 0;
+            }
+        }
+
+        // TODO: async this
+        void BuildAndUploadAllChunks()
+        {
+            Console.WriteLine("Sending CPU Buffer to GPU");
+
+            var vDataList = new List<float>();
+            var iDataList = new List<uint>();
+            var waterVDataList = new List<float>();
+            var waterIDataList = new List<uint>();
+
+            uint baseVertex = 0, waterBaseVertex = 0;
             foreach (var chunk in world.chunks)
             {
                 ChunkMesher.GenerateMesh(
@@ -109,9 +262,6 @@ namespace Minecraft_Clone
                 waterBaseVertex += (uint)waterVerts.Count;
             }
 
-            Console.WriteLine("Converted world chunks to vertices");
-
-            // Optional: Convert to array if needed
             float[] finalVertexData = vDataList.ToArray();
             float[] finalWaterVertexData = waterVDataList.ToArray();
 
@@ -128,99 +278,13 @@ namespace Minecraft_Clone
             waterVao = waterResult.vao;
             waterIbo = waterResult.ibo;
 
-            solidVao.Bind();
-            solidIbo.Bind();
-
-            skyRender.InitSky();
-
-            // allow water and stuff to be transparent
-            GL.Enable(EnableCap.Blend);
-            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
-
+            Console.WriteLine("Completed CPU Buffer to GPU");
         }
 
-
-        protected override void OnRenderFrame(FrameEventArgs args)
-        {
-            base.OnRenderFrame(args);
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-            time += (float)args.Time;
-
-            Matrix4 model = Matrix4.Identity;
-            Matrix4 view = camera.GetViewMatrix();
-            Matrix4 projection = camera.GetProjectionMatrix();
-
-            // Render sky first (infinite background)
-            skyRender.RenderSky(camera);
-
-            // Draw SOLID blocks
-            blockShader.Bind();
-            solidVao.Bind();
-            solidIbo.Bind();
-
-            int modelLocation = GL.GetUniformLocation(blockShader.ID, "model");
-            int viewLocation = GL.GetUniformLocation(blockShader.ID, "view");
-            int projectionLocation = GL.GetUniformLocation(blockShader.ID, "projection");
-
-            GL.UniformMatrix4(modelLocation, true, ref model);
-            GL.UniformMatrix4(viewLocation, true, ref view);
-            GL.UniformMatrix4(projectionLocation, true, ref projection);
-
-            GL.DepthMask(true);             // enable depth write
-            GL.Disable(EnableCap.Blend);    // disable blending
-            GL.DrawElements(
-                PrimitiveType.Triangles,
-                solidIbo.length,
-                DrawElementsType.UnsignedInt,
-                0
-            );
-
-            // draw WATER blocks (transparent pass)
-            waterVao.Bind();
-            waterIbo.Bind();
-
-            GL.DepthMask(false);            // water wont write to depth buffer
-            GL.Enable(EnableCap.Blend);     // enable alpha blending
-            GL.BlendFunc(
-                BlendingFactor.SrcAlpha,
-                BlendingFactor.OneMinusSrcAlpha
-            );
-
-            GL.UniformMatrix4(modelLocation, true, ref model); // reuse same view/proj
-            GL.UniformMatrix4(viewLocation, true, ref view);
-            GL.UniformMatrix4(projectionLocation, true, ref projection);
-
-            GL.DrawElements(
-                PrimitiveType.Triangles,
-                waterIbo.length,
-                DrawElementsType.UnsignedInt,
-                0
-            );
-
-            GL.Disable(EnableCap.Blend);
-            GL.DepthMask(true);
-
-            SwapBuffers();
-
-            // track fps
-            frameTimeAccumulator += args.Time;
-            frameCount++;
-
-            if (frameTimeAccumulator >= 0.25)
-            {
-                Title = $"game - FPS: {frameCount * 4}";
-                frameTimeAccumulator = 0.0;
-                frameCount = 0;
-            }
-        }
-
-
+        // simplify vao/vbo/ibo into one function for a mesh
         public static (VAO vao, IBO ibo) UploadMesh(float[] vData, List<uint> indices)
         {
-            // Create and bind VAO
             VAO vao = new VAO();
-
-            // Create and bind VBO
             VBO vbo = new VBO(vData);
 
             // Link vertex attributes to VAO
@@ -249,7 +313,7 @@ namespace Minecraft_Clone
             camera.UpdateResolution(width, height);
         }
 
-        // called every frame. All updating happens here
+        // logic, non-rendering frame-by-frame stuff
         protected override void OnUpdateFrame(FrameEventArgs args)
         {
             MouseState mouse = MouseState;
@@ -280,8 +344,16 @@ namespace Minecraft_Clone
         {
             base.OnUnload();
 
-            solidVao.Delete();
-            solidIbo.Delete();
+            if(solidVao != null)
+                solidVao.Delete();
+            if(solidIbo!=null)
+                solidIbo.Delete();
+
+            if (waterVao != null)
+                waterVao.Delete();
+            if (waterIbo != null)
+                waterIbo.Delete();
+            
             blockShader.Dispose();
             blockTexture.Delete();
             skyRender.Dispose();
