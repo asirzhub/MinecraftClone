@@ -1,4 +1,5 @@
 ﻿using OpenTK.Mathematics;
+using System.Runtime.InteropServices;
 using static Minecraft_Clone.Graphics.VBO;
 
 namespace Minecraft_Clone.Graphics
@@ -9,9 +10,10 @@ namespace Minecraft_Clone.Graphics
         // <summary>
         /// Squash a human-readable vertex into a list of floats to be used as VBO
         /// </summary>
-        public static List<float> FlattenVertices(List<Vertex> vertices, int stride = 8)
+        public static List<float> FlattenVertices(List<Vertex> vertices)
         {
             List<float> data = new List<float>();
+            int stride = Marshal.SizeOf(typeof(Vertex));
 
             for (int i = 0; i < vertices.Count; i++)
             {
@@ -26,6 +28,7 @@ namespace Minecraft_Clone.Graphics
                 data.Add(v.Normal.X);
                 data.Add(v.Normal.Y);
                 data.Add(v.Normal.Z);
+                data.Add(v.brightness);
             }
 
             return data;

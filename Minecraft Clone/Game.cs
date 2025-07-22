@@ -6,6 +6,8 @@ using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
+using System.Runtime.InteropServices;
+using static Minecraft_Clone.Graphics.VBO;
 using static Minecraft_Clone.Graphics.VertexUtils;
 using ErrorCode = OpenTK.Graphics.OpenGL4.ErrorCode;
 
@@ -44,7 +46,7 @@ namespace Minecraft_Clone
             Title = title,
             API = ContextAPI.OpenGL,
             APIVersion = new Version(3, 3),
-            DepthBits = 24
+            DepthBits = 24,
         })
         {
             this.width = width;
@@ -68,7 +70,7 @@ namespace Minecraft_Clone
             camera = new Camera(width, height, -20f * Vector3.UnitX);
             CursorState = CursorState.Grabbed;
 
-            VSync = VSyncMode.On;
+            //VSync = VSyncMode.On;
             GL.Enable(EnableCap.DepthTest);
 
             var cts = new CancellationTokenSource();
@@ -79,7 +81,7 @@ namespace Minecraft_Clone
 
             generationTask = world.GenerateWorldAsync(
                 origin: new Vector3i(0, 0, 0),
-                size: new Vector3i(12, 3, 12),
+                size: new Vector3i(5, 3, 5),
                 seaLevel: 0,
                 dirtThickness: 3,
                 progress: progress,
@@ -255,11 +257,12 @@ namespace Minecraft_Clone
             VBO vbo = new VBO(vData);
 
             // Link vertex attributes to VAO
-            int stride = (3 + 2 + 3) * sizeof(float); // 8 floats per vertex
+            int stride = sizeof(float) * 9; 
 
             vao.LinkToVAO(0, 3, vbo, stride, 0);                       // position
             vao.LinkToVAO(1, 2, vbo, stride, 3 * sizeof(float));       // texcoord
             vao.LinkToVAO(2, 3, vbo, stride, 5 * sizeof(float));       // normal
+            vao.LinkToVAO(3, 1, vbo, stride, 8 * sizeof(float));       // brightness
 
             // Create IBO
             IBO ibo = new IBO(indices);

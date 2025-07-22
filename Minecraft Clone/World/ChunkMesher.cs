@@ -87,12 +87,34 @@ namespace Minecraft_Clone.Rendering
                                 Vector2 uvCoord = tile / 8f; // scale down to uv coordinates
                                 uvCoord.Y = 1.0f - uvCoord.Y; // flip y because stbimagesharp trolls you hard
 
-                                Vector3 blockPos = (worldBlockPosX, worldBlockPosY, worldBlockPosZ);
+                                Vector3 blockPos = new Vector3(worldBlockPosX, worldBlockPosY, worldBlockPosZ);
+
+                                // World-space vertex corner
+                                Vector3 worldCorner = v.Position + blockPos;
+
+                                // Round down to voxel grid
+                                Vector3i cornerPos = new Vector3i(
+                                    (int)MathF.Floor(worldCorner.X),
+                                    (int)MathF.Floor(worldCorner.Y),
+                                    (int)MathF.Floor(worldCorner.Z)
+                                );
+
+                                // Find neighbor offsets — approximate by projecting normal and tangent axes
+                                Vector3 normal = v.Normal;
+                                Vector3 tangentA = Vector3.Cross(normal, Vector3.UnitY);
+                                if (tangentA == Vector3.Zero) tangentA = Vector3.UnitX; // fallback
+                                Vector3 tangentB = Vector3.Cross(normal, tangentA);
+
+                                // Count neighbors (ambient occlusion)
+                                int occlusion = CountOccludingNeighbors(world, cornerPos, tangentA, tangentB);
+
+                                // Final brightness: range 100 → 25
+                                float brightness = 1.0f - 0.15f * occlusion; 
 
                                 if (thisType == BlockType.WATER)
-                                    waterVertices.Add(new Vertex(v.Position + blockPos, uvCoord, v.Normal));
+                                    waterVertices.Add(new Vertex(v.Position + blockPos, uvCoord, v.Normal, brightness));
                                 else
-                                    vertices.Add(new Vertex(v.Position + blockPos, uvCoord, v.Normal));
+                                    vertices.Add(new Vertex(v.Position + blockPos, uvCoord, v.Normal, brightness));
                             }
 
                             // add info to the correect indices too
@@ -150,5 +172,21 @@ namespace Minecraft_Clone.Rendering
 
             return neighborChunk.GetBlock(lx, ly, lz);
         }
+
+        static int CountOccludingNeighbors(ChunkWorld world, Vector3i pos, Vector3 offsetA, Vector3 offsetB)
+        {
+            int count = 0;
+
+            Vector3i side = pos + new Vector3i((int)offsetA.X, (int)offsetA.Y, (int)offsetA.Z);
+            Vector3i up = pos + new Vector3i((int)offsetB.X, (int)offsetB.Y, (int)offsetB.Z);
+            Vector3i corner = pos + new Vector3i((int)(offsetA.X + offsetB.X), (int)(offsetA.Y + offsetB.Y), (int)(offsetA.Z + offsetB.Z));
+
+            if (!GetBlockGlobal(world, side.X, side.Y, side.Z).isAir) count++;
+            if (!GetBlockGlobal(world, up.X, up.Y, up.Z).isAir) count++;
+            if (!GetBlockGlobal(world, corner.X, corner.Y, corner.Z).isAir) count++;
+
+            return count;
+        }
+
     }
 }

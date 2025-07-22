@@ -2,6 +2,7 @@
 
 in vec2 texCoord;
 in vec3 normal;
+in float brightness;
 
 uniform sampler2D texture0;
 
@@ -13,5 +14,5 @@ void main()
     if (texColor.a < 0.1)
         discard;
 
-    gl_FragColor = texColor;
+    gl_FragColor = texColor * brightness;
 }
