@@ -1,16 +1,12 @@
 ﻿using Minecraft_Clone.Graphics;
 using Minecraft_Clone.Rendering;
 using Minecraft_Clone.World;
-using OpenTK.Compute.OpenCL;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
-using System.Diagnostics;
-using static Minecraft_Clone.Graphics.VBO;
 using static Minecraft_Clone.Graphics.VertexUtils;
-using static Minecraft_Clone.Graphics.SkyRender;
 
 namespace Minecraft_Clone
 {
@@ -24,6 +20,7 @@ namespace Minecraft_Clone
         SkyRender skyRender;
 
         int seed = 69420;
+        float noiseScale = 0.02f;
 
         Camera camera;
 
@@ -34,9 +31,8 @@ namespace Minecraft_Clone
         private double frameTimeAccumulator = 0.0;
         private int frameCount = 0;
 
-        // temporary world data
-        Chunk chunk = new Chunk(0, 0, 0);
-        float noiseScale = 0.1f;
+        // world data
+        ChunkWorld world;
 
         public Game(int width, int height, string title) : base(GameWindowSettings.Default, new NativeWindowSettings()
         {
@@ -50,39 +46,13 @@ namespace Minecraft_Clone
             this.width = width;
             this.height = height;
             skyRender = new SkyRender();
+            world = new ChunkWorld(seed, noiseScale);
         }
 
         protected override void OnLoad()
         {
             base.OnLoad();
             GL.ClearColor(0.0f, 0.0f, 1.0f, 1.0f);
-
-            PerlinNoise noise = new PerlinNoise(seed);
-            Random rnd = new Random(seed);
-
-            for(int x = 0; x < Chunk.CHUNKSIZE; x++)
-            {
-                for (int z = 0; z < Chunk.CHUNKSIZE; z++)
-                {
-                    float height = noise.Noise(x*noiseScale, z*noiseScale) * Chunk.CHUNKSIZE;
-                    for (int y = 0; y < Chunk.CHUNKSIZE; y++)
-                    {
-                        if (y < height - 4)
-                        {
-                            chunk.SetBlock(x, y, z, BlockType.STONE);
-                        }
-                        else if (y < height-1)
-                        {
-                            chunk.SetBlock(x, y, z, BlockType.DIRT);
-                        }
-                        else if (y < height)
-                        {
-                            chunk.SetBlock(x, y, z, BlockType.GRASS);
-                        }
-                        else chunk.SetBlock(x, y, z, BlockType.AIR);
-                    }
-                }
-            }
 
             blockShader = new Shader("../../../Shaders/default.vert", "../../../Shaders/default.frag");
             blockShader.Bind();
@@ -91,19 +61,45 @@ namespace Minecraft_Clone
 
             // some clean-up stuff
             time = 0f;
-            camera = new Camera(width, height, -2f * Vector3.UnitX);
+            camera = new Camera(width, height, -20f * Vector3.UnitX);
             CursorState = CursorState.Grabbed;
 
             VSync = VSyncMode.On;
             GL.Enable(EnableCap.DepthTest);
 
-            ChunkMesher.GenerateMesh(chunk, out var verts, out List<uint> indices);
-            float[] vData = FlattenVertices(verts);
+            List<float> vDataList = new List<float>();
+            List<uint> iDataList = new List<uint>();
+
+            Console.WriteLine("Going to convert world chunks into vertices");
+
+            world.GenerateWorldAbout((0, -1, 0), (8, 3, 8), -10, 3);
+
+            const int floatsPerVertex = 3 + 2 + 3; // your stride
+            uint baseVertex = (uint)(vDataList.Count / floatsPerVertex);
+            foreach (var chunk in world.chunks)
+            {
+                ChunkMesher.GenerateMesh(chunk.Value, out var verts, out List<uint> indices);
+                var vertexList = FlattenVertices(verts);
+                // Append vertex data
+                vDataList.AddRange(vertexList);
+
+                // Offset indices by how many verts we've already got
+                for (int i = 0; i < indices.Count; i++)
+                    iDataList.Add(indices[i] + baseVertex);
+
+                // Advance baseVertex for the next chunk
+                baseVertex += (uint)verts.Count;
+            }
+
+            Console.WriteLine("Converted world chunks to vertices");
+
+            // Optional: Convert to array if needed
+            float[] finalVertexData = vDataList.ToArray();
 
             blockShader.Bind();
             blockTexture.Bind();   
             
-            var result = UploadMesh(vData, indices); // need a magic function...
+            var result = UploadMesh(finalVertexData, iDataList); // need a magic function...
             vao = result.vao;
             ibo = result.ibo;
 

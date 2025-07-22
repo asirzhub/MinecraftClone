@@ -25,7 +25,12 @@ namespace Minecraft_Clone.Rendering
                         Block block = chunk.GetBlock(x, y, z);
                         if (block.isAir) continue;
 
-                        Vector3 blockPos = new(x, y, z);
+                        // Calculate the block's position in the world
+                        Vector3 blockPos = new Vector3(
+                            x + (float)chunk.chunkXIndex * (float)Chunk.CHUNKSIZE,
+                            y + (float)chunk.chunkYIndex * (float)Chunk.CHUNKSIZE,
+                            z + (float)chunk.chunkZIndex * (float)Chunk.CHUNKSIZE
+                        ); // local chunk coord + chunk index
 
                         bool[] visibility = new bool[6];
                         visibility[0] = (z == Chunk.CHUNKSIZE - 1) || chunk.GetBlock(x, y, z + 1).isAir; // FRONT
@@ -39,6 +44,7 @@ namespace Minecraft_Clone.Rendering
                         {
                             int faceIndex = (int)face;
                             if (!visibility[faceIndex]) continue;
+                            //Console.WriteLine($"Adding a face for the block at world coordinate: {blockPos}");
 
                             var faceVerts = CubeMesh.FaceVertices[face];
                             for (int i = 0; i < 4; i++)
@@ -48,7 +54,7 @@ namespace Minecraft_Clone.Rendering
                                 Vector2 tile = faceUVs[faceIndex];
                                 tile += v.TexCoord; // apply the corners
                                 Vector2 uvCoord = tile / 8f; // scale down to uv coordinates
-                                uvCoord.Y = 1.0f - uvCoord.Y; // flip y...?
+                                uvCoord.Y = 1.0f - uvCoord.Y; // flip y because stbimagesharp trolls you hard
                                 vertices.Add(new Vertex(v.Position + blockPos, uvCoord, v.Normal));
                             }
 
@@ -67,7 +73,7 @@ namespace Minecraft_Clone.Rendering
                 }
             }
 
-            Console.WriteLine($"Verts: {vertices.Count}, Indices: {indices.Count}");
+            Console.WriteLine($"In chunk with index {chunk.ChunkPosition()} is Verts: {vertices.Count}, Indices: {indices.Count}");
         }
     }
 }
