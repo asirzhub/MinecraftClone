@@ -3,6 +3,7 @@ using static Minecraft_Clone.Graphics.VBO;
 
 namespace Minecraft_Clone.Graphics
 {
+    // Literally just information on how to make a cube
     public static class CubeMesh
     {
 

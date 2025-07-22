@@ -2,9 +2,11 @@
 {
     public struct Block
     {
-        public BlockType Type; // we DONT store a blocktypedata here, bc there will be millions of these
-        // its smarter to store ONLY the enum. and then use a registry to learn about a block properties
+        public BlockType Type; 
 
+        // <summary>
+        /// A block only knows what it is, and nothing else.
+        /// </summary>
         public Block(BlockType type)
         {
             this.Type = type;

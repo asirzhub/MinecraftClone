@@ -12,6 +12,9 @@ namespace Minecraft_Clone.Graphics
         public void UnBind() => GL.BindTexture(TextureTarget.Texture2D, 0);
         public void Delete() => GL.DeleteTexture(ID);
 
+        // <summary>
+        /// Bind, import a texture, upload it.
+        /// </summary>
         public Texture(string path)
         {
             ID = GL.GenTexture();
@@ -33,7 +36,6 @@ namespace Minecraft_Clone.Graphics
 
             // upload the image
             GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, image.Width, image.Height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, image.Data);
-            UnBind();
         }
     }
 }

@@ -11,13 +11,19 @@ namespace Minecraft_Clone.World
         float noiseScale;
         PerlinNoise noise; // The base for the world gen
 
-        public ChunkWorld(int seed, float noiseScale)
+        // <summary>
+        /// Create a world using a seed and noise Scale
+        /// </summary>
+        public ChunkWorld(int seed = 0, float noiseScale = 0.1f)
         {
             this.seed = seed;
             noise = new PerlinNoise(seed);
             this.noiseScale = noiseScale;
         }
 
+        // <summary>
+        /// Instance a chunk at the designated location, and add it to the world's chunks.
+        /// </summary>
         public Chunk AddChunk(Vector3i pos, BlockType fillType = BlockType.AIR)
         {
             Chunk chunk = new Chunk(pos.X, pos.Y, pos.Z);
@@ -26,6 +32,9 @@ namespace Minecraft_Clone.World
             return chunk;
         }
 
+        // <summary>
+        /// Probably not going to use this going forward but keeping here in case. Generate the world about a point with specific size.
+        /// </summary>
         public void GenerateWorldAbout(Vector3i origin, Vector3i size, int seaLevel, int dirtThickness)
         {
             for (int x = origin.X - size.X; x < origin.X + size.X; x++)
@@ -59,6 +68,9 @@ namespace Minecraft_Clone.World
             }
         }
 
+        // <summary>
+        /// Generate the world about a point with specific size, asynchronously.
+        /// </summary>
         public async Task GenerateWorldAsync(
             Vector3i origin,
             Vector3i size,
@@ -74,12 +86,14 @@ namespace Minecraft_Clone.World
                 int total = (2 * size.X) * (2 * size.Y) * (2 * size.Z);
                 int done = 0;
 
+                // six nest loops!
                 for (int chunkX = origin.X - size.X; chunkX < origin.X + size.X; chunkX++)
+                {
                     for (int chunkZ = origin.Z - size.Z; chunkZ < origin.Z + size.Z; chunkZ++)
+                    {
                         for (int chunkY = origin.Y - size.Y; chunkY < origin.Y + size.Y; chunkY++)
                         {
                             token.ThrowIfCancellationRequested();
-
                             Chunk _chunk = AddChunk((chunkX, chunkY, chunkZ), BlockType.AIR);
 
                             for (int blockX = 0; blockX < Chunk.CHUNKSIZE; blockX++)
@@ -92,6 +106,8 @@ namespace Minecraft_Clone.World
                                         int terrainHeight = (int)(3000 * ((noise.Noise(blockWorldPos.X * noiseScale, blockWorldPos.Z * noiseScale))
                                             * (0.5 * noise.Noise(blockWorldPos.Z * noiseScale / 2, blockWorldPos.X * noiseScale / 2))
                                             * (0.25 * noise.Noise(blockWorldPos.X * noiseScale / 4, blockWorldPos.Z * noiseScale / 4)))) - 50;
+                                        
+                                        // depending on the block's y position, the height of the terrain, and sea level, assign the correct block
 
                                         if (blockWorldPos.Y == terrainHeight)
                                             _chunk.SetBlock(blockX, blockY, blockZ, BlockType.GRASS);
@@ -107,6 +123,9 @@ namespace Minecraft_Clone.World
                             done++;
                             progress?.Report((float)done / total);
                         }
+                    }
+                }
+                    
             }, token);
             Console.WriteLine("worldgen completed");
         }

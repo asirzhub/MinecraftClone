@@ -5,7 +5,10 @@ namespace Minecraft_Clone.Graphics
 {
     public class VertexUtils
     {
-        // to squash human-readable vertex into a float array to send to gpu
+
+        // <summary>
+        /// Squash a human-readable vertex into a list of floats to be used as VBO
+        /// </summary>
         public static List<float> FlattenVertices(List<Vertex> vertices, int stride = 8)
         {
             List<float> data = new List<float>();

@@ -9,13 +9,19 @@ namespace Minecraft_Clone.Graphics
         public int skyVBO;
         Shader skyShader;
 
+        // <summary>
+        /// A Triangle is rendered over the entire screen, coloured to look like the Sky. Stores its own vao/vbo.
+        /// </summary>
         public SkyRender()
         {
             skyVAO = GL.GenVertexArray();
             skyVBO = GL.GenBuffer();
-            skyShader = new Shader("../../../Shaders/sky.vert", "../../../Shaders/sky.frag");
+            skyShader = new Shader("sky.vert", "sky.frag");
         }
 
+        // <summary>
+        /// Initialize the sky vao and vbo, and binds them.
+        /// </summary>
         public void InitSky()
         {
             float[] skyVerts = {
@@ -32,6 +38,9 @@ namespace Minecraft_Clone.Graphics
             GL.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2 * sizeof(float), 0);
         }
 
+        // <summary>
+        /// Binds the correct shader and renders the sky based on the direction the camera faces. TODO: Optimize/simplify.
+        /// </summary>
         public void RenderSky(Camera camera)
         {
             skyShader.Bind();
@@ -46,8 +55,7 @@ namespace Minecraft_Clone.Graphics
             Vector3 forward = new Vector3(-view.M13, -view.M23, -view.M33);
             float cameraViewY = forward.Y; // y-component of camera's look direction
 
-            loc = GL.GetUniformLocation(skyShader.ID, "cameraViewY"); // pass in the camera's y direction component 
-            GL.Uniform1(loc, cameraViewY);
+            skyShader.SetFloat("cameraViewY", cameraViewY);
 
             // Draw fullscreen triangle
             GL.BindVertexArray(skyVAO);
@@ -57,11 +65,12 @@ namespace Minecraft_Clone.Graphics
             skyShader.UnBind();
             GL.BindVertexArray(0);
         }
+
         public void Dispose()
         {
             GL.DeleteVertexArray(skyVAO);
             GL.DeleteBuffer(skyVBO);
-            skyShader.Delete(); // Assuming this method exists
+            skyShader.Delete(); 
         }
     }
 }

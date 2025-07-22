@@ -1,8 +1,4 @@
-﻿using OpenTK.Windowing.Common;
-using OpenTK.Windowing.Desktop;
-using OpenTK.Graphics.OpenGL4;
-using OpenTK.Windowing.GraphicsLibraryFramework;
-using System;
+﻿using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 
 namespace Minecraft_Clone.Graphics
@@ -10,14 +6,15 @@ namespace Minecraft_Clone.Graphics
     internal class Shader
     {
         public int ID;
+        string pathPrefix = "../../../Shaders/";
 
-        // args: IDs to individual shaders (where the vert and where the frag are)
-        // you dont need the shaders once they're compiled
-        // shaders need to be compiled per computer, it depends on the gpu you have
+        /// <summary>
+        /// Create a shader with vertex and fragment. Binds the shader to the graph
+        /// </summary>
         public Shader(string vertexPath, string fragmentPath)
         {
-            string VertexShaderSource = File.ReadAllText(vertexPath);
-            string FragmentShaderSource = File.ReadAllText(fragmentPath);
+            string VertexShaderSource = File.ReadAllText(pathPrefix + vertexPath);
+            string FragmentShaderSource = File.ReadAllText(pathPrefix + fragmentPath);
 
             int VertexShader = GL.CreateShader(ShaderType.VertexShader);
             GL.ShaderSource(VertexShader, VertexShaderSource);
@@ -33,7 +30,7 @@ namespace Minecraft_Clone.Graphics
             {
                 string infoLog = GL.GetShaderInfoLog(VertexShader);
                 Console.WriteLine(infoLog);
-            } else Console.WriteLine("vertex compilation success");
+            } else Console.WriteLine($"{vertexPath} compilation success");
 
             GL.CompileShader(FragmentShader);
             GL.GetShader(FragmentShader, ShaderParameter.CompileStatus, out int _success);
@@ -41,7 +38,7 @@ namespace Minecraft_Clone.Graphics
             {
                 string infoLog = GL.GetShaderInfoLog(FragmentShader);
                 Console.WriteLine(infoLog);
-            } else Console.WriteLine("fragment compilation success");
+            } else Console.WriteLine($"{fragmentPath} compilation success");
 
             // with the individual shaders compiled, we now create our "shader program" which is what runs on the GPU
             ID = GL.CreateProgram();
@@ -50,7 +47,8 @@ namespace Minecraft_Clone.Graphics
             GL.AttachShader(ID, FragmentShader);
 
             GL.LinkProgram(ID);
-
+        
+            // error-check
             GL.GetProgram(ID, GetProgramParameterName.LinkStatus, out int __success);
             if (__success == 0)
             {
@@ -68,6 +66,7 @@ namespace Minecraft_Clone.Graphics
         public void UnBind() => GL.UseProgram(0);
         public void Delete() => GL.DeleteShader(ID);
 
+        // a series of functions to make it easier to pass values into the shader
         public void SetMatrix4(string name, Matrix4 value)
         {
             int loc = GL.GetUniformLocation(ID, name);
@@ -76,6 +75,7 @@ namespace Minecraft_Clone.Graphics
             else
                 GL.UniformMatrix4(loc, true, ref value);
         }
+
         public void SetMatrix3(string name, Matrix3 value)
         {
             int loc = GL.GetUniformLocation(ID, name);
@@ -93,7 +93,6 @@ namespace Minecraft_Clone.Graphics
             else
                 GL.Uniform1(loc, value);
         }
-
         public void SetInt(string name, int value)
         {
             int loc = GL.GetUniformLocation(ID, name);
@@ -102,7 +101,6 @@ namespace Minecraft_Clone.Graphics
             else
                 GL.Uniform1(loc, value);
         }
-
         public void SetVector3(string name, Vector3 value)
         {
             int loc = GL.GetUniformLocation(ID, name);
@@ -121,16 +119,13 @@ namespace Minecraft_Clone.Graphics
                 GL.Uniform4(loc, value);
         }
 
-
-        // we also need to clean up the ID after the class dies
-        // we can't do it in the finalizer due to "OOLP"
+        // Stuff that the openTK tutorial told me to do but i dont fully understand
         private bool disposedValue = false;
         protected virtual void Dispose(bool disposing)
         {
             if (!disposedValue)
             {
                 GL.DeleteProgram(ID);
-
                 disposedValue = true;
             }
         }

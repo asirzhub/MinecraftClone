@@ -29,16 +29,14 @@ namespace Minecraft_Clone.Graphics
             }
         }
 
+        // <summary>
+        /// VBO built with floats
+        /// </summary>
         public VBO(float[] data)
         {
             ID = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, ID);
             GL.BufferData(BufferTarget.ArrayBuffer, data.Length * sizeof(float), data, BufferUsageHint.StaticDraw);
-        }
-
-        public static implicit operator int(VBO v)
-        {
-            throw new NotImplementedException();
         }
     }
 }

@@ -14,6 +14,9 @@ namespace Minecraft_Clone.World
 
         public Block[] blocks = new Block[CHUNKSIZE * CHUNKSIZE * CHUNKSIZE];
 
+        // <summary>
+        /// Create a new chunk at these chunk coordinates
+        /// </summary>
         public Chunk(int xIndex, int yIndex, int zIndex)
         {
             chunkXIndex = xIndex;
@@ -25,6 +28,9 @@ namespace Minecraft_Clone.World
 
         public void SetBlock(int x, int y, int z, BlockType type) => blocks[(y * CHUNKSIZE + z) * CHUNKSIZE + x] = new Block(type);
 
+        // <summary>
+        /// Fill a chunk with some block.
+        /// </summary>
         public void FillWithBlock(BlockType blockType)
         {
             for (int x = 0; x < CHUNKSIZE; x++)

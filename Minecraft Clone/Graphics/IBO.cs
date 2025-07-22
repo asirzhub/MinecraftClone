@@ -13,13 +13,15 @@ namespace Minecraft_Clone.Graphics
         public void UnBind() => GL.BindBuffer(BufferTarget.ElementArrayBuffer, 0);
         public void Delete() => GL.DeleteBuffer(ID);
 
+        /// <summary>
+        /// Generates, binds, and uploads index buffer object data in one go.
+        /// </summary>
         public IBO(List<uint> data)
         {
             ID = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, ID);
+            Bind();
             GL.BufferData(BufferTarget.ElementArrayBuffer, data.Count * sizeof(uint), data.ToArray(), BufferUsageHint.StaticDraw);
             length = data.Count * sizeof (uint);
-
         }
     }
 }

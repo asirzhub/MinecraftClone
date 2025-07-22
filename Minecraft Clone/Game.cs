@@ -22,23 +22,22 @@ namespace Minecraft_Clone
         Texture blockTexture;
         SkyRender skyRender;
 
-        int seed = 69420;
-        float noiseScale = 0.02f;
-
         Camera camera;
 
-        // window-centered variables
-        private float time;
+        // window-specific variables
         private int width;
         private int height; 
         private double frameTimeAccumulator = 0.0;
         private int frameCount = 0;
 
         // world data
+        int seed = 69420;
+        float noiseScale = 0.02f;
         ChunkWorld world;
         private Task generationTask;
         private bool rebuildWorld = true;
 
+        // Game Constructor not much to say
         public Game(int width, int height, string title) : base(GameWindowSettings.Default, new NativeWindowSettings()
         {
             ClientSize = (width, height),
@@ -54,18 +53,18 @@ namespace Minecraft_Clone
             world = new ChunkWorld(seed, noiseScale);
         }
 
+        // first frame activities
         protected override void OnLoad()
         {
             base.OnLoad();
             GL.ClearColor(0.0f, 0.0f, 1.0f, 1.0f);
 
-            blockShader = new Shader("../../../Shaders/default.vert", "../../../Shaders/default.frag");
+            blockShader = new Shader("default.vert", "default.frag");
             blockShader.Bind();
             blockTexture = new Texture("textures.png");
             blockTexture.Bind();
 
             // some clean-up stuff
-            time = 0f;
             camera = new Camera(width, height, -20f * Vector3.UnitX);
             CursorState = CursorState.Grabbed;
 
@@ -80,7 +79,7 @@ namespace Minecraft_Clone
 
             generationTask = world.GenerateWorldAsync(
                 origin: new Vector3i(0, 1, 0),
-                size: new Vector3i(8, 3, 8),
+                size: new Vector3i(8, 4, 8),
                 seaLevel: 0,
                 dirtThickness: 3,
                 progress: progress,
@@ -95,12 +94,11 @@ namespace Minecraft_Clone
 
         }
 
-
+        // render stuff for each frame 
         protected override void OnRenderFrame(FrameEventArgs args)
         {
             base.OnRenderFrame(args);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-            time += (float)args.Time;
 
             Matrix4 model = Matrix4.Identity;
             Matrix4 view = camera.GetViewMatrix();
@@ -111,12 +109,11 @@ namespace Minecraft_Clone
 
             if(rebuildWorld && generationTask.IsCompleted)
             {
-                Console.WriteLine("this is the part where i'd upload to the gpu");
+                Console.WriteLine("Uploading data to GPU, will freeze for a second.");
                 rebuildWorld = false;
                 BuildAndUploadAllChunks();
             }
 
-            
 
             // Draw SOLID blocks
             if (solidIbo != null)
@@ -180,36 +177,6 @@ namespace Minecraft_Clone
                 GL.Disable(EnableCap.Blend);
                 GL.DepthMask(true);
             }
-            
-            float[] triangleVerts = {
-                 0.0f,  0.5f, 0f,  0f, 0f, 0f,0f,0f,
-                -0.5f, -0.5f, 0f,  0f, 1f, 0f,0f,0f,
-                 0.5f, -0.5f, 0f,  1f, 1f, 0f,0f,0f
-            };
-            uint[] triangleIndices = { 0, 1, 2 };
-            var triVao =  new VAO();
-            var triVbo = new VBO(triangleVerts);
-            var triIbo = new IBO(triangleIndices.ToList());
-
-            triVao.Bind();
-            triVbo.Bind();
-            triIbo.Bind();
-            blockShader.Bind();
-
-            Matrix4 model1 = Matrix4.Identity;
-            Matrix4 view1 = camera.GetViewMatrix();
-            Matrix4 projection1 = camera.GetProjectionMatrix();
-
-            blockShader.SetMatrix4("model", model1);
-            blockShader.SetMatrix4("view", view1);
-            blockShader.SetMatrix4("projection", projection1);
-
-            GL.DrawElements(
-                PrimitiveType.Triangles,
-                triIbo.length,
-                DrawElementsType.UnsignedInt,
-                0
-            );
             
             SwapBuffers();
 

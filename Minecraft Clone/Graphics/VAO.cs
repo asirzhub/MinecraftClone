@@ -12,12 +12,18 @@ namespace Minecraft_Clone.Graphics
         public void UnBind() => GL.BindVertexArray(0);
         public void Delete() => GL.DeleteVertexArray(ID);
 
+        // <summary>
+        /// Create and bind a VAO
+        /// </summary>
         public VAO()
         {
             ID = GL.GenVertexArray();
             Bind();
         }
 
+        // <summary>
+        /// Enable the vertex attrib, and fill it in with correct info.
+        /// </summary>
         public void LinkToVAO(int location, int size, VBO vbo, int stride, int offset)
         {
             Bind();

@@ -24,6 +24,9 @@ namespace Minecraft_Clone
         private bool firstMove = true;
         public Vector2 lastPos;
 
+        // <summary>
+        /// Create a camera with a specific width/height (for aspect ratio) and location in worldspace
+        /// </summary>
         public Camera(float width, float height, Vector3 position)
         {
             screenwidth = width;

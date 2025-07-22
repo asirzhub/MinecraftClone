@@ -24,6 +24,9 @@ namespace Minecraft_Clone.World
         EMERALDBLOCK
     }
 
+    // <summary>
+    /// BlockTypeData identifies different properties of blocks (texture, transparency, solidness, etc)
+    /// </summary>
     public class BlockTypeData
     {
         public bool IsSolid;
@@ -40,9 +43,11 @@ namespace Minecraft_Clone.World
             if (faceUVs.Length != 6) throw new ArgumentException("erm... what the scallop? (did not provide correct # of face UVs!)");
             FaceUVs = faceUVs;
         }
-
     }
 
+    // <summary>
+    /// BlockRegistry links the BlockType Enums (which blocks store) with their correct properties
+    /// </summary>
     public static class BlockRegistry
     {
         public static readonly Dictionary<BlockType, BlockTypeData> Types = new()

@@ -8,8 +8,10 @@ namespace Minecraft_Clone.Rendering
 {
     public static class ChunkMesher
     {
-        // input: a chunk, and the world chunks
-        // output: list of vertices that only form the outer shell of said chunk
+
+        // <summary>
+        /// Turn the chunk data into a VBO and IBO. This will remove interior faces of solid blocks, and keep only the surface of water.
+        /// </summary>
         public static void GenerateMesh(Chunk chunk, ChunkWorld world, out List<Vertex> vertices, out List<uint> indices,
             out List<Vertex> waterVertices, out List<uint> waterIndices)
 
@@ -22,6 +24,7 @@ namespace Minecraft_Clone.Rendering
             uint vertexOffset = 0;
             uint waterVertexOffset = 0;
 
+            // for every block in this chunk...
             for (int x = 0; x < Chunk.CHUNKSIZE; x++)
             {
                 for (int y = 0; y < Chunk.CHUNKSIZE; y++)
@@ -29,30 +32,25 @@ namespace Minecraft_Clone.Rendering
                     for (int z = 0; z < Chunk.CHUNKSIZE; z++)
                     {
                         Block block = chunk.GetBlock(x, y, z);
-                        if (block.isAir) continue;
+                        if (block.isAir) continue; // skip it if it's air
 
-                        // Calculate the block's position in the world
-                        Vector3 blockPos = new Vector3(
-                            x + (float)chunk.chunkXIndex * (float)Chunk.CHUNKSIZE,
-                            y + (float)chunk.chunkYIndex * (float)Chunk.CHUNKSIZE,
-                            z + (float)chunk.chunkZIndex * (float)Chunk.CHUNKSIZE
-                        ); // local chunk coord + chunk index
+                        // Calculate the block's position in the world (local chunk coord + chunk index
 
-                        bool[] visibility = new bool[6];
+                        bool[] visibility = new bool[6]; // track face visibilities.
 
-                        int gx = chunk.chunkXIndex * Chunk.CHUNKSIZE + x;
-                        int gy = chunk.chunkYIndex * Chunk.CHUNKSIZE + y;
-                        int gz = chunk.chunkZIndex * Chunk.CHUNKSIZE + z;
+                        int worldBlockPosX = chunk.chunkXIndex * Chunk.CHUNKSIZE + x;
+                        int worldBlockPosY = chunk.chunkYIndex * Chunk.CHUNKSIZE + y;
+                        int worldBlockPosZ = chunk.chunkZIndex * Chunk.CHUNKSIZE + z;
 
                         BlockType thisType = block.Type;
                         bool isWater = block.isWater;
 
-                        Block blockFront = GetBlockGlobal(world, gx, gy, gz + 1);
-                        Block blockBack = GetBlockGlobal(world, gx, gy, gz - 1);
-                        Block blockLeft = GetBlockGlobal(world, gx - 1, gy, gz);
-                        Block blockRight = GetBlockGlobal(world, gx + 1, gy, gz);
-                        Block blockTop = GetBlockGlobal(world, gx, gy + 1, gz);
-                        Block blockBottom = GetBlockGlobal(world, gx, gy - 1, gz);
+                        Block blockFront = GetBlockGlobal(world, worldBlockPosX, worldBlockPosY, worldBlockPosZ + 1);
+                        Block blockBack = GetBlockGlobal(world, worldBlockPosX, worldBlockPosY, worldBlockPosZ - 1);
+                        Block blockLeft = GetBlockGlobal(world, worldBlockPosX - 1, worldBlockPosY, worldBlockPosZ);
+                        Block blockRight = GetBlockGlobal(world, worldBlockPosX + 1, worldBlockPosY, worldBlockPosZ);
+                        Block blockTop = GetBlockGlobal(world, worldBlockPosX, worldBlockPosY + 1, worldBlockPosZ);
+                        Block blockBottom = GetBlockGlobal(world, worldBlockPosX, worldBlockPosY - 1, worldBlockPosZ);
 
                         if (isWater)
                         {
@@ -72,27 +70,32 @@ namespace Minecraft_Clone.Rendering
                             visibility[5] = blockBottom.isAir || blockBottom.isWater;  // BOTTOM
                         }
 
-
+                        // for each face of the block
                         foreach (CubeMesh.Face face in Enum.GetValues(typeof(CubeMesh.Face)))
                         {
                             int faceIndex = (int)face;
-                            if (!visibility[faceIndex]) continue;
+                            if (!visibility[faceIndex]) continue; // skip the vertices if its invisible
 
                             var faceVerts = CubeMesh.FaceVertices[face];
-                            for (int i = 0; i < 4; i++)
+
+                            for (int i = 0; i < 4; i++) // four corners
                             {
                                 var v = faceVerts[i];
                                 var faceUVs = BlockRegistry.Types[block.Type].FaceUVs;
                                 Vector2 tile = faceUVs[faceIndex];
-                                tile += v.TexCoord; // apply the corners
+                                tile += v.TexCoord; // apply the corner offset
                                 Vector2 uvCoord = tile / 8f; // scale down to uv coordinates
                                 uvCoord.Y = 1.0f - uvCoord.Y; // flip y because stbimagesharp trolls you hard
+
+                                Vector3 blockPos = (worldBlockPosX, worldBlockPosY, worldBlockPosZ);
+
                                 if (thisType == BlockType.WATER)
                                     waterVertices.Add(new Vertex(v.Position + blockPos, uvCoord, v.Normal));
                                 else
                                     vertices.Add(new Vertex(v.Position + blockPos, uvCoord, v.Normal));
                             }
 
+                            // add info to the correect indices too
                             if (thisType == BlockType.WATER) { 
                                 // Add indices (two triangles: 0-1-2 and 2-3-0)
                                 waterIndices.Add(waterVertexOffset + 0);
@@ -116,7 +119,6 @@ namespace Minecraft_Clone.Rendering
                                 indices.Add(vertexOffset + 0);
                                 vertexOffset += 4;
                             }
-
                         }
                     }
                 }
@@ -125,6 +127,9 @@ namespace Minecraft_Clone.Rendering
             //Console.WriteLine($"In chunk with index {chunk.ChunkPosition()} is Verts: {vertices.Count}, Indices: {indices.Count}");
         }
 
+        // <summary>
+        /// Get a block's global position from the whole world.
+        /// </summary>
         static Block GetBlockGlobal(ChunkWorld world, int globalX, int globalY, int globalZ)
         {
             Vector3i chunkIndex = new Vector3i(
