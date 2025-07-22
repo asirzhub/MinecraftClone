@@ -78,8 +78,8 @@ namespace Minecraft_Clone
             );
 
             generationTask = world.GenerateWorldAsync(
-                origin: new Vector3i(0, 1, 0),
-                size: new Vector3i(8, 4, 8),
+                origin: new Vector3i(0, 0, 0),
+                size: new Vector3i(12, 3, 12),
                 seaLevel: 0,
                 dirtThickness: 3,
                 progress: progress,

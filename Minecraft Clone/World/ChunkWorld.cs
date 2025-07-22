@@ -103,14 +103,13 @@ namespace Minecraft_Clone.World
                                     for (int blockZ = 0; blockZ < Chunk.CHUNKSIZE; blockZ++)
                                     {
                                         Vector3i blockWorldPos = _chunk.ChunkPosition() * Chunk.CHUNKSIZE + (blockX, blockY, blockZ);
-                                        int terrainHeight = (int)(3000 * ((noise.Noise(blockWorldPos.X * noiseScale, blockWorldPos.Z * noiseScale))
-                                            * (0.5 * noise.Noise(blockWorldPos.Z * noiseScale / 2, blockWorldPos.X * noiseScale / 2))
-                                            * (0.25 * noise.Noise(blockWorldPos.X * noiseScale / 4, blockWorldPos.Z * noiseScale / 4)))) - 50;
-                                        
+                                        int terrainHeight = (int)(Chunk.CHUNKSIZE*8*(noise.Noise(blockWorldPos.X * noiseScale/4, blockWorldPos.Z * noiseScale/4)-0.5));
                                         // depending on the block's y position, the height of the terrain, and sea level, assign the correct block
 
-                                        if (blockWorldPos.Y == terrainHeight)
+                                        if (blockWorldPos.Y == terrainHeight && blockWorldPos.Y >= seaLevel)
                                             _chunk.SetBlock(blockX, blockY, blockZ, BlockType.GRASS);
+                                        else if (blockWorldPos.Y == terrainHeight && blockWorldPos.Y < seaLevel)
+                                            _chunk.SetBlock(blockX, blockY, blockZ, BlockType.DIRT);
                                         else if (blockWorldPos.Y < terrainHeight - dirtThickness)
                                             _chunk.SetBlock(blockX, blockY, blockZ, BlockType.STONE);
                                         else if (blockWorldPos.Y < terrainHeight)
