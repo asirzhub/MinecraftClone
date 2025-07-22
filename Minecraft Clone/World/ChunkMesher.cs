@@ -10,12 +10,17 @@ namespace Minecraft_Clone.Rendering
     {
         // input: a chunk
         // output: list of vertices that only form the outer shell of said chunk
-        public static void GenerateMesh(Chunk chunk, ChunkWorld world, out List<Vertex> vertices, out List<uint> indices)
+        public static void GenerateMesh(Chunk chunk, ChunkWorld world, out List<Vertex> vertices, out List<uint> indices,
+            out List<Vertex> waterVertices, out List<uint> waterIndices)
 
         {
             vertices = new List<Vertex>();
             indices = new List<uint>();
+            waterVertices = new List<Vertex>();
+            waterIndices = new List<uint>();
+
             uint vertexOffset = 0;
+            uint waterVertexOffset = 0;
 
             for (int x = 0; x < Chunk.CHUNKSIZE; x++)
             {
@@ -83,19 +88,36 @@ namespace Minecraft_Clone.Rendering
                                 tile += v.TexCoord; // apply the corners
                                 Vector2 uvCoord = tile / 8f; // scale down to uv coordinates
                                 uvCoord.Y = 1.0f - uvCoord.Y; // flip y because stbimagesharp trolls you hard
-                                vertices.Add(new Vertex(v.Position + blockPos, uvCoord, v.Normal));
+                                if (thisType == BlockType.WATER)
+                                    waterVertices.Add(new Vertex(v.Position + blockPos, uvCoord, v.Normal));
+                                else
+                                    vertices.Add(new Vertex(v.Position + blockPos, uvCoord, v.Normal));
                             }
 
-                            // Add indices (two triangles: 0-1-2 and 2-3-0)
-                            indices.Add(vertexOffset + 0);
-                            indices.Add(vertexOffset + 1);
-                            indices.Add(vertexOffset + 2);
+                            if (thisType == BlockType.WATER) { 
+                                // Add indices (two triangles: 0-1-2 and 2-3-0)
+                                waterIndices.Add(waterVertexOffset + 0);
+                                waterIndices.Add(waterVertexOffset + 1);
+                                waterIndices.Add(waterVertexOffset + 2);
 
-                            indices.Add(vertexOffset + 2);
-                            indices.Add(vertexOffset + 3);
-                            indices.Add(vertexOffset + 0);
+                                waterIndices.Add(waterVertexOffset + 2);
+                                waterIndices.Add(waterVertexOffset + 3);
+                                waterIndices.Add(waterVertexOffset + 0);
+                                waterVertexOffset += 4;
+                            }
+                            else
+                            {
+                                // Add indices (two triangles: 0-1-2 and 2-3-0)
+                                indices.Add(vertexOffset + 0);
+                                indices.Add(vertexOffset + 1);
+                                indices.Add(vertexOffset + 2);
 
-                            vertexOffset += 4;
+                                indices.Add(vertexOffset + 2);
+                                indices.Add(vertexOffset + 3);
+                                indices.Add(vertexOffset + 0);
+                                vertexOffset += 4;
+                            }
+
                         }
                     }
                 }

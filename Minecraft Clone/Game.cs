@@ -13,8 +13,10 @@ namespace Minecraft_Clone
     class Game : GameWindow
     {
         // Render Pipeline
-        VAO vao;
-        IBO ibo;
+        VAO solidVao;
+        IBO solidIbo;
+        VAO waterVao;
+        IBO waterIbo;
         Shader blockShader;
         Texture blockTexture;
         SkyRender skyRender;
@@ -67,68 +69,94 @@ namespace Minecraft_Clone
             VSync = VSyncMode.On;
             GL.Enable(EnableCap.DepthTest);
 
+            const int floatsPerVertex = 3 + 2 + 3; // stride
             List<float> vDataList = new List<float>();
             List<uint> iDataList = new List<uint>();
+            uint baseVertex = (uint)(vDataList.Count / floatsPerVertex);
+
+            List<float> waterVDataList = new List<float>();
+            List<uint> waterIDataList = new List<uint>();
+            uint waterBaseVertex = 0;
+
+            // actually generate the world
+            world.GenerateWorldAbout((0, 1, 0), (8, 3, 8), 0, 3); // world.Chunks is now populated with terrain
 
             Console.WriteLine("Going to convert world chunks into vertices");
 
-            world.GenerateWorldAbout((0, 1, 0), (8, 3, 8), 0, 3);
-
-            const int floatsPerVertex = 3 + 2 + 3; // your stride
-            uint baseVertex = (uint)(vDataList.Count / floatsPerVertex);
             foreach (var chunk in world.chunks)
             {
-                ChunkMesher.GenerateMesh(chunk.Value, world, out var verts, out List<uint> indices);
-                var vertexList = FlattenVertices(verts);
-                // Append vertex data
-                vDataList.AddRange(vertexList);
+                ChunkMesher.GenerateMesh(
+                    chunk.Value,
+                    world,
+                    out var verts,
+                    out var indices,
+                    out var waterVerts,
+                    out var waterIndices
+                );
 
-                // Offset indices by how many verts we've already got
+                // SOLID
+                var vertexList = FlattenVertices(verts);
+                vDataList.AddRange(vertexList);
                 for (int i = 0; i < indices.Count; i++)
                     iDataList.Add(indices[i] + baseVertex);
-
-                // Advance baseVertex for the next chunk
                 baseVertex += (uint)verts.Count;
+
+                // WATER
+                var waterVertexList = FlattenVertices(waterVerts);
+                waterVDataList.AddRange(waterVertexList);
+                for (int i = 0; i < waterIndices.Count; i++)
+                    waterIDataList.Add(waterIndices[i] + waterBaseVertex);
+                waterBaseVertex += (uint)waterVerts.Count;
             }
 
             Console.WriteLine("Converted world chunks to vertices");
 
             // Optional: Convert to array if needed
             float[] finalVertexData = vDataList.ToArray();
+            float[] finalWaterVertexData = waterVDataList.ToArray();
 
             blockShader.Bind();
-            blockTexture.Bind();   
-            
-            var result = UploadMesh(finalVertexData, iDataList); // need a magic function...
-            vao = result.vao;
-            ibo = result.ibo;
+            blockTexture.Bind();
 
-            vao.Bind();
-            ibo.Bind();
+            // Solid
+            var result = UploadMesh(finalVertexData, iDataList);
+            solidVao = result.vao;
+            solidIbo = result.ibo;
+
+            // Water
+            var waterResult = UploadMesh(finalWaterVertexData, waterIDataList);
+            waterVao = waterResult.vao;
+            waterIbo = waterResult.ibo;
+
+            solidVao.Bind();
+            solidIbo.Bind();
 
             skyRender.InitSky();
+
+            // allow water and stuff to be transparent
+            GL.Enable(EnableCap.Blend);
+            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+
         }
 
-        
+
         protected override void OnRenderFrame(FrameEventArgs args)
         {
             base.OnRenderFrame(args);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             time += (float)args.Time;
 
-            // placeholder values?
             Matrix4 model = Matrix4.Identity;
             Matrix4 view = camera.GetViewMatrix();
             Matrix4 projection = camera.GetProjectionMatrix();
 
-            // draw the sky
+            // Render sky first (infinite background)
             skyRender.RenderSky(camera);
 
-            // draw the chunk
-
+            // Draw SOLID blocks
             blockShader.Bind();
-            vao.Bind();
-            ibo.Bind();
+            solidVao.Bind();
+            solidIbo.Bind();
 
             int modelLocation = GL.GetUniformLocation(blockShader.ID, "model");
             int viewLocation = GL.GetUniformLocation(blockShader.ID, "view");
@@ -138,42 +166,54 @@ namespace Minecraft_Clone
             GL.UniformMatrix4(viewLocation, true, ref view);
             GL.UniformMatrix4(projectionLocation, true, ref projection);
 
+            GL.DepthMask(true);             // enable depth write
+            GL.Disable(EnableCap.Blend);    // disable blending
             GL.DrawElements(
                 PrimitiveType.Triangles,
-                ibo.length,
+                solidIbo.length,
                 DrawElementsType.UnsignedInt,
                 0
             );
 
+            // draw WATER blocks (transparent pass)
+            waterVao.Bind();
+            waterIbo.Bind();
+
+            GL.DepthMask(false);            // water wont write to depth buffer
+            GL.Enable(EnableCap.Blend);     // enable alpha blending
+            GL.BlendFunc(
+                BlendingFactor.SrcAlpha,
+                BlendingFactor.OneMinusSrcAlpha
+            );
+
+            GL.UniformMatrix4(modelLocation, true, ref model); // reuse same view/proj
+            GL.UniformMatrix4(viewLocation, true, ref view);
+            GL.UniformMatrix4(projectionLocation, true, ref projection);
+
+            GL.DrawElements(
+                PrimitiveType.Triangles,
+                waterIbo.length,
+                DrawElementsType.UnsignedInt,
+                0
+            );
+
+            GL.Disable(EnableCap.Blend);
+            GL.DepthMask(true);
+
             SwapBuffers();
 
+            // track fps
             frameTimeAccumulator += args.Time;
             frameCount++;
 
             if (frameTimeAccumulator >= 0.25)
             {
-                Title = $"game - FPS: {frameCount*4}";
+                Title = $"game - FPS: {frameCount * 4}";
                 frameTimeAccumulator = 0.0;
                 frameCount = 0;
             }
-
-            // press escape to close this window or release mouse
-            if (KeyboardState.IsKeyPressed(Keys.Escape))
-            {
-                if(CursorState == CursorState.Grabbed)
-                {
-                    CursorState = CursorState.Normal;
-                }
-                else
-                {
-                    Close();
-                }
-            }
-            if (MouseState.IsButtonPressed(MouseButton.Left))
-            {
-                CursorState = CursorState.Normal;
-            }
         }
+
 
         public static (VAO vao, IBO ibo) UploadMesh(float[] vData, List<uint> indices)
         {
@@ -217,14 +257,31 @@ namespace Minecraft_Clone
 
             base.OnUpdateFrame(args);
             camera.Update(input, mouse, args);
+
+            // press escape to close this window or release mouse
+            if (KeyboardState.IsKeyPressed(Keys.Escape))
+            {
+                if (CursorState == CursorState.Grabbed)
+                {
+                    CursorState = CursorState.Normal;
+                }
+                else
+                {
+                    Close();
+                }
+            }
+            if (MouseState.IsButtonPressed(MouseButton.Left))
+            {
+                CursorState = CursorState.Grabbed;
+            }
         }
 
         protected override void OnUnload()
         {
             base.OnUnload();
 
-            vao.Delete();
-            ibo.Delete();
+            solidVao.Delete();
+            solidIbo.Delete();
             blockShader.Dispose();
             blockTexture.Delete();
             skyRender.Dispose();

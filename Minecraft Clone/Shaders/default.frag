@@ -1,15 +1,17 @@
-#version 330
-
-out vec4 outputColor;
+#version 330 core
 
 in vec2 texCoord;
-in vec3 vNormal;
-uniform sampler2D texture0;
+in vec3 normal;
 
-uniform mat4 model;
+uniform sampler2D texture0;
 
 void main()
 {
-    vec3 lightDirection = vec3(1.0, 1.0, 1.0);
-    outputColor = texture(texture0, texCoord) * (0.8 + 0.2*dot(vNormal, lightDirection));
+    vec4 texColor = texture(texture0, texCoord);
+    
+    // Optional: discard fully transparent pixels
+    if (texColor.a < 0.1)
+        discard;
+
+    gl_FragColor = texColor;
 }
