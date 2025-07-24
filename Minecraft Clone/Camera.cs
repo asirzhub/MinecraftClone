@@ -8,8 +8,8 @@ namespace Minecraft_Clone
     {
         // camera properties
         private float speed = 5f;
-        private float screenwidth;
-        private float screenheight;
+        public float screenwidth;
+        public float screenheight;
         private float sensitivity = 10f;
 
         public Vector3 position;
@@ -17,6 +17,7 @@ namespace Minecraft_Clone
         public Vector3 right = Vector3.UnitX;
         public Vector3 up = Vector3.UnitY; // we define Y as going up, not Z. but you can.
         public Vector3 front = -Vector3.UnitZ;
+        public float fovY = 60;
 
         private float pitch;
         private float yaw;
@@ -35,7 +36,7 @@ namespace Minecraft_Clone
         }
 
         public Matrix4 GetViewMatrix() => Matrix4.LookAt(position, position + front, up);
-        public Matrix4 GetProjectionMatrix() => Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(50f), screenwidth / screenheight, 0.01f, 2000f);
+        public Matrix4 GetProjectionMatrix() => Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(fovY), screenwidth / screenheight, 0.01f, 2000f);
 
         private void UpdateVectors()
         { // copied straight out of the tutorial lol

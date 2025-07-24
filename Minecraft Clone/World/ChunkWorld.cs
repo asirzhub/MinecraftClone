@@ -11,6 +11,8 @@ namespace Minecraft_Clone.World
         float noiseScale;
         PerlinNoise noise; // The base for the world gen
 
+        Random random;
+
         // <summary>
         /// Create a world using a seed and noise Scale
         /// </summary>
@@ -19,7 +21,12 @@ namespace Minecraft_Clone.World
             this.seed = seed;
             noise = new PerlinNoise(seed);
             this.noiseScale = noiseScale;
+            random = new Random(seed);
         }
+
+        public int seaLevel;
+        public int dirtThickness;
+        public int sandFalloff;
 
         // <summary>
         /// Instance a chunk at the designated location, and add it to the world's chunks.
@@ -76,16 +83,20 @@ namespace Minecraft_Clone.World
             Vector3i size,
             int seaLevel,
             int dirtThickness,
+            int sandFallof,
             IProgress<float> progress = null,
             CancellationToken token = default
         )
         {
+            this.seaLevel = seaLevel;
+            this.dirtThickness = dirtThickness;
+            this.sandFalloff = sandFallof;
             // Run the CPU-heavy loop on a ThreadPool thread
             await Task.Run(() =>
             {
                 int total = (2 * size.X) * (2 * size.Y) * (2 * size.Z);
                 int done = 0;
-
+                int r;
                 // six nest loops!
                 for (int chunkX = origin.X - size.X; chunkX < origin.X + size.X; chunkX++)
                 {
@@ -103,19 +114,55 @@ namespace Minecraft_Clone.World
                                     for (int blockZ = 0; blockZ < Chunk.CHUNKSIZE; blockZ++)
                                     {
                                         Vector3i blockWorldPos = _chunk.ChunkPosition() * Chunk.CHUNKSIZE + (blockX, blockY, blockZ);
-                                        int terrainHeight = (int)(Chunk.CHUNKSIZE*8*(noise.Noise(blockWorldPos.X * noiseScale/4, blockWorldPos.Z * noiseScale/4)-0.5));
-                                        // depending on the block's y position, the height of the terrain, and sea level, assign the correct block
+                                        int terrainHeight = CalculateHeight(blockWorldPos.X, blockWorldPos.Z, out bool mountain);
 
-                                        if (blockWorldPos.Y == terrainHeight && blockWorldPos.Y >= seaLevel)
-                                            _chunk.SetBlock(blockX, blockY, blockZ, BlockType.GRASS);
-                                        else if (blockWorldPos.Y == terrainHeight && blockWorldPos.Y < seaLevel)
-                                            _chunk.SetBlock(blockX, blockY, blockZ, BlockType.DIRT);
-                                        else if (blockWorldPos.Y < terrainHeight - dirtThickness)
-                                            _chunk.SetBlock(blockX, blockY, blockZ, BlockType.STONE);
-                                        else if (blockWorldPos.Y < terrainHeight)
-                                            _chunk.SetBlock(blockX, blockY, blockZ, BlockType.DIRT);
-                                        else if (terrainHeight < seaLevel && blockWorldPos.Y <= seaLevel && blockWorldPos.Y > terrainHeight)
-                                            _chunk.SetBlock(blockX, blockY, blockZ, BlockType.WATER);
+                                        // depending on the block's y position, the height of the terrain, and sea level, assign the correct block
+                                        BlockType blockType = BlockType.AIR;
+
+                                        bool isSurface = blockWorldPos.Y == terrainHeight;
+                                        bool isBelowSurface = blockWorldPos.Y < terrainHeight;
+                                        bool isFarBelowSurface = blockWorldPos.Y < terrainHeight - dirtThickness;
+                                        bool isUnderwater = terrainHeight < seaLevel && blockWorldPos.Y <= seaLevel && blockWorldPos.Y > terrainHeight;
+
+                                        if (isSurface)
+                                        {
+                                            if (blockWorldPos.Y > seaLevel)
+                                            {
+                                                blockType = mountain ? BlockType.STONE : BlockType.GRASS;
+                                            }
+                                            else if (blockWorldPos.Y == seaLevel)
+                                            {
+                                                blockType = BlockType.SAND;
+                                            }
+                                            else if (blockWorldPos.Y > seaLevel - 10)
+                                            {
+                                                int R = (int)(random.NextDouble() * 10);
+                                                blockType = (seaLevel - blockWorldPos.Y < R) ? BlockType.SAND : BlockType.DIRT;
+                                            }
+                                            else
+                                            {
+                                                blockType = mountain ? BlockType.STONE : BlockType.DIRT;
+                                            }
+                                        }
+                                        else if (isFarBelowSurface)
+                                        {
+                                            blockType = BlockType.STONE;
+                                        }
+                                        else if (isBelowSurface)
+                                        {
+                                            blockType = mountain ? BlockType.STONE : BlockType.DIRT;
+                                        }
+                                        else if (isUnderwater)
+                                        {
+                                            blockType = BlockType.WATER;
+                                        }
+
+                                        // Finally set the block if a type was selected
+                                        if (blockType != BlockType.AIR)
+                                        {
+                                            _chunk.SetBlock(blockX, blockY, blockZ, blockType);
+                                        }
+
                                     }
                                 }
                             }
@@ -128,5 +175,30 @@ namespace Minecraft_Clone.World
             }, token);
             Console.WriteLine("worldgen completed");
         }
+
+        public int CalculateHeight(int x, int z, out bool mountain)
+        {
+            float height = (5f * (noise.Noise(x * noiseScale / 4, z * noiseScale / 4) - 0.5f));
+            float m = height;
+            height += (4f * (noise.Noise(x * noiseScale / 3, z * noiseScale / 3) - 0.5f));
+            height += (4f * (noise.Noise(x * noiseScale / 5, z * noiseScale / 5) - 0.5f));
+
+            mountain = false;
+            if (m > 0.7f)
+            {
+                height *= (height - 0.7f);
+                mountain = true;
+            }
+
+            height *= Chunk.CHUNKSIZE;
+            height -= 1;
+            if (height < 0)
+            {
+                height = -MathF.Pow(-height, 0.8f);
+            }
+            return (int)height;
+        }
+
+
     }
 }
