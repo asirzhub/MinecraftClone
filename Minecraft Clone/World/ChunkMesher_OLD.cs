@@ -6,13 +6,13 @@ using Minecraft_Clone.World;
 
 namespace Minecraft_Clone.Rendering
 {
-    public static class ChunkMesher
+    public static class ChunkMesher_OLD
     {
 
         // <summary>
         /// Turn the chunk data into a VBO and IBO. This will remove interior faces of solid blocks, and keep only the surface of water.
         /// </summary>
-        public static void GenerateMesh(Chunk chunk, ChunkWorld world, out List<Vertex> vertices, out List<uint> indices,
+        public static void GenerateMesh_OLD(Chunk chunk, ChunkWorld world, out List<Vertex> vertices, out List<uint> indices,
             out List<Vertex> waterVertices, out List<uint> waterIndices)
 
         {
@@ -45,12 +45,12 @@ namespace Minecraft_Clone.Rendering
                         BlockType thisType = block.Type;
                         bool isWater = block.isWater;
 
-                        Block blockFront = GetBlockGlobal(world, worldBlockPosX, worldBlockPosY, worldBlockPosZ + 1);
-                        Block blockBack = GetBlockGlobal(world, worldBlockPosX, worldBlockPosY, worldBlockPosZ - 1);
-                        Block blockLeft = GetBlockGlobal(world, worldBlockPosX - 1, worldBlockPosY, worldBlockPosZ);
-                        Block blockRight = GetBlockGlobal(world, worldBlockPosX + 1, worldBlockPosY, worldBlockPosZ);
-                        Block blockTop = GetBlockGlobal(world, worldBlockPosX, worldBlockPosY + 1, worldBlockPosZ);
-                        Block blockBottom = GetBlockGlobal(world, worldBlockPosX, worldBlockPosY - 1, worldBlockPosZ);
+                        Block blockFront = GetBlockGlobal_OLD(world, worldBlockPosX, worldBlockPosY, worldBlockPosZ + 1);
+                        Block blockBack = GetBlockGlobal_OLD(world, worldBlockPosX, worldBlockPosY, worldBlockPosZ - 1);
+                        Block blockLeft = GetBlockGlobal_OLD(world, worldBlockPosX - 1, worldBlockPosY, worldBlockPosZ);
+                        Block blockRight = GetBlockGlobal_OLD(world, worldBlockPosX + 1, worldBlockPosY, worldBlockPosZ);
+                        Block blockTop = GetBlockGlobal_OLD(world, worldBlockPosX, worldBlockPosY + 1, worldBlockPosZ);
+                        Block blockBottom = GetBlockGlobal_OLD(world, worldBlockPosX, worldBlockPosY - 1, worldBlockPosZ);
 
                         if (isWater)
                         {
@@ -106,10 +106,13 @@ namespace Minecraft_Clone.Rendering
                                 Vector3 tangentB = Vector3.Cross(normal, tangentA);
 
                                 // Count neighbors (ambient occlusion)
-                                int occlusion = CountOccludingNeighbors(world, cornerPos, tangentA, tangentB);
+                                int occlusion = CountOccludingNeighbors_OLD(world, cornerPos, tangentA, tangentB);
 
                                 // Final brightness: range 100 → 25
-                                float brightness = 1.0f - 0.15f * occlusion; 
+                                float brightness = 1.0f - 0.15f * occlusion;
+
+                                if (worldBlockPosY < world.seaLevel)
+                                    brightness += (world.seaLevel + worldBlockPosY) * 0.05f;
 
                                 if (thisType == BlockType.WATER)
                                     waterVertices.Add(new Vertex(v.Position + blockPos, uvCoord, v.Normal, brightness));
@@ -152,7 +155,7 @@ namespace Minecraft_Clone.Rendering
         // <summary>
         /// Get a block's global position from the whole world.
         /// </summary>
-        static Block GetBlockGlobal(ChunkWorld world, int globalX, int globalY, int globalZ)
+        static Block GetBlockGlobal_OLD(ChunkWorld world, int globalX, int globalY, int globalZ)
         {
             Vector3i chunkIndex = new Vector3i(
                 globalX / Chunk.CHUNKSIZE,
@@ -173,7 +176,7 @@ namespace Minecraft_Clone.Rendering
             return neighborChunk.GetBlock(lx, ly, lz);
         }
 
-        static int CountOccludingNeighbors(ChunkWorld world, Vector3i pos, Vector3 offsetA, Vector3 offsetB)
+        static int CountOccludingNeighbors_OLD(ChunkWorld world, Vector3i pos, Vector3 offsetA, Vector3 offsetB)
         {
             int count = 0;
 
@@ -181,9 +184,9 @@ namespace Minecraft_Clone.Rendering
             Vector3i up = pos + new Vector3i((int)offsetB.X, (int)offsetB.Y, (int)offsetB.Z);
             Vector3i corner = pos + new Vector3i((int)(offsetA.X + offsetB.X), (int)(offsetA.Y + offsetB.Y), (int)(offsetA.Z + offsetB.Z));
 
-            if (!GetBlockGlobal(world, side.X, side.Y, side.Z).isAir) count++;
-            if (!GetBlockGlobal(world, up.X, up.Y, up.Z).isAir) count++;
-            if (!GetBlockGlobal(world, corner.X, corner.Y, corner.Z).isAir) count++;
+            if (!GetBlockGlobal_OLD(world, side.X, side.Y, side.Z).isAir) count++;
+            if (!GetBlockGlobal_OLD(world, up.X, up.Y, up.Z).isAir) count++;
+            if (!GetBlockGlobal_OLD(world, corner.X, corner.Y, corner.Z).isAir) count++;
 
             return count;
         }

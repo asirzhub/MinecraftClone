@@ -18,6 +18,7 @@ void main(void)
 {
     texCoord = aTexCoord;
     brightness = aBrightness;
+
     vNormal = (vec4(aNormal, 1) * model).xyz; // apply the transformation to the vertex normals
     gl_Position = vec4(aPosition, 1.0) * model * view * projection;
 }

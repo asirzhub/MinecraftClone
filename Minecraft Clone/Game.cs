@@ -33,11 +33,12 @@ namespace Minecraft_Clone
         private int frameCount = 0;
 
         // world data
-        int seed = 69420;
-        float noiseScale = 0.02f;
+        int seed = 46    ;
+        float noiseScale = 0.01f;
         ChunkWorld world;
         private Task generationTask;
         private bool rebuildWorld = true;
+
 
         // Game Constructor not much to say
         public Game(int width, int height, string title) : base(GameWindowSettings.Default, new NativeWindowSettings()
@@ -51,7 +52,7 @@ namespace Minecraft_Clone
         {
             this.width = width;
             this.height = height;
-            skyRender = new SkyRender();
+            skyRender = new SkyRender( (0f, 1f, -1f));
             world = new ChunkWorld(seed, noiseScale);
         }
 
@@ -70,7 +71,7 @@ namespace Minecraft_Clone
             camera = new Camera(width, height, -20f * Vector3.UnitX);
             CursorState = CursorState.Grabbed;
 
-            //VSync = VSyncMode.On;
+            VSync = VSyncMode.On;
             GL.Enable(EnableCap.DepthTest);
 
             var cts = new CancellationTokenSource();
@@ -80,10 +81,11 @@ namespace Minecraft_Clone
             );
 
             generationTask = world.GenerateWorldAsync(
-                origin: new Vector3i(0, 0, 0),
+                origin: new Vector3i(0, 1, 0),
                 size: new Vector3i(5, 3, 5),
                 seaLevel: 0,
                 dirtThickness: 3,
+                sandFallof:10,
                 progress: progress,
                 token: cts.Token
             ); // start the world gen, it'll be rendered later
@@ -107,6 +109,7 @@ namespace Minecraft_Clone
             Matrix4 projection = camera.GetProjectionMatrix();
 
             // Render sky first
+            skyRender.SetSunDirection(Vector3.Transform(skyRender.sunDirection, new Quaternion((float)args.Time/5f, 0f, 0f)));
             skyRender.RenderSky(camera);
 
             if(rebuildWorld && generationTask.IsCompleted)
@@ -165,6 +168,8 @@ namespace Minecraft_Clone
                 blockShader.SetMatrix4("model", model);
                 blockShader.SetMatrix4("view", view);
                 blockShader.SetMatrix4("projection", projection);
+                blockShader.SetFloat("u_brightnessAdjust", (skyRender.sunDirection.Y-1)/2);
+                Console.WriteLine("bright adjust:" +(skyRender.sunDirection.Y - 1) / 2);
 
                 GL.DrawElements(
                     PrimitiveType.Triangles,
@@ -207,7 +212,7 @@ namespace Minecraft_Clone
             uint baseVertex = 0, waterBaseVertex = 0;
             foreach (var chunk in world.chunks)
             {
-                ChunkMesher.GenerateMesh(
+                ChunkMesher_OLD.GenerateMesh_OLD(
                     chunk.Value,
                     world,
                     out var verts,

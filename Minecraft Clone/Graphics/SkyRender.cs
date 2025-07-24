@@ -9,14 +9,18 @@ namespace Minecraft_Clone.Graphics
         public int skyVBO;
         Shader skyShader;
 
+        public Vector3 sunDirection;
+
         // <summary>
         /// A Triangle is rendered over the entire screen, coloured to look like the Sky. Stores its own vao/vbo.
         /// </summary>
-        public SkyRender()
+        public SkyRender(Vector3 sunDirection)
         {
             skyVAO = GL.GenVertexArray();
             skyVBO = GL.GenBuffer();
             skyShader = new Shader("sky.vert", "sky.frag");
+
+            this.sunDirection = sunDirection.Normalized();
         }
 
         // <summary>
@@ -39,23 +43,19 @@ namespace Minecraft_Clone.Graphics
         }
 
         // <summary>
-        /// Binds the correct shader and renders the sky based on the direction the camera faces. TODO: Optimize/simplify.
-        /// </summary>
+        // Renders the sky for the given camera
+        // </summary>
         public void RenderSky(Camera camera)
         {
             skyShader.Bind();
             GL.Disable(EnableCap.DepthTest);
 
-            // Compute inverse view-projection matrix
-            Matrix4 inverseVP = Matrix4.Invert(camera.GetProjectionMatrix() * camera.GetViewMatrix());
-            int loc = GL.GetUniformLocation(skyShader.ID, "inverseVP");
-            GL.UniformMatrix4(loc, true, ref inverseVP);
-
-            Matrix4 view = camera.GetViewMatrix();
-            Vector3 forward = new Vector3(-view.M13, -view.M23, -view.M33);
-            float cameraViewY = forward.Y; // y-component of camera's look direction
-
-            skyShader.SetFloat("cameraViewY", cameraViewY);
+            skyShader.SetVector3("cameraRight", camera.right);
+            skyShader.SetVector3("cameraUp", camera.up);
+            skyShader.SetVector3("cameraForward", camera.front);
+            skyShader.SetVector3("sunDir", sunDirection);
+            skyShader.SetFloat("fovY", camera.fovY);
+            skyShader.SetFloat("aspectRatio", camera.screenwidth / camera.screenheight);
 
             // Draw fullscreen triangle
             GL.BindVertexArray(skyVAO);
@@ -64,6 +64,11 @@ namespace Minecraft_Clone.Graphics
             GL.Enable(EnableCap.DepthTest); // Re-enable for world rendering
             skyShader.UnBind();
             GL.BindVertexArray(0);
+        }
+
+        public void SetSunDirection(Vector3 direction)
+        {
+            this.sunDirection = direction.Normalized();
         }
 
         public void Dispose()
