@@ -3,7 +3,7 @@ using OpenTK.Mathematics;
 
 namespace Minecraft_Clone.Graphics
 {
-    internal class Shader
+    public class Shader
     {
         public int ID;
         string pathPrefix = "../../../Shaders/";

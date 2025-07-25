@@ -93,5 +93,10 @@ namespace Minecraft_Clone
             this.screenwidth = width;
             this.screenheight = height;
         }
+
+        public float AspectRatio()
+        {
+            return screenwidth / screenheight;
+        }
     }
 }

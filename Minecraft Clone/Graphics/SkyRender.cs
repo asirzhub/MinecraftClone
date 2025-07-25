@@ -26,7 +26,7 @@ namespace Minecraft_Clone.Graphics
         // <summary>
         /// Initialize the sky vao and vbo, and binds them.
         /// </summary>
-        public void InitSky()
+        public void InitializeSky()
         {
             float[] skyVerts = {
                 -1f, -1f,

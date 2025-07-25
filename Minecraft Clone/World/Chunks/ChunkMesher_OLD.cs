@@ -4,8 +4,9 @@ using OpenTK.Mathematics;
 using static Minecraft_Clone.Graphics.VBO;
 using Minecraft_Clone.World;
 
-namespace Minecraft_Clone.Rendering
+namespace Minecraft_Clone.World.Chunks
 {
+    /**
     public static class ChunkMesher_OLD
     {
 
@@ -25,11 +26,11 @@ namespace Minecraft_Clone.Rendering
             uint waterVertexOffset = 0;
 
             // for every block in this chunk...
-            for (int x = 0; x < Chunk.CHUNKSIZE; x++)
+            for (int x = 0; x < Chunk.SIZE; x++)
             {
-                for (int y = 0; y < Chunk.CHUNKSIZE; y++)
+                for (int y = 0; y < Chunk.SIZE; y++)
                 {
-                    for (int z = 0; z < Chunk.CHUNKSIZE; z++)
+                    for (int z = 0; z < Chunk.SIZE; z++)
                     {
                         Block block = chunk.GetBlock(x, y, z);
                         if (block.isAir) continue; // skip it if it's air
@@ -38,9 +39,9 @@ namespace Minecraft_Clone.Rendering
 
                         bool[] visibility = new bool[6]; // track face visibilities.
 
-                        int worldBlockPosX = chunk.chunkXIndex * Chunk.CHUNKSIZE + x;
-                        int worldBlockPosY = chunk.chunkYIndex * Chunk.CHUNKSIZE + y;
-                        int worldBlockPosZ = chunk.chunkZIndex * Chunk.CHUNKSIZE + z;
+                        int worldBlockPosX = chunk.chunkXIndex * Chunk.SIZE + x;
+                        int worldBlockPosY = chunk.chunkYIndex * Chunk.SIZE + y;
+                        int worldBlockPosZ = chunk.chunkZIndex * Chunk.SIZE + z;
 
                         BlockType thisType = block.Type;
                         bool isWater = block.isWater;
@@ -158,20 +159,20 @@ namespace Minecraft_Clone.Rendering
         static Block GetBlockGlobal_OLD(ChunkWorld world, int globalX, int globalY, int globalZ)
         {
             Vector3i chunkIndex = new Vector3i(
-                globalX / Chunk.CHUNKSIZE,
-                globalY / Chunk.CHUNKSIZE,
-                globalZ / Chunk.CHUNKSIZE
+                globalX / Chunk.SIZE,
+                globalY / Chunk.SIZE,
+                globalZ / Chunk.SIZE
             );
 
-            if (globalX < 0 && globalX % Chunk.CHUNKSIZE != 0) chunkIndex.X--;
-            if (globalY < 0 && globalY % Chunk.CHUNKSIZE != 0) chunkIndex.Y--;
-            if (globalZ < 0 && globalZ % Chunk.CHUNKSIZE != 0) chunkIndex.Z--;
+            if (globalX < 0 && globalX % Chunk.SIZE != 0) chunkIndex.X--;
+            if (globalY < 0 && globalY % Chunk.SIZE != 0) chunkIndex.Y--;
+            if (globalZ < 0 && globalZ % Chunk.SIZE != 0) chunkIndex.Z--;
 
             if (!world.chunks.TryGetValue(chunkIndex, out var neighborChunk)) return new Block(BlockType.AIR);
 
-            int lx = (globalX % Chunk.CHUNKSIZE + Chunk.CHUNKSIZE) % Chunk.CHUNKSIZE;
-            int ly = (globalY % Chunk.CHUNKSIZE + Chunk.CHUNKSIZE) % Chunk.CHUNKSIZE;
-            int lz = (globalZ % Chunk.CHUNKSIZE + Chunk.CHUNKSIZE) % Chunk.CHUNKSIZE;
+            int lx = (globalX % Chunk.SIZE + Chunk.SIZE) % Chunk.SIZE;
+            int ly = (globalY % Chunk.SIZE + Chunk.SIZE) % Chunk.SIZE;
+            int lz = (globalZ % Chunk.SIZE + Chunk.SIZE) % Chunk.SIZE;
 
             return neighborChunk.GetBlock(lx, ly, lz);
         }
@@ -191,5 +192,5 @@ namespace Minecraft_Clone.Rendering
             return count;
         }
 
-    }
+    }*/
 }

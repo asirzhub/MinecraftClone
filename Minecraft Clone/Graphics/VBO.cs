@@ -11,7 +11,7 @@ namespace Minecraft_Clone.Graphics
 
         public void Bind() => GL.BindBuffer(BufferTarget.ArrayBuffer, ID);
         public void UnBind() => GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
-        public void Delete() => GL.DeleteBuffer(ID);
+        public void Dispose() => GL.DeleteBuffer(ID);
 
 
         // human-readable vertex info
