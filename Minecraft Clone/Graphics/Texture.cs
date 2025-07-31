@@ -3,7 +3,7 @@ using StbImageSharp;
 
 namespace Minecraft_Clone.Graphics
 {
-    internal class Texture
+    public class Texture
     {
         public int ID;
         string pathPrefix = "../../../Textures/";

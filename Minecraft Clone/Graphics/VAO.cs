@@ -10,7 +10,7 @@ namespace Minecraft_Clone.Graphics
 
         public void Bind() => GL.BindVertexArray(ID);
         public void UnBind() => GL.BindVertexArray(0);
-        public void Delete() => GL.DeleteVertexArray(ID);
+        public void Dispose() => GL.DeleteVertexArray(ID);
 
         // <summary>
         /// Create and bind a VAO

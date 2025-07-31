@@ -4,14 +4,14 @@ using OpenTK.Graphics.OpenGL4;
 
 namespace Minecraft_Clone.Graphics
 {
-    internal class IBO
+    public class IBO
     {
         public int ID;
         public int length;
 
         public void Bind() => GL.BindBuffer(BufferTarget.ElementArrayBuffer, ID);
         public void UnBind() => GL.BindBuffer(BufferTarget.ElementArrayBuffer, 0);
-        public void Delete() => GL.DeleteBuffer(ID);
+        public void Dispose() => GL.DeleteBuffer(ID);
 
         /// <summary>
         /// Generates, binds, and uploads index buffer object data in one go.
