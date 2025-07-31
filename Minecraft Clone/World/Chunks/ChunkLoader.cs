@@ -11,6 +11,7 @@ namespace Minecraft_Clone.World.Chunks
     {
         //private Vector3 cameraPosition;
         private int loadRadius = 8;
+        Dictionary<Vector3i, bool> chunkLoadList = new Dictionary<Vector3i, bool>();
 
         public ChunkLoader()
         {
@@ -26,35 +27,46 @@ namespace Minecraft_Clone.World.Chunks
             // check if the chunk is even in the direction we are facing (dot product)
             // if its less than a threshold, hide it
 
-            Dictionary<Vector3i, bool> chunkLoadList = new Dictionary<Vector3i, bool>();
             int visible = 0;
             Vector3 viewDir = camera.front.Normalized();
 
-            for (int x = -radius;  x <= radius; x++)
+            for (int x = currentChunkIndex.X - radius;  x <= currentChunkIndex.X + radius; x++)
             {
-                for(int y = - radius; y <= radius; y++)
+                for(int y = currentChunkIndex .Y - radius; y <= currentChunkIndex.Y + radius; y++)
                 {
-                    for(int z = - radius; z <= radius; z++)
+                    for(int z = currentChunkIndex.Z - radius; z <= currentChunkIndex.Z + radius; z++)
                     {
-                        // skip the xyz if it is behind the plane (cuts loop time in half... hopefully?)
-                        // for every chunk that is touching the cone, mark that index as true
-                        Vector3 chunkDir = ((Vector3)(x, y, z) - (Vector3)currentChunkIndex).Normalized();
-                        float dot = Vector3.Dot((Vector3)viewDir, (Vector3)chunkDir);
-                        if (dot < 0)
-                            chunkLoadList.Add((x, y, z), false);
-                        else
+                        if (x == currentChunkIndex.X && y == currentChunkIndex.Y && z == currentChunkIndex.Z)
                         {
-                            Vector3i offset = new Vector3i(x, y, z);
-                            Vector3i chunkIndex = currentChunkIndex + offset;
-                            chunkLoadList.Add(chunkIndex, true);
-
+                            SetChunkVisibility(currentChunkIndex, true);
                             visible++;
+                            continue;
                         }
+
+                        Vector3i targetChunkIndex = (x, y, z);
+
+                        SetChunkVisibility(targetChunkIndex, true);
+
+                        visible++;
+
                     }
                 }
             }
-            Console.WriteLine($"Total Chunks {chunkLoadList.Count}: visibile is {visible} ({visible/chunkLoadList.Count * 100}%)");
+            Console.WriteLine($"Total Chunks {chunkLoadList.Count}: visibile is {visible} ({(float)visible/(float)chunkLoadList.Count}%)");
             return chunkLoadList;
         }
+
+        public void SetChunkVisibility(Vector3i index, bool visible)
+        {
+            if (chunkLoadList.ContainsKey(index))
+            {
+                chunkLoadList[index] = visible;
+            }
+            else
+            {
+                chunkLoadList.Add(index, visible);
+            }
+        }
+
     }
 }

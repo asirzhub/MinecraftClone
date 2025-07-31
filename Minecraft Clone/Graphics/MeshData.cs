@@ -12,11 +12,16 @@ namespace Minecraft_Clone.Graphics
         public VAO vao;
         public VBO vbo;
         public IBO ibo;
+
+        public MeshData()
+        {
+        }
+
         public void Upload()
         {
-            vao = new VAO();
-            vbo = new VBO(VertexUtils.FlattenVertices(Vertices).ToArray());
-            ibo = new IBO(Indices);
+            if (vao == null) { vao = new VAO(); }
+            if (vbo == null) { vbo = new VBO(VertexUtils.FlattenVertices(Vertices).ToArray()); }
+            if (ibo == null) { ibo = new IBO(Indices); }
 
             int stride = Marshal.SizeOf<Vertex>();
             int floatSize = sizeof(float);
@@ -44,9 +49,15 @@ namespace Minecraft_Clone.Graphics
         }
         public void Dispose()
         {
+            vao?.UnBind();
             vao?.Dispose();
+            vbo?.UnBind();
             vbo?.Dispose();
+            ibo?.UnBind();
             ibo?.Dispose();
+
+            Vertices.Clear();
+            Indices.Clear();
         }
     }
 }

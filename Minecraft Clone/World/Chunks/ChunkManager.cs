@@ -31,23 +31,32 @@ namespace Minecraft_Clone.World.Chunks
             currentChunkIndex = ToChunkIndex(camera.position);
 
             // Loader decides which chunks to load/unload
-            var loadList = loader.GetChunksToLoad(currentChunkIndex, camera, radius:1);
+            var loadList = loader.GetChunksToLoad(currentChunkIndex, camera, radius:3);
 
-            int chunksGeneratedThisFrame = 0;
-            int maxPerFrame = 2;
-
+            // with the list of chunks to load, check the world to see if a chunk was created prior:
             foreach (var kvp in loadList)
             {
-                if (chunksGeneratedThisFrame >= maxPerFrame)
-                    break;
-
-                if (kvp.Value && !world.HasChunk(kvp.Key))
+                //Console.WriteLine($"Does the world have the chunk {kvp.Key} with visibility set {kvp.Value}? {world.HasChunk(kvp.Key)}");
+                Vector3i thisChunkIndex = kvp.Key;
+                bool thisChunkExists = world.HasChunk(thisChunkIndex);
+                bool showThisChunk = kvp.Value;
+                // if it exists, just render it if its visible
+                if (thisChunkExists && showThisChunk) {
+                    //Console.WriteLine($"Need to render the chunk at {thisChunkIndex}");
+                    mesher.GenerateMesh(thisChunkIndex, world);
+                }
+                // if it doesnt exist, create it first
+                if (!thisChunkExists)
                 {
-                    var chunk = new Chunk();
-                    generators[0].GenerateChunk(chunk);
-                    world.AddChunk(kvp.Key, chunk);
-                    mesher.GenerateMesh(kvp.Key, world);
-                    chunksGeneratedThisFrame++;
+                    //Console.WriteLine($"adding a chunk that was not created before at {thisChunkIndex}");
+                    Chunk newChunk = new Chunk();
+                    world.AddChunk(thisChunkIndex, newChunk);// after it's added to the world, it can be generated
+                    generators[0].GenerateChunk(newChunk, thisChunkIndex, world);
+                }
+                if (thisChunkExists && !showThisChunk)
+                {
+                    world.GetChunkAtIndex(thisChunkIndex, out var found).dirty = true;
+                    mesher.DisposeMesh(thisChunkIndex);
                 }
             }
 
@@ -58,7 +67,7 @@ namespace Minecraft_Clone.World.Chunks
         {
             foreach (var kvp in mesher.meshes)
             {
-                renderer.RenderChunk(kvp.Value, camera);
+                renderer.RenderChunk(kvp.Value, camera, kvp.Key);
             }
         }
 

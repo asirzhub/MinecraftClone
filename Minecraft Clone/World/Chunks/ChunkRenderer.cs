@@ -27,7 +27,7 @@ namespace Minecraft_Clone.World.Chunks
             waterTexture = new Texture("textures.png");
         }
 
-        public void RenderChunk(MeshData mesh, Camera camera)
+        public void RenderChunk(MeshData mesh, Camera camera, Vector3i index)
         {
             blockShader.Bind();
             blockTexture.Bind();
@@ -44,6 +44,10 @@ namespace Minecraft_Clone.World.Chunks
             blockShader.SetMatrix4("projection", projection);
             //blockShader.SetFloat("u_brightnessAdjust", (skyRender.sunDirection.Y - 1) / 2);
             //Console.WriteLine("bright adjust:" + (skyRender.sunDirection.Y - 1) / 2);
+
+            mesh.vao.Bind();
+            mesh.vbo.Bind();
+            mesh.ibo.Bind();
 
             GL.DrawElements(
             PrimitiveType.Triangles,

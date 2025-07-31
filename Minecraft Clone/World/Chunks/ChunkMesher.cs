@@ -15,15 +15,19 @@ namespace Minecraft_Clone.World.Chunks
         public void GenerateMesh(Vector3i chunkIndex,
                                      ChunkWorld world)
         {
+            // ONLY RE-MESH IF THIS CHUNK IS DIRTY!
+            bool dirty = world.GetChunkAtIndex(chunkIndex, out var found).dirty;
+            if (!dirty || !found)
+                return;
+
             Vector3i localOrigin = chunkIndex * Chunk.SIZE;
-            Chunk chunk = world.GetChunkAtIndex(chunkIndex, out bool thisChunkExists); 
-            Chunk forwardChunk = world.GetChunkAtIndex(chunkIndex + new Vector3i(0, 0, -1), out bool forwardChunkExists);
-            Chunk rearChunk = world.GetChunkAtIndex(chunkIndex + new Vector3i(0, 0, +1), out bool rearChunkExists);
+            Chunk chunk = world.GetChunkAtIndex(chunkIndex, out bool thisChunkExists);
+            Chunk forwardChunk = world.GetChunkAtIndex(chunkIndex + new Vector3i(0, 0, 1), out bool forwardChunkExists);
+            Chunk rearChunk = world.GetChunkAtIndex(chunkIndex + new Vector3i(0, 0, -1), out bool rearChunkExists);
             Chunk leftChunk = world.GetChunkAtIndex(chunkIndex + new Vector3i(-1, 0, 0), out bool leftChunkExists);
             Chunk rightChunk = world.GetChunkAtIndex(chunkIndex + new Vector3i(+1, 0, 0), out bool rightChunkExists);
             Chunk topChunk = world.GetChunkAtIndex(chunkIndex + new Vector3i(0, +1, 0), out bool topChunkExists);
             Chunk belowChunk = world.GetChunkAtIndex(chunkIndex + new Vector3i(0, -1, 0), out bool belowChunkExists);
-
 
             MeshData result = new MeshData();
             uint vertexOffset = 0;
@@ -41,75 +45,62 @@ namespace Minecraft_Clone.World.Chunks
                         if (block.Type == BlockType.AIR) // skip air
                             continue;
 
-                        //check in all six directions of this block
+                        //front: +z
+                        //back: -z
+                        //left: -x
+                        //right: +x
+                        //up: +y
+                        //down: -y
+
+
+                        Vector3i blockPos = new Vector3i(x, y, z);
+                        Vector3i blockWorldPos = blockPos + chunkIndex * Chunk.SIZE;
                         bool[] occlusions = new bool[6];
 
-                        // if we're at the front edge of chunk, and the next chunk over exists, and there is a block there
-                        // or if the front block exists
-                        // occlude the front side of the block
-                        // otherwise, show it.
+                        // base-layer culling: hide faces hidden by solid blocks
 
-                        // forward/front
-                        if (z == 0 && forwardChunkExists && forwardChunk.GetBlock(x, y, Chunk.SIZE - 1).isSolid
-                            || z!= 0 && chunk.GetBlock(x, y, z - 1).isSolid)
-                            occlusions[0] = true;
-                        else
-                            occlusions[0] = false;
+                        // front
+                        if (world.TryGetBlockAt(blockWorldPos + new Vector3i(0, 0, +1), out var bF))
+                            occlusions[0] = bF.isSolid || (block.isWater && bF.isWater);
 
-                        // rear/back
-                        if (z == Chunk.SIZE - 1 && rearChunkExists && rearChunk.GetBlock(x, y, 0).isSolid
-                            || z != Chunk.SIZE - 1 && chunk.GetBlock(x, y, z + 1).isSolid)
-                            occlusions[1] = true;
-                        else
-                            occlusions[1] = false;
+                        // back
+                        if (world.TryGetBlockAt(blockWorldPos + new Vector3i(0, 0, -1), out var bB))
+                            occlusions[1] = bB.isSolid || (block.isWater && bB.isWater); ;
 
-                        //left
-                        if (x == 0 && leftChunkExists && leftChunk.GetBlock(Chunk.SIZE - 1, y, z).isSolid
-                            || x != 0 && chunk.GetBlock(x - 1, y, z).isSolid)
-                            occlusions[2] = true;
-                        else
-                            occlusions[2] = false;
+                        // left
+                        if (world.TryGetBlockAt(blockWorldPos + new Vector3i(-1, 0, 0), out var bL))
+                            occlusions[2] = bL.isSolid || (block.isWater && bL.isWater); ;
 
                         // right
-                        if (x == Chunk.SIZE - 1 && rightChunkExists && rightChunk.GetBlock(0, y, z).isSolid
-                            || x != Chunk.SIZE - 1 &&  chunk.GetBlock(x + 1, y, z).isSolid)
-                            occlusions[3] = true;
-                        else
-                            occlusions[3] = false;
+                        if (world.TryGetBlockAt(blockWorldPos + new Vector3i(+1, 0, 0), out var bR))
+                            occlusions[3] = bR.isSolid || (block.isWater && bR.isWater); ;
 
-                        // above
-                        if (y == Chunk.SIZE - 1 && topChunkExists && topChunk.GetBlock(x, 0, z).isSolid
-                            || y != Chunk.SIZE - 1 && chunk.GetBlock(x, y + 1, z).isSolid)
-                            occlusions[5] = true;
-                        else
-                            occlusions[5] = false;
+                        // down
+                        if (world.TryGetBlockAt(blockWorldPos + new Vector3i(0, 1, 0), out var bD))
+                            occlusions[4] = bD.isSolid || (block.isWater && bD.isWater); ;
 
-                        // below
-                        if (y == 0 && belowChunkExists && belowChunk.GetBlock(x, Chunk.SIZE - 1, z).isSolid
-                            || y!= 0 &&  chunk.GetBlock(x, y - 1, z).isSolid)
-                            occlusions[4] = true;
-                        else
-                            occlusions[4] = false;
+                        // up
+                        if (world.TryGetBlockAt(blockWorldPos + new Vector3i(0, -1, 0), out var bU))
+                            occlusions[5] = bU.isSolid || (block.isWater && bU.isWater); ;
 
-                        // for each face of the block
+                        // next step: water culling, only topmostlayer visible
+
+
+                        // for each face
                         foreach (CubeMesh.Face face in Enum.GetValues(typeof(CubeMesh.Face)))
                         {
-                            int faceIndex = (int)face;
-                            if (occlusions[faceIndex]) continue; // skip the vertices if its invisible
-
+                            int fi = (int)face;
+                            if (occlusions[fi]) continue;              // skip hidden faces
                             var faceVerts = CubeMesh.FaceVertices[face];
 
                             for (int i = 0; i < 4; i++) // four corners
                             {
                                 var v = faceVerts[i];
                                 var faceUVs = BlockRegistry.Types[block.Type].FaceUVs;
-                                Vector2 tile = faceUVs[faceIndex];
+                                Vector2 tile = faceUVs[fi];
                                 tile += v.TexCoord; // apply the corner offset
                                 Vector2 uvCoord = tile / 8f; // scale down to uv coordinates
                                 uvCoord.Y = 1.0f - uvCoord.Y; // flip y because stbimagesharp trolls you hard
-
-                                Vector3i blockPos = new Vector3i(x, y, z);
-                                Vector3i blockWorldPos = blockPos + chunkIndex * Chunk.SIZE;
 
                                 // World-space vertex corner
                                 Vector3 worldCorner = v.Position + blockWorldPos;
@@ -143,12 +134,17 @@ namespace Minecraft_Clone.World.Chunks
                     }
                 }
             }
+
             UpdateMeshList(chunkIndex, result);
+
+            world.GetChunkAtIndex(chunkIndex, out var _found).dirty = false;
+
         }
+
 
         void UpdateMeshList(Vector3i index, MeshData mesh)
         {
-            if (meshes.ContainsKey(index)) 
+            if (meshes.ContainsKey(index))
             {
                 meshes[index] = mesh;
             }
@@ -156,6 +152,13 @@ namespace Minecraft_Clone.World.Chunks
             {
                 meshes.Add(index, mesh);
             }
+
+        }
+
+        public void DisposeMesh(Vector3i index)
+        {
+            if (meshes.ContainsKey(index))
+                meshes[index].Dispose();
         }
     }
 }
