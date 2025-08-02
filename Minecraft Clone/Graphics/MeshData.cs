@@ -6,7 +6,7 @@ namespace Minecraft_Clone.Graphics
 {
     public class MeshData
     {
-        public List<VBO.Vertex> Vertices = new();
+        public List<PackedVertex> Vertices = new();
         public List<uint> Indices = new();
 
         public VAO vao;
@@ -20,26 +20,23 @@ namespace Minecraft_Clone.Graphics
         public void Upload()
         {
             if (vao == null) { vao = new VAO(); }
-            if (vbo == null) { vbo = new VBO(VertexUtils.FlattenVertices(Vertices).ToArray()); }
+            if (vbo == null) { vbo = new VBO(FlattenPackedVertices(Vertices)); }
             if (ibo == null) { ibo = new IBO(Indices); }
 
-            int stride = Marshal.SizeOf<Vertex>();
-            int floatSize = sizeof(float);
+            int stride = Marshal.SizeOf(typeof(PackedVertex));
 
             vao.Bind();
             vbo.Bind();
-            vao.LinkToVAO(0, 3, vbo, stride, 0);
-            vao.LinkToVAO(1, 2, vbo, stride, 3 * floatSize);
-            vao.LinkToVAO(2, 3, vbo, stride, 5 * floatSize);
-            vao.LinkToVAO(3, 1, vbo, stride, 8 * floatSize);
+            vao.LinkToVAOInt(0, 1, vbo, stride, 0);
+            vao.LinkToVAO(1, 2, vbo, stride, 4);
             ibo.Bind();
         }
 
-        public void AddVertex(VBO.Vertex v)
+        public void AddVertex(VBO.PackedVertex v)
         {
             Vertices.Add(v);
         }
-        public void AddVertices(List<VBO.Vertex> vertices) 
+        public void AddVertices(List<PackedVertex> vertices) 
         {
             Vertices.AddRange(vertices);
         }

@@ -48,7 +48,7 @@ namespace Minecraft_Clone.World.Chunks
             foreach (var kvp in chunks)
                 if (kvp.Value == chunk) return kvp.Key;
 
-            Console.WriteLine("[ChunkWorld] Tried getting a chunk index that is not registered!!!");
+            //Console.WriteLine("[ChunkWorld] Tried getting a chunk index that is not registered!!!");
             return (0, 0, 0);
         }
 
@@ -62,7 +62,7 @@ namespace Minecraft_Clone.World.Chunks
                     return kvp.Value;
                 }
 
-            Console.WriteLine($"[ChunkWorld] Tried getting a chunk at {index} that is not registered!!!.");
+            //Console.WriteLine($"[ChunkWorld] Tried getting a chunk at {index} that is not registered!!!.");
 
             return null;
         }

@@ -32,7 +32,7 @@ namespace Minecraft_Clone.World.Chunks
 
             for (int x = currentChunkIndex.X - radius;  x <= currentChunkIndex.X + radius; x++)
             {
-                for(int y = currentChunkIndex .Y - radius; y <= currentChunkIndex.Y + radius; y++)
+                for(int y = currentChunkIndex .Y - (int)(radius/2); y <= currentChunkIndex.Y + (int)(radius / 2); y++)
                 {
                     for(int z = currentChunkIndex.Z - radius; z <= currentChunkIndex.Z + radius; z++)
                     {
@@ -52,12 +52,13 @@ namespace Minecraft_Clone.World.Chunks
                     }
                 }
             }
-            Console.WriteLine($"Total Chunks {chunkLoadList.Count}: visibile is {visible} ({(float)visible/(float)chunkLoadList.Count}%)");
+            //Console.WriteLine($"Total Chunks {chunkLoadList.Count}: visibile is {visible} ({(float)visible/(float)chunkLoadList.Count}%)");
             return chunkLoadList;
         }
 
         public void SetChunkVisibility(Vector3i index, bool visible)
         {
+                
             if (chunkLoadList.ContainsKey(index))
             {
                 chunkLoadList[index] = visible;
