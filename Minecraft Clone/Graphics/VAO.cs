@@ -32,5 +32,14 @@ namespace Minecraft_Clone.Graphics
             GL.VertexAttribPointer(location, size, VertexAttribPointerType.Float, false, stride, offset);
             UnBind();
         }
+        public void LinkToVAOInt(int location, int size, VBO vbo, int stride, int offset)
+        {
+            Bind();
+            vbo.Bind();
+            GL.EnableVertexAttribArray(location);
+            GL.VertexAttribIPointer(location, size, VertexAttribIntegerType.UnsignedInt, stride, offset);
+            UnBind();
+        }
+
     }
 }

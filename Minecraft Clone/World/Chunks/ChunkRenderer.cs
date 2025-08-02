@@ -21,7 +21,7 @@ namespace Minecraft_Clone.World.Chunks
 
         public ChunkRenderer()
         {
-            blockShader = new Shader("default.vert", "default.frag");
+            blockShader = new Shader("PackedBlock.vert", "PackedBlock.frag");
             blockTexture = new Texture("textures.png");
             waterShader = new Shader("default.vert", "default.frag");
             waterTexture = new Texture("textures.png");
@@ -33,17 +33,15 @@ namespace Minecraft_Clone.World.Chunks
             blockTexture.Bind();
 
             mesh.Upload();
-            
+
             //with everything prepped, we can now render
-            Matrix4 model = Matrix4.Identity;
+            Matrix4 model = Matrix4.CreateTranslation(index*(Chunk.SIZE));
             Matrix4 view = camera.GetViewMatrix();
             Matrix4 projection = camera.GetProjectionMatrix();
 
             blockShader.SetMatrix4("model", model);
             blockShader.SetMatrix4("view", view);
             blockShader.SetMatrix4("projection", projection);
-            //blockShader.SetFloat("u_brightnessAdjust", (skyRender.sunDirection.Y - 1) / 2);
-            //Console.WriteLine("bright adjust:" + (skyRender.sunDirection.Y - 1) / 2);
 
             mesh.vao.Bind();
             mesh.vbo.Bind();
