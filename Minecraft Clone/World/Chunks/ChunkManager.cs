@@ -1,4 +1,5 @@
 ﻿using OpenTK.Mathematics;
+using OpenTK.Graphics.OpenGL4;
 
 namespace Minecraft_Clone.World.Chunks
 {
@@ -65,10 +66,21 @@ namespace Minecraft_Clone.World.Chunks
 
         private void Render(Camera camera)
         {
-            foreach (var kvp in mesher.meshes)
+            foreach(var kvp in mesher.solidMeshes)
             {
                 renderer.RenderChunk(kvp.Value, camera, kvp.Key);
             }
+
+            GL.Enable(EnableCap.Blend);
+            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+            GL.DepthMask(false);
+
+            foreach (var kvp in mesher.liquidMeshes)
+            {
+                renderer.RenderChunk(kvp.Value, camera, kvp.Key);
+            }
+
+            GL.DepthMask(true);
         }
 
         private Vector3i ToChunkIndex(Vector3 position)
