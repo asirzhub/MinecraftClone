@@ -6,11 +6,13 @@ namespace Minecraft_Clone.World.Chunks
 {
     public class ChunkMesher
     {
-        public Dictionary<Vector3i, MeshData> meshes;
+        public Dictionary<Vector3i, MeshData> solidMeshes;
+        public Dictionary<Vector3i, MeshData> liquidMeshes;
 
         public ChunkMesher()
         {
-            meshes = new Dictionary<Vector3i, MeshData>();
+            solidMeshes = new Dictionary<Vector3i, MeshData>();
+            liquidMeshes = new Dictionary<Vector3i, MeshData>();
         }
 
         public void GenerateMesh(Vector3i chunkIndex,
@@ -30,8 +32,11 @@ namespace Minecraft_Clone.World.Chunks
             Chunk topChunk = world.GetChunkAtIndex(chunkIndex + new Vector3i(0, +1, 0), out bool topChunkExists);
             Chunk belowChunk = world.GetChunkAtIndex(chunkIndex + new Vector3i(0, -1, 0), out bool belowChunkExists);
 
-            MeshData result = new MeshData();
-            uint vertexOffset = 0;
+            MeshData solidResult = new MeshData();
+            uint solidVertexOffset = 0;
+
+            MeshData liquidResult = new MeshData();
+            uint liquidVertexOffset = 0;
 
             // generates only the mesh for chunk with index chunkIndex
             // greedy mesh or face culling based on neighbors
@@ -121,52 +126,82 @@ namespace Minecraft_Clone.World.Chunks
                                     greenLight -= (byte)MathF.Min(-blockWorldPos.Y, 15);
                                 }
 
-                                result.Vertices.Add(
-                                    new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, redLight, greenLight, blueLight)
-                                );
+                                if (block.isWater)
+                                {
+                                    liquidResult.Vertices.Add(
+                                        new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, redLight, greenLight, blueLight)
+                                    );
 
 
-                                // Two triangles (0,1,2) & (2,3,0)
-                                result.Indices.Add(vertexOffset + 0);
-                                result.Indices.Add(vertexOffset + 1);
-                                result.Indices.Add(vertexOffset + 2);
-                                result.Indices.Add(vertexOffset + 2);
-                                result.Indices.Add(vertexOffset + 3);
-                                result.Indices.Add(vertexOffset + 0);
+                                    // Two triangles (0,1,2) & (2,3,0)
+                                    liquidResult.Indices.Add(liquidVertexOffset + 0);
+                                    liquidResult.Indices.Add(liquidVertexOffset + 1);
+                                    liquidResult.Indices.Add(liquidVertexOffset + 2);
+                                    liquidResult.Indices.Add(liquidVertexOffset + 2);
+                                    liquidResult.Indices.Add(liquidVertexOffset + 3);
+                                    liquidResult.Indices.Add(liquidVertexOffset + 0);
 
-                                vertexOffset += 4;
+                                    liquidVertexOffset += 4;
+                                }
+                                else
+                                {
+                                    solidResult.Vertices.Add(
+                                        new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, redLight, greenLight, blueLight)
+                                    );
 
-                                if (x == Chunk.SIZE - 1 || y == Chunk.SIZE - 1 || z == Chunk.SIZE - 1) 
-                                    continue;
+
+                                    // Two triangles (0,1,2) & (2,3,0)
+                                    solidResult.Indices.Add(solidVertexOffset + 0);
+                                    solidResult.Indices.Add(solidVertexOffset + 1);
+                                    solidResult.Indices.Add(solidVertexOffset + 2);
+                                    solidResult.Indices.Add(solidVertexOffset + 2);
+                                    solidResult.Indices.Add(solidVertexOffset + 3);
+                                    solidResult.Indices.Add(solidVertexOffset + 0);
+
+                                    solidVertexOffset += 4;
+                                }
+
                             }
                         }
                     }
                 }
             }
 
-            UpdateMeshList(chunkIndex, result);
+            UpdateSolidMeshList(chunkIndex, solidResult);
+            UpdateLiquidMeshList(chunkIndex, liquidResult);
 
             world.GetChunkAtIndex(chunkIndex, out var _found).dirty = false;
         }
 
 
-        void UpdateMeshList(Vector3i index, MeshData mesh)
+        void UpdateSolidMeshList(Vector3i index, MeshData mesh)
         {
-            if (meshes.ContainsKey(index))
+            if (solidMeshes.ContainsKey(index))
             {
-                meshes[index] = mesh;
+                solidMeshes[index] = mesh;
             }
             else
             {
-                meshes.Add(index, mesh);
+                solidMeshes.Add(index, mesh);
             }
+        }
 
+        void UpdateLiquidMeshList(Vector3i index, MeshData mesh)
+        {
+            if (liquidMeshes.ContainsKey(index))
+            {
+                liquidMeshes[index] = mesh;
+            }
+            else
+            {
+                liquidMeshes.Add(index, mesh);
+            }
         }
 
         public void DisposeMesh(Vector3i index)
         {
-            if (meshes.ContainsKey(index))
-                meshes[index].Dispose();
+            if (solidMeshes.ContainsKey(index))
+                solidMeshes[index].Dispose();
         }
     }
 }
