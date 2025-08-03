@@ -88,8 +88,6 @@ namespace Minecraft_Clone.World.Chunks
                         if (world.TryGetBlockAt(blockWorldPos + new Vector3i(0, -1, 0), out var bU))
                             occlusions[5] = bU.isSolid || (block.isWater && bU.isWater); ;
 
-                        // next step: water culling, only topmostlayer visible
-
                         // for each face
                         foreach (CubeMesh.Face face in Enum.GetValues(typeof(CubeMesh.Face)))
                         {
@@ -114,7 +112,6 @@ namespace Minecraft_Clone.World.Chunks
                                 Vector2 uv = (tile + (v.TexU, v.TexV)) / 8f;
                                 uv.Y = 1f - uv.Y;
 
-                                // Normal index 0..5
                                 byte normal = (byte)face;
 
                                 byte redLight = 15;
@@ -126,12 +123,16 @@ namespace Minecraft_Clone.World.Chunks
                                     greenLight -= (byte)MathF.Min(-blockWorldPos.Y, 15);
                                 }
 
+                                // Ambient Occlusion
+
+                                
+
+
                                 if (block.isWater)
                                 {
                                     liquidResult.Vertices.Add(
-                                        new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, redLight, greenLight, blueLight)
+                                        new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, redLight, greenLight, blueLight, true)
                                     );
-
 
                                     // Two triangles (0,1,2) & (2,3,0)
                                     liquidResult.Indices.Add(liquidVertexOffset + 0);

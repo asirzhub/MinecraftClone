@@ -27,7 +27,7 @@ namespace Minecraft_Clone.World.Chunks
             renderer = new ChunkRenderer();
         }
 
-        public void Update(Camera camera)
+        public void Update(Camera camera, float time)
         {
             currentChunkIndex = ToChunkIndex(camera.position);
 
@@ -61,14 +61,14 @@ namespace Minecraft_Clone.World.Chunks
                 }
             }
 
-            Render(camera);
+            Render(camera, time);
         }
 
-        private void Render(Camera camera)
+        private void Render(Camera camera, float time)
         {
             foreach(var kvp in mesher.solidMeshes)
             {
-                renderer.RenderChunk(kvp.Value, camera, kvp.Key);
+                renderer.RenderChunk(kvp.Value, camera, kvp.Key, time);
             }
 
             GL.Enable(EnableCap.Blend);
@@ -77,7 +77,7 @@ namespace Minecraft_Clone.World.Chunks
 
             foreach (var kvp in mesher.liquidMeshes)
             {
-                renderer.RenderChunk(kvp.Value, camera, kvp.Key);
+                renderer.RenderChunk(kvp.Value, camera, kvp.Key, time);
             }
 
             GL.DepthMask(true);
