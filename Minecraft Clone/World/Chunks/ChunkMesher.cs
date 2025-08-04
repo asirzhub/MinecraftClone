@@ -88,13 +88,13 @@ namespace Minecraft_Clone.World.Chunks
                         if (world.TryGetBlockAt(blockWorldPos + new Vector3i(0, -1, 0), out var bU))
                             occlusions[5] = bU.isSolid || (block.isWater && bU.isWater); ;
 
-                        // next step: water culling, only topmostlayer visible
 
                         // for each face
                         foreach (CubeMesh.Face face in Enum.GetValues(typeof(CubeMesh.Face)))
                         {
-                            int fi = (int)face;
-                            if (occlusions[fi]) continue;              // skip hidden faces
+                            //if (face != CubeMesh.Face.TOP) continue;
+                            int faceIndex = (int)face;
+                            if (occlusions[faceIndex]) continue;              // skip hidden faces
                             var faceVerts = CubeMesh.PackedFaceVertices[face];
 
                             // Append 4 corners
@@ -110,11 +110,10 @@ namespace Minecraft_Clone.World.Chunks
 
                                 // Compute UV
                                 var faceUVs = BlockRegistry.Types[block.Type].FaceUVs;
-                                Vector2 tile = faceUVs[fi];
+                                Vector2 tile = faceUVs[faceIndex];
                                 Vector2 uv = (tile + (v.TexU, v.TexV)) / 8f;
                                 uv.Y = 1f - uv.Y;
 
-                                // Normal index 0..5
                                 byte normal = (byte)face;
 
                                 byte redLight = 15;
@@ -126,12 +125,40 @@ namespace Minecraft_Clone.World.Chunks
                                     greenLight -= (byte)MathF.Min(-blockWorldPos.Y, 15);
                                 }
 
+                                // check the edges in the direction of the vertex to do ambient occlusion with
+                                Vector3i[] AOCheckDirection = new Vector3i[4];
+                                AOCheckDirection[0] = ((int)(MathF.Round((vPos.X - 0.5f) * 2f)), 
+                                    0,
+                                    (int)(MathF.Round((vPos.Z - 0.5f) * 2f)));
+
+                                AOCheckDirection[1] = ((int)(MathF.Round((vPos.X - 0.5f) * 2f)),
+                                    (int)(MathF.Round((vPos.Y - 0.5f) * 2f)),
+                                    0);
+
+                                AOCheckDirection[2] = (0,
+                                    (int)(MathF.Round((vPos.Y - 0.5f) * 2f)),
+                                    (int)(MathF.Round((vPos.Z - 0.5f) * 2f)));
+
+                                AOCheckDirection[3] = ((int)(MathF.Round((vPos.X - 0.5f) * 2f)),
+                                    (int)(MathF.Round((vPos.Y - 0.5f) * 2f)),
+                                    (int)(MathF.Round((vPos.Z - 0.5f) * 2f)));
+
+                                foreach (var direction in AOCheckDirection)
+                                {
+                                    world.TryGetBlockAt(blockWorldPos + direction, out var b);
+                                    if (b.isSolid)
+                                    {
+                                        redLight -= 3;
+                                        greenLight -= 3;
+                                        blueLight -= 2;
+                                    }
+                                }
+
                                 if (block.isWater)
                                 {
                                     liquidResult.Vertices.Add(
-                                        new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, redLight, greenLight, blueLight)
+                                        new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, redLight, greenLight, blueLight, true)
                                     );
-
 
                                     // Two triangles (0,1,2) & (2,3,0)
                                     liquidResult.Indices.Add(liquidVertexOffset + 0);

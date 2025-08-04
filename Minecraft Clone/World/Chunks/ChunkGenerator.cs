@@ -12,7 +12,7 @@ namespace Minecraft_Clone.World.Chunks
         private PerlinNoise noise;
         private float noiseScale;
 
-        public ChunkGenerator(int seed = 420, float noiseScale = 0.01f)
+        public ChunkGenerator(int seed = 420, float noiseScale = 0.02f)
         {
             noise = new PerlinNoise(seed);
             this.noiseScale = noiseScale;

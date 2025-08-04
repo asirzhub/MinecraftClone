@@ -2,6 +2,7 @@
 using System.Runtime.InteropServices;
 using OpenTK.Mathematics;
 using OpenTK.Graphics.OpenGL4;
+using OpenTK.Windowing.Common;
 
 namespace Minecraft_Clone.World.Chunks
 {
@@ -19,6 +20,11 @@ namespace Minecraft_Clone.World.Chunks
         public Texture waterTexture;
         public Shader waterShader;
 
+        public float waterOffset = 0.15f;
+        public float waterWaveAmplitude = 0.05f;
+        public float waterWaveScale = 0.1f;
+        public float waterWaveSpeed = 0.3f;
+
         public ChunkRenderer()
         {
             blockShader = new Shader("PackedBlock.vert", "PackedBlock.frag");
@@ -27,7 +33,7 @@ namespace Minecraft_Clone.World.Chunks
             waterTexture = new Texture("textures.png");
         }
 
-        public void RenderChunk(MeshData mesh, Camera camera, Vector3i index)
+        public void RenderChunk(MeshData mesh, Camera camera, Vector3i index, float time)
         {
             blockShader.Bind();
             blockTexture.Bind();
@@ -42,6 +48,13 @@ namespace Minecraft_Clone.World.Chunks
             blockShader.SetMatrix4("model", model);
             blockShader.SetMatrix4("view", view);
             blockShader.SetMatrix4("projection", projection);
+
+
+            blockShader.SetFloat("u_waterOffset", waterOffset);
+            blockShader.SetFloat("u_waveAmplitude", waterWaveAmplitude);
+            blockShader.SetFloat("u_waveScale", waterWaveScale);
+            blockShader.SetFloat("u_time", time);
+            blockShader.SetFloat("u_waveSpeed", waterWaveSpeed);
 
             mesh.vao.Bind();
             mesh.vbo.Bind();

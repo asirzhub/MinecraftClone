@@ -8,14 +8,23 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
+uniform float u_waterOffset;
+uniform float u_waveAmplitude;
+uniform float u_waveScale;
+uniform float u_time;
+uniform float u_waveSpeed;
+
 out vec2 texCoord;
 out vec3 vNormal;
 out vec3 vColor;
+out int isWater;
 
 vec3 DecodePos(uint p) {
     int x = int((p >> 0) & 0x1Fu);
-    int y = int((p >> 5) & 0x1Fu);
+    float y = int((p >> 5) & 0x1Fu);
     int z = int((p >> 10) & 0x1Fu);
+    y -= u_waterOffset * int((inPosNorBright >> 19) & 0x1u);
+
     return vec3(x, y, z);
 }
 
@@ -38,9 +47,19 @@ vec3 DecodeColor(uint p) {
 
 void main()
 {
-    texCoord   = inTex;
+    texCoord = inTex;
 
     vColor = DecodeColor(inPosNorBright);
     vNormal = DecodeNormal(inPosNorBright);
-    gl_Position = vec4(DecodePos(inPosNorBright), 1.0) * model * view * projection;
+    isWater = int((inPosNorBright >> 19) & 0x1u);
+
+    vec4 position = vec4(DecodePos(inPosNorBright), 1.0);
+    vec4 worldPos = position * model;
+
+    if(isWater == 1)
+    {
+        position.y += u_waveAmplitude * sin(((worldPos.x + worldPos.z) * u_waveScale + u_time * u_waveSpeed)*6.28318);
+    }
+
+    gl_Position = (position * model * view * projection);
 }

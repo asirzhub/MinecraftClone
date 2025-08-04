@@ -21,7 +21,7 @@ namespace Minecraft_Clone.Graphics
 
              4,  5,  7,  5,  6,  7,
 
-             8,  9, 11,  9, 10, 11, 
+             8,  9, 11,  9, 10, 11,
 
             12, 13, 15, 13, 14, 15,
 
@@ -29,55 +29,6 @@ namespace Minecraft_Clone.Graphics
 
             20, 21, 23, 21, 22, 23
         };
-
-        private static readonly Vertex[] FaceFront = new Vertex[]
-        {
-            new Vertex(new Vector3(1, 1, 1), new Vector2(1, 1), Vector3.UnitZ),
-            new Vertex(new Vector3(1, 0, 1), new Vector2(1, 0), Vector3.UnitZ),
-            new Vertex(new Vector3(0, 0, 1), new Vector2(0, 0), Vector3.UnitZ),
-            new Vertex(new Vector3(0, 1, 1), new Vector2(0, 1), Vector3.UnitZ),
-        };
-
-        private static readonly Vertex[] FaceBack = new Vertex[]
-        {
-            new Vertex(new Vector3(0, 1, 0), new Vector2(1, 1), -Vector3.UnitZ),
-            new Vertex(new Vector3(0, 0, 0), new Vector2(1, 0), -Vector3.UnitZ),
-            new Vertex(new Vector3(1, 0, 0), new Vector2(0, 0), -Vector3.UnitZ),
-            new Vertex(new Vector3(1, 1, 0), new Vector2(0, 1), -Vector3.UnitZ),
-        };
-
-        private static readonly Vertex[] FaceLeft = new Vertex[]
-        {
-            new Vertex(new Vector3(0, 1, 1), new Vector2(1, 1), -Vector3.UnitX),
-            new Vertex(new Vector3(0, 0, 1), new Vector2(1, 0), -Vector3.UnitX),
-            new Vertex(new Vector3(0, 0, 0), new Vector2(0, 0), -Vector3.UnitX),
-            new Vertex(new Vector3(0, 1, 0), new Vector2(0, 1), -Vector3.UnitX),
-        };
-
-        private static readonly Vertex[] FaceRight = new Vertex[]
-        {
-            new Vertex(new Vector3(1, 1, 0), new Vector2(1, 1), Vector3.UnitX),
-            new Vertex(new Vector3(1, 0, 0), new Vector2(1, 0), Vector3.UnitX),
-            new Vertex(new Vector3(1, 0, 1), new Vector2(0, 0), Vector3.UnitX),
-            new Vertex(new Vector3(1, 1, 1), new Vector2(0, 1), Vector3.UnitX),
-        };
-
-        private static readonly Vertex[] FaceTop = new Vertex[]
-        {
-            new Vertex(new Vector3(0, 1, 1), new Vector2(0, 0), Vector3.UnitY),
-            new Vertex(new Vector3(1, 1, 1), new Vector2(1, 0), Vector3.UnitY),
-            new Vertex(new Vector3(1, 1, 0), new Vector2(1, 1), Vector3.UnitY),
-            new Vertex(new Vector3(0, 1, 0), new Vector2(0, 1), Vector3.UnitY),
-        };
-
-        private static readonly Vertex[] FaceBottom = new Vertex[]
-        {
-            new Vertex(new Vector3(0, 0, 0), new Vector2(0, 0), -Vector3.UnitY),
-            new Vertex(new Vector3(1, 0, 0), new Vector2(1, 0), -Vector3.UnitY),
-            new Vertex(new Vector3(1, 0, 1), new Vector2(1, 1), -Vector3.UnitY),
-            new Vertex(new Vector3(0, 0, 1), new Vector2(0, 1), -Vector3.UnitY),
-        };
-
 
         // PackedVertex arrays for each face (x, y, z, u, v, normalIdx, brightness)
         private static readonly PackedVertex[] PackedFaceFront = new PackedVertex[] {
@@ -122,16 +73,6 @@ namespace Minecraft_Clone.Graphics
             new PackedVertex(0, 0, 1, 0f, 1f, 5, 255),
         };
 
-        public static readonly Dictionary<Face, Vertex[]> FaceVertices = new()
-        {
-            { Face.FRONT, FaceFront },
-            { Face.BACK, FaceBack },
-            { Face.LEFT, FaceLeft },
-            { Face.RIGHT, FaceRight },
-            { Face.TOP, FaceTop },
-            { Face.BOTTOM, FaceBottom }
-        };
-
         public static readonly Dictionary<Face, PackedVertex[]> PackedFaceVertices = new()
         {
             { Face.FRONT, PackedFaceFront },
@@ -141,7 +82,5 @@ namespace Minecraft_Clone.Graphics
             { Face.TOP, PackedFaceTop },
             { Face.BOTTOM, PackedFaceBottom }
         };
-
-
-    }
+    }    
 }
