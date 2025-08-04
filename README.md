@@ -4,7 +4,7 @@ Literally just making a clone of Minecraft. Using C# and OpenTK (A wrapper for O
 1. ~~Base-layer absolute minimum engine with chunk generation, camera, and rendering of chunks.~~
 2. ~~Improve chunk meshing to massively increase performance~~
 3. Dynamic loading and unloading of chunks
-4. Improve terrain generation to make it more interesting/realistic
+4. ~~Improve terrain generation to make it more interesting/realistic~~
 5. Async world generation
 6. Async chunk loading
 7. ~~Separate solid blocks vs water/transparent render passes~~
