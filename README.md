@@ -8,7 +8,7 @@ Literally just making a clone of Minecraft. Using C# and OpenTK (A wrapper for O
 5. Async world generation
 6. Async chunk loading
 7. ~~Separate solid blocks vs water/transparent render passes~~
-8. Vertex-based baked lighting (ambient occlusion)
+8. ~~Vertex-based baked lighting (ambient occlusion)~~
 9. Frustrum culling
 10. Surface features (trees, grass, flowers)
 11. Occlusion culling?? Is this possible?
