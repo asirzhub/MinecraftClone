@@ -57,9 +57,10 @@ namespace Minecraft_Clone
 
         public void InputController(KeyboardState keyboard, MouseState mouse, FrameEventArgs e)
         {
-            if (keyboard.IsKeyDown(Keys.W)) { position += front * speed * (float)e.Time; }
+            var forward_dir = Vector3.Normalize(new Vector3(front.X, 0, front.Z));
+            if (keyboard.IsKeyDown(Keys.W)) { position += forward_dir * speed * (float)e.Time; }
             if (keyboard.IsKeyDown(Keys.A)) { position -= right * speed * (float)e.Time; }
-            if (keyboard.IsKeyDown(Keys.S)) { position -= front * speed * (float)e.Time; }
+            if (keyboard.IsKeyDown(Keys.S)) { position -= forward_dir * speed * (float)e.Time; }
             if (keyboard.IsKeyDown(Keys.D)) { position += right * speed * (float)e.Time; }
             if (keyboard.IsKeyDown(Keys.Space)) { position.Y += speed * (float)e.Time; }
             if (keyboard.IsKeyDown(Keys.LeftControl)) { position.Y -= speed * (float)e.Time; }

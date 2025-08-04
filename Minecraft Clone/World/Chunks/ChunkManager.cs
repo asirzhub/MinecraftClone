@@ -8,7 +8,7 @@ namespace Minecraft_Clone.World.Chunks
     {
         ChunkLoader loader; // decides which chunks to load or unload from the world, based on player pos
         ChunkWorld world; // stores loaded chunks in memory
-        ChunkGenerator[] generators; // generators are only dispatched when a new chunk is made
+        public ChunkGenerator[] generators; // generators are only dispatched when a new chunk is made
         ChunkMesher mesher; // based on what the laoder has decided, mesher makes a mesh for each loaded chunk
         ChunkRenderer renderer; // renders the chunks that the mesher has meshed
 
@@ -32,7 +32,7 @@ namespace Minecraft_Clone.World.Chunks
             currentChunkIndex = ToChunkIndex(camera.position);
 
             // Loader decides which chunks to load/unload
-            var loadList = loader.GetChunksToLoad(currentChunkIndex, camera, radius:3);
+            var loadList = loader.GetChunksToLoad(currentChunkIndex, camera, radius:5);
 
             // with the list of chunks to load, check the world to see if a chunk was created prior:
             foreach (var kvp in loadList)

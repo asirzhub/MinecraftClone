@@ -125,3 +125,4 @@ C:\Users\Zaki Asir\Downloads\github\MinecraftClone\Minecraft Clone\obj\Debug\net
 C:\Users\Zaki Asir\Downloads\github\MinecraftClone\Minecraft Clone\obj\Debug\net8.0\Minecraft Clone.pdb
 C:\Users\Zaki Asir\Downloads\github\MinecraftClone\Minecraft Clone\obj\Debug\net8.0\Minecraft Clone.genruntimeconfig.cache
 C:\Users\Zaki Asir\Downloads\github\MinecraftClone\Minecraft Clone\obj\Debug\net8.0\ref\Minecraft Clone.dll
+C:\Users\User\Documents\MinecraftClone\Minecraft Clone\bin\Debug\net8.0\SixLabors.ImageSharp.dll
