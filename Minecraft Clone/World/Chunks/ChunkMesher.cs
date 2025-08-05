@@ -119,15 +119,23 @@ namespace Minecraft_Clone.World.Chunks
                                 byte redLight = 15;
                                 byte greenLight = 15;
                                 byte blueLight = 15;
-                                if(blockWorldPos.Y < world.seaLevel)
+
+
+                                if (blockWorldPos.Y < world.seaLevel && blockWorldPos.Y > world.seaLevel - 6)
                                 {
-                                    redLight -= (byte)MathF.Min(-blockWorldPos.Y * 2, 15);
-                                    greenLight -= (byte)MathF.Min(-blockWorldPos.Y, 15);
+                                    redLight = (byte)(15 - (world.seaLevel - blockWorldPos.Y));
+                                    greenLight = (byte)(15 - (world.seaLevel - blockWorldPos.Y));
+                                    blueLight = (byte)(15 - (world.seaLevel - blockWorldPos.Y));
+                                } else if (blockWorldPos.Y <= world.seaLevel - 6)
+                                {
+                                    redLight = (byte)9;
+                                    greenLight = (byte)9;
+                                    blueLight = (byte)9;
                                 }
 
-                                // check the edges in the direction of the vertex to do ambient occlusion with
-                                Vector3i[] AOCheckDirection = new Vector3i[4];
-                                AOCheckDirection[0] = ((int)(MathF.Round((vPos.X - 0.5f) * 2f)), 
+                                    // check the edges in the direction of the vertex to do ambient occlusion with
+                                    Vector3i[] AOCheckDirection = new Vector3i[4];
+                                AOCheckDirection[0] = ((int)(MathF.Round((vPos.X - 0.5f) * 2f)),
                                     0,
                                     (int)(MathF.Round((vPos.Z - 0.5f) * 2f)));
 
@@ -148,8 +156,8 @@ namespace Minecraft_Clone.World.Chunks
                                     world.TryGetBlockAt(blockWorldPos + direction, out var b);
                                     if (b.isSolid)
                                     {
-                                        redLight -= 3;
-                                        greenLight -= 3;
+                                        redLight -= 2;
+                                        greenLight -= 2;
                                         blueLight -= 2;
                                     }
                                 }

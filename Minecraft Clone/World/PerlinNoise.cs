@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Minecraft_Clone.World
 {
@@ -50,8 +51,61 @@ namespace Minecraft_Clone.World
             return (Lerp(x1, x2, v) + 1) / 2f; // normalize to [0,1]
         }
 
+        public float Noise(float x, float y, float z)
+        {
+            int X = (int)MathF.Floor(x) & 255, Y = (int)MathF.Floor(y) & 255, Z = (int)MathF.Floor(z) & 255;
+            float xf = x - MathF.Floor(x), yf = y -MathF.Floor(y), zf = z - MathF.Floor(z);
+
+            float u = Fade(xf);
+            float v = Fade(yf);
+            float w = Fade(zf);
+
+            int aaa = permutation[permutation[permutation[X] + Y] + Z];
+            int aba = permutation[permutation[permutation[X] + Y + 1] + Z];
+            int baa = permutation[permutation[permutation[X + 1] + Y] + Z];
+            int bba = permutation[permutation[permutation[X + 1] + Y + 1] + Z];
+
+            int aab = permutation[permutation[permutation[X] + Y] + Z + 1];
+            int abb = permutation[permutation[permutation[X] + Y + 1] + Z + 1];
+            int bab = permutation[permutation[permutation[X + 1] + Y] + Z + 1];
+            int bbb = permutation[permutation[permutation[X + 1] + Y + 1] + Z + 1];
+
+            float x1 = Lerp(Grad(aaa, xf, yf, zf), Grad(baa, xf - 1, yf, zf), u);
+            float x2 = Lerp(Grad(aba, xf, yf - 1, zf), Grad(bba, xf - 1, yf - 1, zf), u);
+            float x3 = Lerp(Grad(aab, xf, yf, zf - 1), Grad(bab, xf - 1, yf, zf - 1), u);
+            float x4 = Lerp(Grad(abb, xf, yf - 1, zf - 1), Grad(bbb, xf - 1, yf - 1, zf - 1), u);
+
+            float y1 = Lerp(x1, x2, v);
+            float y2 = Lerp(x3, x4, v);
+            return (Lerp(y1, y2, w) + 1) / 2f;
+
+        }
+
+        public void SaveNoiseSliceImage(string filename, int width, int height, float zSlice)
+        {
+            using var image = new Image<L8>(width, height); // L8 = grayscale 8-bit
+
+            float scale = 0.1f;
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    float nx = x * scale;
+                    float ny = y * scale;
+                    float noiseValue = FractalNoise(nx, ny, zSlice, lacunarity: 3.0f); // assuming [-1, 1]
+
+                    byte pixelValue = (byte)(Math.Clamp((noiseValue + 1f) * 0.5f, 0f, 1f) * 255);
+                    image[x, y] = new L8(pixelValue);
+                }
+            }
+
+            image.SaveAsPng(filename);
+        }
+
+
         private static float Fade(float t) =>
-            t * t * t * (t * (t * 6 - 15) + 10);
+                t * t * t * (t * (t * 6 - 15) + 10);
 
         private static float Lerp(float a, float b, float t) =>
             a + t * (b - a);
@@ -63,5 +117,35 @@ namespace Minecraft_Clone.World
             float v = h < 4 ? y : x;
             return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
         }
+
+        float Grad(int hash, float x, float y, float z)
+        {
+            int h = hash & 15;
+            float u = h < 8 ? x : y;
+            float v = h < 4 ? y : h == 12 || h == 14 ? x : z;
+            return ((h & 1) == 0 ? u : -u) +
+                   ((h & 2) == 0 ? v : -v);
+        }
+
+        public float FractalNoise(float x, float y, float z, int octaves = 4, float lacunarity = 2f, float gain = 0.5f)
+        {
+            float total = 0f;
+            float amplitude = 1f;
+            float frequency = 1f;
+            float maxValue = 0f; // used for normalization
+
+            for (int i = 0; i < octaves; i++)
+            {
+                total += Noise(x * frequency, y * frequency, z * frequency) * amplitude;
+                maxValue += amplitude;
+
+                amplitude *= gain;
+                frequency *= lacunarity;
+            }
+
+            return total / maxValue; // normalize to [0,1]
+        }
+
     }
 }
+

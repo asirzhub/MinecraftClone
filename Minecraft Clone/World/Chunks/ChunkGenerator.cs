@@ -1,9 +1,12 @@
-﻿using OpenTK.Mathematics;
+﻿using Minecraft_Clone.World;
+using Minecraft_Clone.World.Chunks;
+using OpenTK.Mathematics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace Minecraft_Clone.World.Chunks
 {
@@ -11,8 +14,11 @@ namespace Minecraft_Clone.World.Chunks
     {
         private PerlinNoise noise;
         private float noiseScale;
+        public float surfaceThreshold = 0.5f;
 
-        public ChunkGenerator(int seed = 420, float noiseScale = 0.02f)
+        public PerlinNoise Noise { get => noise; set => noise = value; }
+
+        public ChunkGenerator(int seed = 420, float noiseScale = 0.01f)
         {
             noise = new PerlinNoise(seed);
             this.noiseScale = noiseScale;
@@ -30,7 +36,7 @@ namespace Minecraft_Clone.World.Chunks
             // for each block in the 16×16×16 volume...
             for (int x = 0; x < Chunk.SIZE; x++)
             {
-                for (int y = 0; y < Chunk.SIZE; y++)
+                for (int y = Chunk.SIZE - 1; y >= 0; y--)
                 {
                     for (int z = 0; z < Chunk.SIZE; z++)
                     {
@@ -38,78 +44,55 @@ namespace Minecraft_Clone.World.Chunks
                         int worldX = chunkIndex.X * Chunk.SIZE + x;
                         int worldY = chunkIndex.Y * Chunk.SIZE + y;
                         int worldZ = chunkIndex.Z * Chunk.SIZE + z;
+                        BlockType type = BlockType.AIR;
 
-                        // how high is the terrain here?
-                        bool mountainFlag;
-                        int terrainHeight = CalculateHeight(worldX, worldZ, out mountainFlag);
-
-                        // decide block type
-                        BlockType blockType = BlockType.AIR;
-                        bool isSurface = (worldY == terrainHeight);
-                        bool isBelowSurface = (worldY < terrainHeight);
-                        bool isFarBelow = (worldY < terrainHeight - dirtThickness);
-                        bool isUnderwater = (terrainHeight < seaLevel
-                                                 && worldY <= seaLevel
-                                                 && worldY > terrainHeight);
-
-                        if (isSurface)
+                        if (worldY < seaLevel)
                         {
-                            if (worldY > seaLevel)
-                                blockType = mountainFlag ? BlockType.STONE : BlockType.GRASS;
-                            else if (worldY == seaLevel)
-                                blockType = BlockType.SAND;
-                            else if (worldY > seaLevel - sandFalloff)
+                            type = BlockType.AIR;
+                        }
+
+                        // Volumetric shaping
+                        float density = (noise.FractalNoise(worldX * noiseScale, worldY * noiseScale, worldZ * noiseScale));
+
+                        // influence density by double
+                        density = density * 2;
+
+                        var landBias = noise.Noise((float)worldX/ noiseScale, (float)worldZ/ noiseScale);
+                        
+                        //decide what kind of block this is.
+
+                        if (worldY <= seaLevel)
+                            type = BlockType.WATER;
+
+                        // solid blocks
+                        if (density - landBias * worldY/40f > (0.95f))
+                        {
+                            type = BlockType.STONE;
+
+                            if (worldY > seaLevel && world.TryGetBlockAt((worldX, worldY + 1, worldZ), out var b))
                             {
-                                // mix sand and dirt near shore
-                                int r = Random.Shared.Next(sandFalloff);
-                                blockType = (seaLevel - worldY < r)
-                                            ? BlockType.SAND
-                                            : BlockType.DIRT;
+                                if (b.isAir) type = BlockType.GRASS;
+                                if (b.Type == BlockType.GRASS || b.Type == BlockType.DIRT)
+                                {
+                                    if (landBias > 0.30) type = BlockType.DIRT;
+                                    else type = BlockType.STONE;
+                                }
                             }
-                            else
-                                blockType = mountainFlag ? BlockType.STONE : BlockType.DIRT;
-                        }
-                        else if (isFarBelow)
-                        {
-                            blockType = BlockType.STONE;
-                        }
-                        else if (isBelowSurface)
-                        {
-                            blockType = mountainFlag ? BlockType.STONE : BlockType.DIRT;
-                        }
-                        else if (isUnderwater)
-                        {
-                            blockType = BlockType.WATER;
+
+                            else if (worldY <= seaLevel && world.TryGetBlockAt((worldX, worldY + 1, worldZ), out var c))
+                            {
+                                if (!c.isSolid) type = BlockType.SAND;
+                                if (c.Type == BlockType.SAND)
+                                {
+                                    if (landBias > 0.30) type = BlockType.SAND;
+                                }
+                            }
                         }
 
-                        // write it
-                        if (blockType != BlockType.AIR)
-                            chunk.SetBlock(x, y, z, blockType);
+                        chunk.SetBlock(x, y, z, type);
                     }
                 }
             }
         }
-
-        public int CalculateHeight(int x, int z, out bool mountain)
-        {
-            float h = 5f * (noise.Noise(x * noiseScale / 4, z * noiseScale / 4) - 0.5f);
-            float m = h;
-            h += 4f * (noise.Noise(x * noiseScale / 3, z * noiseScale / 3) - 0.5f);
-            h += 4f * (noise.Noise(x * noiseScale / 5, z * noiseScale / 5) - 0.5f);
-
-            mountain = false;
-            if (m > 0.7f)
-            {
-                h *= (h - 0.7f);
-                mountain = true;
-            }
-
-            h = h * Chunk.SIZE - 1;
-            if (h < 0)
-                h = -MathF.Pow(-h, 0.8f);
-
-            return (int)h;
-        }
     }
-
 }

@@ -5,10 +5,6 @@ using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
-using System.Runtime.InteropServices;
-using static Minecraft_Clone.Graphics.VBO;
-using static Minecraft_Clone.Graphics.VertexUtils;
-using ErrorCode = OpenTK.Graphics.OpenGL4.ErrorCode;
 
 namespace Minecraft_Clone
 {
@@ -21,7 +17,7 @@ namespace Minecraft_Clone
         float noiseScale = 0.01f;
 
         //chunks work in this order
-        ChunkManager chunkManager;
+        public ChunkManager chunkManager;
         SkyRender skyRender;
 
         // window-specific variables
@@ -48,15 +44,12 @@ namespace Minecraft_Clone
         }
 
         // first frame activities
+        float[] xs = new float[100];
+        float[] ys = new float[100];
         protected override void OnLoad()
         {
             base.OnLoad();
             GL.ClearColor(0.0f, 0.0f, 1.0f, 1.0f);
-
-            //blockShader = new Shader("default.vert", "default.frag");
-            //blockShader.Bind();
-            //blockTexture = new Texture("textures.png");
-            //blockTexture.Bind();
 
             // some clean-up stuff
             CursorState = CursorState.Grabbed;
@@ -65,13 +58,8 @@ namespace Minecraft_Clone
             GL.Enable(EnableCap.DepthTest);
 
             chunkManager = new ChunkManager();
-            skyRender.InitializeSky();
 
-            /*
-            // allow water and stuff to be transparent
-            GL.Enable(EnableCap.Blend);
-            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
-            */
+            skyRender.InitializeSky();
         }
 
         // render stuff for each frame 
@@ -81,7 +69,7 @@ namespace Minecraft_Clone
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
             // Render sky first
-            skyRender.SetSunDirection(Vector3.Transform(skyRender.sunDirection, new Quaternion((float)args.Time / 5f, 0f, 0f)));
+            skyRender.SetSunDirection(Vector3.Transform(skyRender.sunDirection, new Quaternion((float)args.Time / 25f, 0f, 0f)));
             skyRender.RenderSky(camera);
 
             chunkManager.Update(camera, timeElapsed);
