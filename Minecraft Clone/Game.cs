@@ -57,7 +57,7 @@ namespace Minecraft_Clone
 
             VSync = VSyncMode.On;
             GL.Enable(EnableCap.DepthTest);
-            //GL.Enable(EnableCap.CullFace);
+            GL.Enable(EnableCap.CullFace);
 
             chunkManager = new ChunkManager();
 

@@ -17,7 +17,7 @@ namespace Minecraft_Clone
         public Vector3 right = Vector3.UnitX;
         public Vector3 up = Vector3.UnitY; // we define Y as going up, not Z. but you can.
         public Vector3 front = -Vector3.UnitZ;
-        public float fovY = 80;
+        public float fovY = 65;
 
         private float pitch;
         private float yaw;
