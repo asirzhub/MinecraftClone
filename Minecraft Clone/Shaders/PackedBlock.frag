@@ -14,5 +14,9 @@ void main()
     if (texColor.a < 0.1)
         discard;
 
-    FragColor = texColor * vec4(vec3(brightness/7.5), 1) ;
+    float faceBrightness = dot(vec3(0.5, 2, 1), vNormal);
+    faceBrightness/=4;
+    faceBrightness +=1;
+
+    FragColor = texColor * vec4(vec3(brightness/15), 1) * vec4(vec3(faceBrightness), 1);
 }

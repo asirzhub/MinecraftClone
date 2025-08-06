@@ -42,7 +42,7 @@ void main()
 {
     texCoord = inTex;
 
-    brightness = uint((inPosNorBright >> 24) & 0x5u);
+    brightness = uint((inPosNorBright >> 24) & 0xFu);
     vNormal = DecodeNormal(inPosNorBright);
     isWater = int((inPosNorBright >> 21) & 0x1u);
 

@@ -70,24 +70,23 @@ namespace Minecraft_Clone.World.Chunks
 
                         // back
                         if (world.TryGetBlockAt(blockWorldPos + new Vector3i(0, 0, -1), out var bB))
-                            occlusions[1] = bB.isSolid || (block.isWater && bB.isWater); 
+                            occlusions[1] = bB.isSolid || (block.isWater && bB.isWater);
 
                         // left
                         if (world.TryGetBlockAt(blockWorldPos + new Vector3i(-1, 0, 0), out var bL))
-                            occlusions[2] = bL.isSolid || (block.isWater && bL.isWater); 
+                            occlusions[2] = bL.isSolid || (block.isWater && bL.isWater);
 
                         // right
                         if (world.TryGetBlockAt(blockWorldPos + new Vector3i(+1, 0, 0), out var bR))
                             occlusions[3] = bR.isSolid || (block.isWater && bR.isWater);
-                        
+
                         // up
                         if (world.TryGetBlockAt(blockWorldPos + new Vector3i(0, 1, 0), out var bU))
                             occlusions[4] = (bU.isSolid && !block.isWater && blockWorldPos.Y != world.seaLevel) || (block.isWater && bU.isWater);
 
                         // down
                         if (world.TryGetBlockAt(blockWorldPos + new Vector3i(0, -1, 0), out var bD))
-                            occlusions[5] = bD.isSolid || (block.isWater && bD.isWater); 
-
+                            occlusions[5] = bD.isSolid || (block.isWater && bD.isWater);
 
 
                         // for each face
@@ -146,19 +145,26 @@ namespace Minecraft_Clone.World.Chunks
                                     (int)(MathF.Round((vPos.Y - 0.5f) * 2f)),
                                     (int)(MathF.Round((vPos.Z - 0.5f) * 2f)));
 
+                                byte occluderCount = 0;
                                 foreach (var direction in AOCheckDirection)
                                 {
-                                    world.TryGetBlockAt(blockWorldPos + direction, out var b);
-                                    if (b.isSolid && lightLevel > 1)
+                                    if (lightLevel > 1)
                                     {
-                                        lightLevel -= 1;
+                                        world.TryGetBlockAt(blockWorldPos + direction, out var b);
+                                        if (b.isSolid)
+                                        {
+                                            occluderCount += (byte)1;
+                                        }
                                     }
                                 }
+
+                                if (occluderCount > 2) lightLevel -= occluderCount;
+                                
 
                                 if (block.isWater)
                                 {
                                     liquidResult.Vertices.Add(
-                                        new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, 15, true)
+                                        new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, lightLevel, true)
                                     );
 
                                     // Two triangles (0,1,2) & (2,3,0)
@@ -176,7 +182,6 @@ namespace Minecraft_Clone.World.Chunks
                                     solidResult.Vertices.Add(
                                         new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, lightLevel)
                                     );
-
 
                                     // Two triangles (0,1,2) & (2,3,0)
                                     solidResult.Indices.Add(solidVertexOffset + 0);
