@@ -3,28 +3,48 @@
   "WorkspaceRootPath": "C:\\Users\\User\\Documents\\MinecraftClone\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|c:\\users\\user\\documents\\minecraftclone\\minecraft clone\\world\\chunks\\chunkmesher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\world\\chunks\\chunkmesher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|c:\\users\\user\\documents\\minecraftclone\\minecraft clone\\game.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\game.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|c:\\users\\user\\documents\\minecraftclone\\minecraft clone\\world\\chunks\\chunkrenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\world\\chunks\\chunkrenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|c:\\users\\user\\documents\\minecraftclone\\minecraft clone\\camera.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\camera.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|c:\\users\\user\\documents\\minecraftclone\\minecraft clone\\shaders\\packedblock.frag||{8B382828-6202-11D1-8870-0000F87579D2}",
       "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\shaders\\packedblock.frag||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|c:\\users\\user\\documents\\minecraftclone\\minecraft clone\\graphics\\vbo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\graphics\\vbo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|c:\\users\\user\\documents\\minecraftclone\\minecraft clone\\world\\chunks\\chunkmesher_old.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\world\\chunks\\chunkmesher_old.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|c:\\users\\user\\documents\\minecraftclone\\minecraft clone\\shaders\\packedblock.vert||{8B382828-6202-11D1-8870-0000F87579D2}",
       "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\shaders\\packedblock.vert||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
+      "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|c:\\users\\user\\documents\\minecraftclone\\minecraft clone\\shaders\\sky.frag||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\shaders\\sky.frag||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|c:\\users\\user\\documents\\minecraftclone\\minecraft clone\\graphics\\skyrender.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\graphics\\skyrender.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|c:\\users\\user\\documents\\minecraftclone\\minecraft clone\\world\\chunks\\chunkmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\world\\chunks\\chunkmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|c:\\users\\user\\documents\\minecraftclone\\minecraft clone\\game.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\game.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|c:\\users\\user\\documents\\minecraftclone\\minecraft clone\\world\\chunks\\chunkmesher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\world\\chunks\\chunkmesher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|c:\\users\\user\\documents\\minecraftclone\\minecraft clone\\graphics\\vbo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\graphics\\vbo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|c:\\users\\user\\documents\\minecraftclone\\minecraft clone\\world\\chunks\\chunk.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -33,10 +53,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|c:\\users\\user\\documents\\minecraftclone\\minecraft clone\\world\\chunks\\chunkgenerator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\world\\chunks\\chunkgenerator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|c:\\users\\user\\documents\\minecraftclone\\minecraft clone\\camera.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\camera.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|c:\\users\\user\\documents\\minecraftclone\\minecraft clone\\world\\perlinnoise.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -49,10 +65,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|c:\\users\\user\\documents\\minecraftclone\\minecraft clone\\world\\chunks\\chunkworld.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\world\\chunks\\chunkworld.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|c:\\users\\user\\documents\\minecraftclone\\minecraft clone\\world\\chunks\\chunkrenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\world\\chunks\\chunkrenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -62,7 +74,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 13,
+          "SelectedChildIndex": 10,
           "Children": [
             {
               "$type": "Bookmark",
@@ -70,7 +82,43 @@
             },
             {
               "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "ChunkMesher_OLD.cs",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\World\\Chunks\\ChunkMesher_OLD.cs",
+              "RelativeDocumentMoniker": "Minecraft Clone\\World\\Chunks\\ChunkMesher_OLD.cs",
+              "ToolTip": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\World\\Chunks\\ChunkMesher_OLD.cs",
+              "RelativeToolTip": "Minecraft Clone\\World\\Chunks\\ChunkMesher_OLD.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-06T17:55:13.25Z"
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 6,
+              "Title": "sky.frag",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\Shaders\\sky.frag",
+              "RelativeDocumentMoniker": "Minecraft Clone\\Shaders\\sky.frag",
+              "ToolTip": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\Shaders\\sky.frag",
+              "RelativeToolTip": "Minecraft Clone\\Shaders\\sky.frag",
+              "ViewState": "AgIAAAkAAAAAAAAAAAAAABcAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2025-08-06T16:16:45.676Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "SkyRender.cs",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\Graphics\\SkyRender.cs",
+              "RelativeDocumentMoniker": "Minecraft Clone\\Graphics\\SkyRender.cs",
+              "ToolTip": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\Graphics\\SkyRender.cs",
+              "RelativeToolTip": "Minecraft Clone\\Graphics\\SkyRender.cs",
+              "ViewState": "AgIAAD4AAAAAAAAAAAAgwAwAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-06T16:05:08.546Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
               "Title": "Chunk.cs",
               "DocumentMoniker": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\World\\Chunks\\Chunk.cs",
               "RelativeDocumentMoniker": "Minecraft Clone\\World\\Chunks\\Chunk.cs",
@@ -82,19 +130,19 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 2,
               "Title": "Camera.cs",
               "DocumentMoniker": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\Camera.cs",
               "RelativeDocumentMoniker": "Minecraft Clone\\Camera.cs",
               "ToolTip": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\Camera.cs",
               "RelativeToolTip": "Minecraft Clone\\Camera.cs",
-              "ViewState": "AgIAABcAAAAAAAAAAAAAwGcAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAAtAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-08-04T12:46:56.117Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 13,
               "Title": "PerlinNoise.cs",
               "DocumentMoniker": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\World\\PerlinNoise.cs",
               "RelativeDocumentMoniker": "Minecraft Clone\\World\\PerlinNoise.cs",
@@ -106,7 +154,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 12,
               "Title": "ChunkGenerator.cs",
               "DocumentMoniker": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\World\\Chunks\\ChunkGenerator.cs",
               "RelativeDocumentMoniker": "Minecraft Clone\\World\\Chunks\\ChunkGenerator.cs",
@@ -118,7 +166,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 14,
               "Title": "CubeMesh.cs",
               "DocumentMoniker": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\World\\CubeMesh.cs",
               "RelativeDocumentMoniker": "Minecraft Clone\\World\\CubeMesh.cs",
@@ -130,7 +178,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 15,
               "Title": "ChunkWorld.cs",
               "DocumentMoniker": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\World\\Chunks\\ChunkWorld.cs",
               "RelativeDocumentMoniker": "Minecraft Clone\\World\\Chunks\\ChunkWorld.cs",
@@ -142,57 +190,57 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 0,
               "Title": "Game.cs",
               "DocumentMoniker": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\Game.cs",
               "RelativeDocumentMoniker": "Minecraft Clone\\Game.cs",
               "ToolTip": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\Game.cs",
               "RelativeToolTip": "Minecraft Clone\\Game.cs",
-              "ViewState": "AgIAADQAAAAAAAAAAAAYwEIAAAAJAAAAAAAAAA==",
+              "ViewState": "AgIAAC4AAAAAAAAAAAAEwDoAAAArAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-03T22:42:43.59Z"
+              "WhenOpened": "2025-08-03T22:42:43.59Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 1,
               "Title": "ChunkRenderer.cs",
               "DocumentMoniker": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\World\\Chunks\\ChunkRenderer.cs",
               "RelativeDocumentMoniker": "Minecraft Clone\\World\\Chunks\\ChunkRenderer.cs",
               "ToolTip": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\World\\Chunks\\ChunkRenderer.cs",
               "RelativeToolTip": "Minecraft Clone\\World\\Chunks\\ChunkRenderer.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABkAAAArAAAAAAAAAA==",
+              "ViewState": "AgIAACUAAAAAAAAAAAAgwDMAAAA/AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-03T22:39:34.127Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "PackedBlock.frag",
-              "DocumentMoniker": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\Shaders\\PackedBlock.frag",
-              "RelativeDocumentMoniker": "Minecraft Clone\\Shaders\\PackedBlock.frag",
-              "ToolTip": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\Shaders\\PackedBlock.frag",
-              "RelativeToolTip": "Minecraft Clone\\Shaders\\PackedBlock.frag",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2025-08-03T22:35:15.428Z",
+              "WhenOpened": "2025-08-03T22:39:34.127Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 3,
+              "Title": "PackedBlock.frag",
+              "DocumentMoniker": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\Shaders\\PackedBlock.frag",
+              "RelativeDocumentMoniker": "Minecraft Clone\\Shaders\\PackedBlock.frag",
+              "ToolTip": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\Shaders\\PackedBlock.frag",
+              "RelativeToolTip": "Minecraft Clone\\Shaders\\PackedBlock.frag",
+              "ViewState": "AgIAAAkAAAAAAAAAAAAQwBgAAAAXAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2025-08-03T22:35:15.428Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
               "Title": "PackedBlock.vert",
               "DocumentMoniker": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\Shaders\\PackedBlock.vert",
               "RelativeDocumentMoniker": "Minecraft Clone\\Shaders\\PackedBlock.vert",
               "ToolTip": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\Shaders\\PackedBlock.vert",
               "RelativeToolTip": "Minecraft Clone\\Shaders\\PackedBlock.vert",
-              "ViewState": "AgIAACEAAAAAAAAAAAAAACcAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAACEAAAAAAAAAAAAAACwAAAA0AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2025-08-03T22:32:12.934Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-08-03T22:32:12.934Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 10,
               "Title": "VBO.cs",
               "DocumentMoniker": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\Graphics\\VBO.cs",
               "RelativeDocumentMoniker": "Minecraft Clone\\Graphics\\VBO.cs",
@@ -200,33 +248,31 @@
               "RelativeToolTip": "Minecraft Clone\\Graphics\\VBO.cs",
               "ViewState": "AgIAACYAAAAAAAAAAAAswDgAAAAcAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-03T22:29:59.482Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-08-03T22:29:59.482Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 8,
               "Title": "ChunkManager.cs",
               "DocumentMoniker": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\World\\Chunks\\ChunkManager.cs",
               "RelativeDocumentMoniker": "Minecraft Clone\\World\\Chunks\\ChunkManager.cs",
               "ToolTip": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\World\\Chunks\\ChunkManager.cs",
               "RelativeToolTip": "Minecraft Clone\\World\\Chunks\\ChunkManager.cs",
-              "ViewState": "AgIAAEoAAAAAAAAAAAAgwEIAAAA2AAAAAAAAAA==",
+              "ViewState": "AgIAAB0AAAAAAAAAAAAAACAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-08-03T22:08:45.65Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 9,
               "Title": "ChunkMesher.cs",
               "DocumentMoniker": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\World\\Chunks\\ChunkMesher.cs",
               "RelativeDocumentMoniker": "Minecraft Clone\\World\\Chunks\\ChunkMesher.cs",
               "ToolTip": "C:\\Users\\User\\Documents\\MinecraftClone\\Minecraft Clone\\World\\Chunks\\ChunkMesher.cs",
               "RelativeToolTip": "Minecraft Clone\\World\\Chunks\\ChunkMesher.cs",
-              "ViewState": "AgIAAIkAAAAAAAAAAAAAwKAAAABTAAAAAAAAAA==",
+              "ViewState": "AgIAAIkAAAAAAAAAAAAAwJkAAAA2AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-03T22:08:44.385Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-08-03T22:08:44.385Z"
             }
           ]
         }

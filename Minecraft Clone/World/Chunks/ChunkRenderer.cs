@@ -33,7 +33,7 @@ namespace Minecraft_Clone.World.Chunks
             waterTexture = new Texture("textures.png");
         }
 
-        public void RenderChunk(MeshData mesh, Camera camera, Vector3i index, float time)
+        public void RenderChunk(MeshData mesh, Camera camera, Vector3i index, float time, Vector3 sunDirection)
         {
             blockShader.Bind();
             blockTexture.Bind();
@@ -49,12 +49,14 @@ namespace Minecraft_Clone.World.Chunks
             blockShader.SetMatrix4("view", view);
             blockShader.SetMatrix4("projection", projection);
 
-
             blockShader.SetFloat("u_waterOffset", waterOffset);
             blockShader.SetFloat("u_waveAmplitude", waterWaveAmplitude);
             blockShader.SetFloat("u_waveScale", waterWaveScale);
             blockShader.SetFloat("u_time", time);
             blockShader.SetFloat("u_waveSpeed", waterWaveSpeed);
+            blockShader.SetVector3("sunDirection", sunDirection);
+            blockShader.SetVector3("ambientColor", new(1.1f, 1.2f, 1.3f));
+            blockShader.SetVector3("sunsetColor", new(0.7f, 0.2f, 0.3f));
 
             mesh.vao.Bind();
             mesh.vbo.Bind();

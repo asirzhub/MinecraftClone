@@ -40,7 +40,7 @@ namespace Minecraft_Clone
             camera = new Camera(width, height, -1f * Vector3.UnitX + 4 * Vector3.UnitY);
             this.width = width;
             this.height = height;
-            skyRender = new SkyRender((0f, 1f, -1f));
+            skyRender = new SkyRender((0.4f, 1f, -1f));
         }
 
         // first frame activities
@@ -51,11 +51,13 @@ namespace Minecraft_Clone
             base.OnLoad();
             GL.ClearColor(0.0f, 0.0f, 1.0f, 1.0f);
 
+
             // some clean-up stuff
             CursorState = CursorState.Grabbed;
 
             VSync = VSyncMode.On;
             GL.Enable(EnableCap.DepthTest);
+            //GL.Enable(EnableCap.CullFace);
 
             chunkManager = new ChunkManager();
 
@@ -69,10 +71,10 @@ namespace Minecraft_Clone
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
             // Render sky first
-            skyRender.SetSunDirection(Vector3.Transform(skyRender.sunDirection, new Quaternion((float)args.Time / 25f, 0f, 0f)));
+            skyRender.SetSunDirection(Vector3.Transform(skyRender.sunDirection, new Quaternion((float)args.Time / 15f, 0f, 0f)));
             skyRender.RenderSky(camera);
 
-            chunkManager.Update(camera, timeElapsed);
+            chunkManager.Update(camera, timeElapsed, skyRender.sunDirection.Normalized());
 
             SwapBuffers();
 
