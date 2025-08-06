@@ -16,20 +16,20 @@ uniform float u_waveSpeed;
 
 out vec2 texCoord;
 out vec3 vNormal;
-out vec3 vColor;
+out float brightness;
 out int isWater;
 
 vec3 DecodePos(uint p) {
-    int x = int((p >> 0) & 0x1Fu);
-    float y = int((p >> 5) & 0x1Fu);
-    int z = int((p >> 10) & 0x1Fu);
-    y -= u_waterOffset * int((inPosNorBright >> 19) & 0x1u);
+    int x = int((p >> 0) & 0x3Fu);
+    float y = int((p >> 6) & 0x3Fu);
+    int z = int((p >> 12) & 0x3Fu);
+    y -= u_waterOffset * int((inPosNorBright >> 21) & 0x1u);
 
     return vec3(x, y, z);
 }
 
 vec3 DecodeNormal(uint p) {
-    uint n = (p >> 16) & 0x7u;
+    uint n = (p >> 18) & 0x7u;
     if (n == 0u) return vec3( 0, 0, 1);
     if (n == 1u) return vec3( 0, 0,-1);
     if (n == 2u) return vec3(-1, 0, 0);
@@ -38,20 +38,13 @@ vec3 DecodeNormal(uint p) {
                  return vec3( 0,-1, 0);
 }
 
-vec3 DecodeColor(uint p) {
-    int x = int((p >> 20) & 0xFu);
-    int y = int((p >> 24) & 0xFu);
-    int z = int((p >> 28) & 0xFu);
-    return (vec3(x, y, z)+1)/16;
-}
-
 void main()
 {
     texCoord = inTex;
 
-    vColor = DecodeColor(inPosNorBright);
+    brightness = uint((inPosNorBright >> 24) & 0x5u);
     vNormal = DecodeNormal(inPosNorBright);
-    isWater = int((inPosNorBright >> 19) & 0x1u);
+    isWater = int((inPosNorBright >> 21) & 0x1u);
 
     vec4 position = vec4(DecodePos(inPosNorBright), 1.0);
     vec4 worldPos = position * model;

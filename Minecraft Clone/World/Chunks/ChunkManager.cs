@@ -32,7 +32,7 @@ namespace Minecraft_Clone.World.Chunks
             currentChunkIndex = ToChunkIndex(camera.position);
 
             // Loader decides which chunks to load/unload
-            var loadList = loader.GetChunksToLoad(currentChunkIndex, camera, radius:5);
+            var loadList = loader.GetChunksToLoad(currentChunkIndex, camera, radius:2);
 
             // with the list of chunks to load, check the world to see if a chunk was created prior:
             foreach (var kvp in loadList)

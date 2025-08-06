@@ -2,7 +2,7 @@
 
 in vec2 texCoord;
 in vec3 vNormal;
-in vec3 vColor;
+in float brightness;
 uniform sampler2D texture0;
 
 out vec4 FragColor;
@@ -14,5 +14,5 @@ void main()
     if (texColor.a < 0.1)
         discard;
 
-    FragColor = texColor * vec4(vColor, 1);
+    FragColor = texColor * vec4(vec3(brightness/7.5), 1) ;
 }
