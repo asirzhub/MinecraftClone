@@ -37,24 +37,22 @@ namespace Minecraft_Clone.Graphics
         public struct PackedVertex
         {
             public uint PositionNormalLighting; // 32 bits packed
-            // BBBB GGGG RRRR 0NNN 0ZZZ ZZYY YYYX XXXX
-            // [light color ][nrml] [ local position ]
-            //          [is water]
+            // 0000 LLLL 00WN NNZZ ZZZZ YYYY YYXX XXXX
+            // [light lvl] [nrml]  [ local position ]
+            //        [is water]
 
             public float TexU, TexV;
 
-            public PackedVertex(byte posX, byte posY, byte posZ, float texU, float texV, byte normal, byte brightnessR = 15, byte brightnessG = 15, byte brightnessB = 15, bool isWater = false)
+            public PackedVertex(byte posX, byte posY, byte posZ, float texU, float texV, byte normal, byte lightLevel, bool isWater = false)
             {
                 PositionNormalLighting = 0;
 
-                PositionNormalLighting |= (uint)(posX & 0x1F);                      // bits 0–4
-                PositionNormalLighting |= (uint)((posY & 0x1F) << 5);               // bits 5–9
-                PositionNormalLighting |= (uint)((posZ & 0x1F) << 10);              // bits 10–14
-                PositionNormalLighting |= (uint)((normal & 0x7) << 16);             // bits 16–18
-                PositionNormalLighting |= (uint)(((isWater ? 1 : 0) & 0x1) << 19);  // bit 19
-                PositionNormalLighting |= (uint)((brightnessR & 0xF) << 20);        // bits 20–23
-                PositionNormalLighting |= (uint)((brightnessG & 0xF) << 24);        // bits 24–27
-                PositionNormalLighting |= (uint)((brightnessB & 0xF) << 28);        // bits 28–31
+                PositionNormalLighting |= (uint)(posX & 0x3F);                      // bits 0–5
+                PositionNormalLighting |= (uint)((posY & 0x3F) << 6);               // bits 6–11
+                PositionNormalLighting |= (uint)((posZ & 0x3F) << 12);              // bits 12–17
+                PositionNormalLighting |= (uint)((normal & 0x7) << 18);             // bits 18–20
+                PositionNormalLighting |= (uint)(((isWater ? 1 : 0) & 0x1) << 21);  // bit 21
+                PositionNormalLighting |= (uint)((lightLevel & 0xF) << 24);
 
                 TexU = texU;
                 TexV = texV;
@@ -62,9 +60,9 @@ namespace Minecraft_Clone.Graphics
 
             public Vector3i Position()
             {
-                int x = (int)PositionNormalLighting & 0x1F;
-                int y = (int)(PositionNormalLighting >> 5) & 0x1F;
-                int z = (int)(PositionNormalLighting >> 10) & 0x1F;
+                int x = (int)PositionNormalLighting & 0x3F;
+                int y = (int)(PositionNormalLighting >> 6) & 0x3F;
+                int z = (int)(PositionNormalLighting >> 12) & 0x3F;
                 return (x, y, z);
             }
         }

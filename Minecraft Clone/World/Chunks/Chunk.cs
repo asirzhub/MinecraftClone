@@ -4,7 +4,7 @@ namespace Minecraft_Clone.World.Chunks
 {
     public class Chunk
     {
-        public const int SIZE = 16; // same size in all coordinates
+        public const int SIZE = 32; // same size in all coordinates
         public bool dirty = true;
 
         public Block[] blocks = new Block[SIZE * SIZE * SIZE];

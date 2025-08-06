@@ -70,23 +70,23 @@ namespace Minecraft_Clone.World.Chunks
 
                         // back
                         if (world.TryGetBlockAt(blockWorldPos + new Vector3i(0, 0, -1), out var bB))
-                            occlusions[1] = bB.isSolid || (block.isWater && bB.isWater); ;
+                            occlusions[1] = bB.isSolid || (block.isWater && bB.isWater);
 
                         // left
                         if (world.TryGetBlockAt(blockWorldPos + new Vector3i(-1, 0, 0), out var bL))
-                            occlusions[2] = bL.isSolid || (block.isWater && bL.isWater); ;
+                            occlusions[2] = bL.isSolid || (block.isWater && bL.isWater);
 
                         // right
                         if (world.TryGetBlockAt(blockWorldPos + new Vector3i(+1, 0, 0), out var bR))
-                            occlusions[3] = bR.isSolid || (block.isWater && bR.isWater); ;
-
-                        // down
-                        if (world.TryGetBlockAt(blockWorldPos + new Vector3i(0, 1, 0), out var bD))
-                            occlusions[4] = bD.isSolid || (block.isWater && bD.isWater); ;
+                            occlusions[3] = bR.isSolid || (block.isWater && bR.isWater);
 
                         // up
-                        if (world.TryGetBlockAt(blockWorldPos + new Vector3i(0, -1, 0), out var bU))
-                            occlusions[5] = bU.isSolid || (block.isWater && bU.isWater); ;
+                        if (world.TryGetBlockAt(blockWorldPos + new Vector3i(0, 1, 0), out var bU))
+                            occlusions[4] = (bU.isSolid && !block.isWater && blockWorldPos.Y != world.seaLevel) || (block.isWater && bU.isWater);
+
+                        // down
+                        if (world.TryGetBlockAt(blockWorldPos + new Vector3i(0, -1, 0), out var bD))
+                            occlusions[5] = bD.isSolid || (block.isWater && bD.isWater);
 
 
                         // for each face
@@ -104,9 +104,9 @@ namespace Minecraft_Clone.World.Chunks
 
                                 // Local position within chunk (0..16)
                                 var vPos = v.Position();
-                                byte lx = (byte) (x + vPos.X);
-                                byte ly = (byte) (y + vPos.Y);
-                                byte lz = (byte) (z + vPos.Z);
+                                byte lx = (byte)(x + vPos.X);
+                                byte ly = (byte)(y + vPos.Y);
+                                byte lz = (byte)(z + vPos.Z);
 
                                 // Compute UV
                                 var faceUVs = BlockRegistry.Types[block.Type].FaceUVs;
@@ -116,25 +116,19 @@ namespace Minecraft_Clone.World.Chunks
 
                                 byte normal = (byte)face;
 
-                                byte redLight = 15;
-                                byte greenLight = 15;
-                                byte blueLight = 15;
-
+                                byte lightLevel = 15;
 
                                 if (blockWorldPos.Y < world.seaLevel && blockWorldPos.Y > world.seaLevel - 6)
                                 {
-                                    redLight = (byte)(15 - (world.seaLevel - blockWorldPos.Y));
-                                    greenLight = (byte)(15 - (world.seaLevel - blockWorldPos.Y));
-                                    blueLight = (byte)(15 - (world.seaLevel - blockWorldPos.Y));
-                                } else if (blockWorldPos.Y <= world.seaLevel - 6)
+                                    lightLevel = (byte)(15 - (world.seaLevel - blockWorldPos.Y));
+                                }
+                                else if (blockWorldPos.Y <= world.seaLevel - 6)
                                 {
-                                    redLight = (byte)9;
-                                    greenLight = (byte)9;
-                                    blueLight = (byte)9;
+                                    lightLevel = (byte)9;
                                 }
 
-                                    // check the edges in the direction of the vertex to do ambient occlusion with
-                                    Vector3i[] AOCheckDirection = new Vector3i[4];
+                                // check the edges in the direction of the vertex to do ambient occlusion with
+                                Vector3i[] AOCheckDirection = new Vector3i[4];
                                 AOCheckDirection[0] = ((int)(MathF.Round((vPos.X - 0.5f) * 2f)),
                                     0,
                                     (int)(MathF.Round((vPos.Z - 0.5f) * 2f)));
@@ -151,21 +145,26 @@ namespace Minecraft_Clone.World.Chunks
                                     (int)(MathF.Round((vPos.Y - 0.5f) * 2f)),
                                     (int)(MathF.Round((vPos.Z - 0.5f) * 2f)));
 
+                                byte occluderCount = 0;
                                 foreach (var direction in AOCheckDirection)
                                 {
-                                    world.TryGetBlockAt(blockWorldPos + direction, out var b);
-                                    if (b.isSolid)
+                                    if (lightLevel > 1)
                                     {
-                                        redLight -= 2;
-                                        greenLight -= 2;
-                                        blueLight -= 2;
+                                        world.TryGetBlockAt(blockWorldPos + direction, out var b);
+                                        if (b.isSolid)
+                                        {
+                                            occluderCount += (byte)1;
+                                        }
                                     }
                                 }
+
+                                if (occluderCount > 2) lightLevel -= occluderCount;
+                                
 
                                 if (block.isWater)
                                 {
                                     liquidResult.Vertices.Add(
-                                        new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, redLight, greenLight, blueLight, true)
+                                        new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, lightLevel, true)
                                     );
 
                                     // Two triangles (0,1,2) & (2,3,0)
@@ -181,9 +180,8 @@ namespace Minecraft_Clone.World.Chunks
                                 else
                                 {
                                     solidResult.Vertices.Add(
-                                        new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, redLight, greenLight, blueLight)
+                                        new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, lightLevel)
                                     );
-
 
                                     // Two triangles (0,1,2) & (2,3,0)
                                     solidResult.Indices.Add(solidVertexOffset + 0);
