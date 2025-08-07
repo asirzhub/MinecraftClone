@@ -12,17 +12,11 @@ namespace Minecraft_Clone.World.Chunks
         public int dirtThickness;
         public int sandFalloff;
 
-        // <summary>
-        /// Create a world using a seed and noise Scale
-        /// </summary>
         public ChunkWorld()
         {
         }
 
-        // <summary>
-        /// Instance a chunk at the designated location, and add it to the world's chunks.
-        /// </summary>
-        public Chunk AddChunk(Vector3i pos, BlockType fillType = BlockType.AIR)
+        public Chunk AddNewChunk(Vector3i pos, BlockType fillType = BlockType.AIR)
         {
             Chunk chunk = new Chunk();
             chunk.FillWithBlock(fillType);
@@ -31,10 +25,26 @@ namespace Minecraft_Clone.World.Chunks
             return chunk;
         }
 
+        public void GetUnloadList(List<Vector3i> loadList, out List<Vector3i> culledList)
+        {
+            culledList = new List<Vector3i>();
+            foreach (var existingChunk in chunks)
+            {
+                if (!loadList.Contains(existingChunk.Key))
+                    culledList.Add(existingChunk.Key);
+            }
+        }
+
+
         public void AddChunk(Vector3i pos, Chunk chunk)
         {
-            chunks.Add(pos, chunk);
-            MarkNeighborsDirty(pos);
+            if (!chunks.ContainsKey(pos))
+            {
+                chunks.Add(pos, chunk);
+                MarkNeighborsDirty(pos);
+            }
+            else
+                chunks[pos] = chunk;
         }
 
         public bool HasChunk(Vector3i pos)
@@ -55,15 +65,14 @@ namespace Minecraft_Clone.World.Chunks
         public Chunk? GetChunkAtIndex(Vector3i index, out bool found)
         {
             found = false;
-            foreach (var kvp in chunks)
+            var chunkCache = chunks.ToList();
+            foreach (var kvp in chunkCache)
                 if (kvp.Key == index)
                 {
                     found = true;
                     return kvp.Value;
                 }
-
             //Console.WriteLine($"[ChunkWorld] Tried getting a chunk at {index} that is not registered!!!.");
-
             return null;
         }
 
@@ -103,9 +112,6 @@ namespace Minecraft_Clone.World.Chunks
             return true;
         }
 
-        /// <summary>
-        /// Integer floor‐division helper: always rounds down.
-        /// </summary>
         private static int FloorDiv(int a, int b)
             => (int)MathF.Floor(a / (float)b);
 

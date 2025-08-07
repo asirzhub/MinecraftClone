@@ -81,29 +81,6 @@ namespace Minecraft_Clone.World
 
         }
 
-        public void SaveNoiseSliceImage(string filename, int width, int height, float zSlice)
-        {
-            using var image = new Image<L8>(width, height); // L8 = grayscale 8-bit
-
-            float scale = 0.1f;
-
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    float nx = x * scale;
-                    float ny = y * scale;
-                    float noiseValue = FractalNoise(nx, ny, zSlice, lacunarity: 3.0f); // assuming [-1, 1]
-
-                    byte pixelValue = (byte)(Math.Clamp((noiseValue + 1f) * 0.5f, 0f, 1f) * 255);
-                    image[x, y] = new L8(pixelValue);
-                }
-            }
-
-            image.SaveAsPng(filename);
-        }
-
-
         private static float Fade(float t) =>
                 t * t * t * (t * (t * 6 - 15) + 10);
 
@@ -127,7 +104,26 @@ namespace Minecraft_Clone.World
                    ((h & 2) == 0 ? v : -v);
         }
 
-        public float FractalNoise(float x, float y, float z, int octaves = 4, float lacunarity = 2f, float gain = 0.5f)
+        public float FractalNoise(float x, float y, int octaves = 3, float lacunarity = 2.4f, float gain = 0.5f)
+        {
+            float total = 0f;
+            float amplitude = 1f;
+            float frequency = 1f;
+            float maxValue = 0f; // used for normalization
+
+            for (int i = 0; i < octaves; i++)
+            {
+                total += Noise(x * frequency, y * frequency) * amplitude;
+                maxValue += amplitude;
+
+                amplitude *= gain;
+                frequency *= lacunarity;
+            }
+
+            return total / maxValue; // normalize to [0,1]
+        }
+
+        public float FractalNoise(float x, float y, float z, int octaves = 3, float lacunarity = 2.4f, float gain = 0.5f)
         {
             float total = 0f;
             float amplitude = 1f;
