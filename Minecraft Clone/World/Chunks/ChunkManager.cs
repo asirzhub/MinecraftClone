@@ -16,6 +16,7 @@ public class ChunkManager
     // Track in-flight tasks
     private Dictionary<Vector3i, Task> genTasks = new();
     private Dictionary<Vector3i, Task<bool>> meshTasks = new();
+    private Dictionary<Vector3i, CancellationTokenSource> cancelTokens = new();
 
     private Vector3i currentChunkIndex;
 
@@ -23,18 +24,21 @@ public class ChunkManager
 
     public async Task UpdateAsync(Camera camera, float time, Vector3 sunDirection)
     {
+        //steps
+        // 1. get a list of chunks to load
+        // 2. based on that, generate a list of chunks to unload
+        // 4. for every chunk that needs to be loaded
+        // 5. if the world doesnt have it, and there is not already a generator task, make a new task for that chunk
+        // 6. for every task in the generation tasks that's completed, add it to the list of finished generations
+        // 7. for every finished generation, check if it's been meshed - if not, start a mesh creation task
+        // 8. for every completed mesh task, remove it from the task dictionary
+        // 9. for every chunk that needs to be unloaded, unload it
+        // 10. render every in the mesher
+
         currentChunkIndex = WorldPosToChunkIndex(camera.position);
 
-        var toLoad = loader.GetChunksToLoad(currentChunkIndex, camera, radius:4);
+        var toLoad = loader.GetChunksToLoad(currentChunkIndex, camera, radius:2);
         world.GetUnloadList(toLoad, out var toUnload);
-
-        foreach (var idx in toUnload) // nuke culled chunks immediately
-        {
-            mesher.DisposeMesh(idx);
-            world.chunks.Remove(idx);
-            genTasks.Remove(idx);
-            meshTasks.Remove(idx);
-        }
 
         foreach (var idx in toLoad)
         {
@@ -42,9 +46,10 @@ public class ChunkManager
             {
                 // add an empty chunk to generate asyncly
                 var chunk = world.AddNewChunk(idx, BlockType.AIR);
-                var task = generator.GenerateChunkAsync(chunk, idx, world);
-                genTasks[idx] = task;
-            }
+
+                var cts = new CancellationTokenSource();
+                cancelTokens[idx] = cts;
+                genTasks[idx] = generator.GenerateChunkAsync(chunk, idx, world, cts.Token);            }
         }
 
         List<Vector3i> finishedGen = new();
@@ -61,7 +66,9 @@ public class ChunkManager
             // avoid re-meshing if already meshing
             if (!meshTasks.ContainsKey(idx))
             {
-                meshTasks[idx] = mesher.GenerateMeshAsync(idx, world);
+                var cts = new CancellationTokenSource();
+                cancelTokens[idx] = cts;
+                meshTasks[idx] = mesher.GenerateMeshAsync(idx, world, cts.Token);
             }
             genTasks.Remove(idx);
         }
@@ -81,7 +88,21 @@ public class ChunkManager
             meshTasks.Remove(idx);
         }
 
-        // ▶︎ 6. Render whatever meshes are ready
+        foreach (var idx in toUnload) // nuke culled chunks
+        {
+            if (cancelTokens.TryGetValue(idx, out var cts))
+            {
+                cts.Cancel();
+                cts.Dispose();
+                cancelTokens.Remove(idx);
+            }
+            mesher.DisposeMesh(idx);
+            world.chunks.Remove(idx);
+            genTasks.Remove(idx);
+            meshTasks.Remove(idx);
+        }
+
+        // Render whatever meshes are ready
         Render(camera, time, sunDirection);
     }
 
@@ -95,6 +116,8 @@ public class ChunkManager
             renderer.RenderChunk(mesh, camera, idx, time, sunDirection);
         GL.DepthMask(true);
     }
+
+
 
     private Vector3i WorldPosToChunkIndex(Vector3 pos)
         => new Vector3i((int)MathF.Floor(pos.X / Chunk.SIZE),

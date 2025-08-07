@@ -25,15 +25,17 @@ namespace Minecraft_Clone.World.Chunks
             liquidMeshes = new();
         }
 
-        public Task<bool> GenerateMeshAsync(Vector3i chunkIndex,
-                                     ChunkWorld world)
+        public Task<bool> GenerateMeshAsync(Vector3i chunkIndex, ChunkWorld world, CancellationToken token)
         {
             // ONLY RE-MESH IF THIS CHUNK IS DIRTY!
             var chunk = world.GetChunkAtIndex(chunkIndex, out var thisChunkExists);
             if (!thisChunkExists || !chunk.dirty)
                 return Task.FromResult(false);
 
-            return Task.Run(() => {
+            return Task.Run(() => 
+            {
+                token.ThrowIfCancellationRequested();
+
                 Vector3i localOrigin = chunkIndex * Chunk.SIZE;
                 Chunk forwardChunk = world.GetChunkAtIndex(chunkIndex + new Vector3i(0, 0, 1), out bool forwardChunkExists);
                 Chunk rearChunk = world.GetChunkAtIndex(chunkIndex + new Vector3i(0, 0, -1), out bool rearChunkExists);
@@ -216,6 +218,8 @@ namespace Minecraft_Clone.World.Chunks
         {
             if (solidMeshes.ContainsKey(index))
                 solidMeshes[index].Dispose();
+            if (liquidMeshes.ContainsKey(index))
+                liquidMeshes[index].Dispose();
         }
     }
 }

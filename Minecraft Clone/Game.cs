@@ -55,7 +55,7 @@ namespace Minecraft_Clone
             // some clean-up stuff
             CursorState = CursorState.Grabbed;
 
-            VSync = VSyncMode.On;
+            //VSync = VSyncMode.On;
             GL.Enable(EnableCap.DepthTest);
             GL.Enable(EnableCap.CullFace);
             GL.Enable(EnableCap.Blend);

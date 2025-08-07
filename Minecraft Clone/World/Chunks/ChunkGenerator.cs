@@ -18,10 +18,12 @@ namespace Minecraft_Clone.World.Chunks
 
         Stopwatch watch = new Stopwatch();
 
-        public async Task GenerateChunkAsync(Chunk chunk, Vector3i chunkIndex, ChunkWorld world)
+        public async Task GenerateChunkAsync(Chunk chunk, Vector3i chunkIndex, ChunkWorld world, CancellationToken token)
         {
             await Task.Run(() =>
             {
+                token.ThrowIfCancellationRequested();
+
                 watch.Start();
                 int totalBlocks = 0;
 
@@ -47,42 +49,13 @@ namespace Minecraft_Clone.World.Chunks
                                 type = BlockType.AIR;
                             }
 
-                            // Volumetric shaping
-                            float density = (noise.FractalNoise(worldX * noiseScale, worldY * 1.2f * noiseScale, worldZ * noiseScale));
-
-                            // influence density by double
-                            density = density * 2;
-
-                            var landBias = noise.Noise((float)worldX, (float)worldZ);
-
-                            //decide what kind of block this is.
+                            var landBias = 3 * Chunk.SIZE * (noise.Noise((float)worldX * noiseScale, (float)worldZ * noiseScale)-0.5);
 
                             if (worldY <= seaLevel)
                                 type = BlockType.WATER;
 
-                            // solid blocks
-                            if (density - landBias * worldY / 20f > (0.85f))
-                            {
+                            if (worldY < landBias && worldY > -64)
                                 type = BlockType.STONE;
-                                if (worldY > seaLevel && world.TryGetBlockAt((worldX, worldY + 1, worldZ), out var b))
-                                {
-                                    if (b.isAir) type = BlockType.GRASS;
-                                    if (b.Type == BlockType.GRASS || b.Type == BlockType.DIRT)
-                                    {
-                                        if (landBias > 0.30) type = BlockType.DIRT;
-                                        else type = BlockType.STONE;
-                                    }
-                                }
-
-                                else if (worldY <= seaLevel && world.TryGetBlockAt((worldX, worldY + 1, worldZ), out var c))
-                                {
-                                    if (!c.isSolid) type = BlockType.SAND;
-                                    if (c.Type == BlockType.SAND)
-                                    {
-                                        if (landBias > 0.30) type = BlockType.SAND;
-                                    }
-                                }
-                            }
 
                             chunk.SetBlock(x, y, z, type);
                             if (type != BlockType.AIR) totalBlocks++;
