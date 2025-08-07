@@ -55,9 +55,11 @@ namespace Minecraft_Clone
             // some clean-up stuff
             CursorState = CursorState.Grabbed;
 
-            VSync = VSyncMode.On;
+            //VSync = VSyncMode.On;
             GL.Enable(EnableCap.DepthTest);
             GL.Enable(EnableCap.CullFace);
+            GL.Enable(EnableCap.Blend);
+            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
 
             chunkManager = new ChunkManager();
 
@@ -65,7 +67,7 @@ namespace Minecraft_Clone
         }
 
         // render stuff for each frame 
-        protected override void OnRenderFrame(FrameEventArgs args)
+        protected override async void OnRenderFrame(FrameEventArgs args)
         {
             base.OnRenderFrame(args);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
@@ -74,7 +76,7 @@ namespace Minecraft_Clone
             skyRender.SetSunDirection(Vector3.Transform(skyRender.sunDirection, new Quaternion((float)args.Time / 15f, 0f, 0f)));
             skyRender.RenderSky(camera);
 
-            chunkManager.Update(camera, timeElapsed, skyRender.sunDirection.Normalized());
+            await chunkManager.UpdateAsync(camera, timeElapsed, skyRender.sunDirection.Normalized());
 
             SwapBuffers();
 

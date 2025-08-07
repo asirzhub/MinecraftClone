@@ -1,96 +1,126 @@
-﻿using OpenTK.Mathematics;
+﻿using Minecraft_Clone;
+using Minecraft_Clone.World;
+using Minecraft_Clone.World.Chunks;
+using OpenTK.Mathematics;
 using OpenTK.Graphics.OpenGL4;
+using Minecraft_Clone.Graphics;
 
-namespace Minecraft_Clone.World.Chunks
+public class ChunkManager
 {
-    // Orchestrates the lifecycle of chunks: updates, mesh creation, and rendering.
-    public class ChunkManager
+    private ChunkLoader loader = new ChunkLoader();
+    private ChunkWorld world = new ChunkWorld();
+    private ChunkGenerator generator = new ChunkGenerator();
+    private ChunkMesher mesher = new ChunkMesher();
+    private ChunkRenderer renderer = new ChunkRenderer();
+
+    // Track in-flight tasks
+    private Dictionary<Vector3i, Task> genTasks = new();
+    private Dictionary<Vector3i, Task<bool>> meshTasks = new();
+    private Dictionary<Vector3i, CancellationTokenSource> cancelTokens = new();
+
+    private Vector3i currentChunkIndex;
+
+    public ChunkManager() { }
+
+    public async Task UpdateAsync(Camera camera, float time, Vector3 sunDirection)
     {
-        ChunkLoader loader; // decides which chunks to load or unload from the world, based on player pos
-        ChunkWorld world; // stores loaded chunks in memory
-        public ChunkGenerator[] generators; // generators are only dispatched when a new chunk is made
-        ChunkMesher mesher; // based on what the laoder has decided, mesher makes a mesh for each loaded chunk
-        ChunkRenderer renderer; // renders the chunks that the mesher has meshed
+        //steps
+        // 1. get a list of chunks to load
+        // 2. based on that, generate a list of chunks to unload
+        // 4. for every chunk that needs to be loaded
+        // 5. if the world doesnt have it, and there is not already a generator task, make a new task for that chunk
+        // 6. for every task in the generation tasks that's completed, add it to the list of finished generations
+        // 7. for every finished generation, check if it's been meshed - if not, start a mesh creation task
+        // 8. for every completed mesh task, remove it from the task dictionary
+        // 9. for every chunk that needs to be unloaded, unload it
+        // 10. render every in the mesher
 
-        private Vector3i currentChunkIndex; // stores the player's current chunk's index
+        currentChunkIndex = WorldPosToChunkIndex(camera.position);
 
-        public ChunkManager()
+        var toLoad = loader.GetChunksToLoad(currentChunkIndex, camera, radius:2);
+        world.GetUnloadList(toLoad, out var toUnload);
+
+        foreach (var idx in toLoad)
         {
-            loader = new ChunkLoader();
-            world = new ChunkWorld();
-            generators = new ChunkGenerator[4];
-
-            for(int i = 0; i < 4; i++)
-                generators[i] = new ChunkGenerator();
-
-            mesher = new ChunkMesher();
-            renderer = new ChunkRenderer();
-        }
-
-        public void Update(Camera camera, float time, Vector3 sunDirection)
-        {
-            currentChunkIndex = ToChunkIndex(camera.position);
-
-            // Loader decides which chunks to load/unload
-            var loadList = loader.GetChunksToLoad(currentChunkIndex, camera, radius:2);
-
-            // with the list of chunks to load, check the world to see if a chunk was created prior:
-            foreach (var kvp in loadList)
+            if (!world.HasChunk(idx) && !genTasks.ContainsKey(idx))
             {
-                //Console.WriteLine($"Does the world have the chunk {kvp.Key} with visibility set {kvp.Value}? {world.HasChunk(kvp.Key)}");
-                Vector3i thisChunkIndex = kvp.Key;
-                bool thisChunkExists = world.HasChunk(thisChunkIndex);
-                bool showThisChunk = kvp.Value;
-                // if it exists, just render it if its visible
-                if (thisChunkExists && showThisChunk) {
-                    //Console.WriteLine($"Need to render the chunk at {thisChunkIndex}");
-                    mesher.GenerateMesh(thisChunkIndex, world);
-                }
-                // if it doesnt exist, create it first
-                if (!thisChunkExists)
-                {
-                    //Console.WriteLine($"adding a chunk that was not created before at {thisChunkIndex}");
-                    Chunk newChunk = new Chunk();
-                    world.AddChunk(thisChunkIndex, newChunk);// after it's added to the world, it can be generated
-                    generators[0].GenerateChunk(newChunk, thisChunkIndex, world);
-                }
-                if (thisChunkExists && !showThisChunk)
-                {
-                    world.GetChunkAtIndex(thisChunkIndex, out var found).dirty = true;
-                    mesher.DisposeMesh(thisChunkIndex);
-                }
-            }
+                // add an empty chunk to generate asyncly
+                var chunk = world.AddNewChunk(idx, BlockType.AIR);
 
-            Render(camera, time, sunDirection);
+                var cts = new CancellationTokenSource();
+                cancelTokens[idx] = cts;
+                genTasks[idx] = generator.GenerateChunkAsync(chunk, idx, world, cts.Token);            }
         }
 
-        private void Render(Camera camera, float time, Vector3 sunDirection)
+        List<Vector3i> finishedGen = new();
+        foreach (var idx in genTasks)
         {
-            foreach(var kvp in mesher.solidMeshes)
+            if (idx.Value.IsCompletedSuccessfully)
             {
-                renderer.RenderChunk(kvp.Value, camera, kvp.Key, time, sunDirection);
+                finishedGen.Add(idx.Key);
             }
-
-            GL.Enable(EnableCap.Blend);
-            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
-            GL.DepthMask(false);
-
-            foreach (var kvp in mesher.liquidMeshes)
-            {
-                renderer.RenderChunk(kvp.Value, camera, kvp.Key, time, sunDirection);
-            }
-
-            GL.DepthMask(true);
         }
 
-        private Vector3i ToChunkIndex(Vector3 position)
+        foreach (var idx in finishedGen)
         {
-            return new Vector3i(
-                (int)MathF.Floor(position.X / Chunk.SIZE),
-                (int)MathF.Floor(position.Y / Chunk.SIZE),
-                (int)MathF.Floor(position.Z / Chunk.SIZE)
-            );
+            // avoid re-meshing if already meshing
+            if (!meshTasks.ContainsKey(idx))
+            {
+                var cts = new CancellationTokenSource();
+                cancelTokens[idx] = cts;
+                meshTasks[idx] = mesher.GenerateMeshAsync(idx, world, cts.Token);
+            }
+            genTasks.Remove(idx);
         }
 
+        List<Vector3i> finishedMesh = new();
+
+        foreach (var kvp in meshTasks)
+        {
+            if(kvp.Value.IsCompletedSuccessfully && kvp.Value.Result)
+            {
+                finishedMesh.Add(kvp.Key);
+            }
+        }
+
+        foreach (var idx in finishedMesh)
+        {
+            meshTasks.Remove(idx);
+        }
+
+        foreach (var idx in toUnload) // nuke culled chunks
+        {
+            if (cancelTokens.TryGetValue(idx, out var cts))
+            {
+                cts.Cancel();
+                cts.Dispose();
+                cancelTokens.Remove(idx);
+            }
+            mesher.DisposeMesh(idx);
+            world.chunks.Remove(idx);
+            genTasks.Remove(idx);
+            meshTasks.Remove(idx);
+        }
+
+        // Render whatever meshes are ready
+        Render(camera, time, sunDirection);
     }
+
+    private void Render(Camera camera, float time, Vector3 sunDirection)
+    {
+        foreach (var (idx, mesh) in mesher.solidMeshes)
+            renderer.RenderChunk(mesh, camera, idx, time, sunDirection);
+
+        GL.DepthMask(false);
+        foreach (var (idx, mesh) in mesher.liquidMeshes)
+            renderer.RenderChunk(mesh, camera, idx, time, sunDirection);
+        GL.DepthMask(true);
+    }
+
+
+
+    private Vector3i WorldPosToChunkIndex(Vector3 pos)
+        => new Vector3i((int)MathF.Floor(pos.X / Chunk.SIZE),
+                        (int)MathF.Floor(pos.Y / Chunk.SIZE),
+                        (int)MathF.Floor(pos.Z / Chunk.SIZE));
 }
