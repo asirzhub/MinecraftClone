@@ -17,7 +17,7 @@ namespace Minecraft_Clone.World.Chunks
         }
 
         Stopwatch watch = new Stopwatch();
-
+        /**
         public async Task GenerateChunkAsync(Chunk chunk, Vector3i chunkIndex, ChunkWorld world, CancellationToken token)
         {
             await Task.Run(() =>
@@ -67,6 +67,6 @@ namespace Minecraft_Clone.World.Chunks
                 Console.WriteLine($"Generating terrain took {watch.ElapsedMilliseconds}ms for chunk: {chunkIndex} with total {totalBlocks} ({100 * totalBlocks / 32768}% full) blocks.");
                 watch.Reset();
             });
-        }
+        }*/
     }
 }

@@ -76,7 +76,9 @@ namespace Minecraft_Clone
             skyRender.SetSunDirection(Vector3.Transform(skyRender.sunDirection, new Quaternion((float)args.Time / 15f, 0f, 0f)));
             skyRender.RenderSky(camera);
 
-            await chunkManager.UpdateAsync(camera, timeElapsed, skyRender.sunDirection.Normalized());
+            //await chunkManager.UpdateAsync(camera, timeElapsed, skyRender.sunDirection.Normalized());
+
+            chunkManager.Update(camera, timeElapsed, skyRender.sunDirection.Normalized());
 
             SwapBuffers();
 

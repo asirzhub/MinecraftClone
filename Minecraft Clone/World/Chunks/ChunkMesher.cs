@@ -25,6 +25,7 @@ namespace Minecraft_Clone.World.Chunks
             liquidMeshes = new();
         }
 
+        /*
         public Task<bool> GenerateMeshAsync(Vector3i chunkIndex, ChunkWorld world, CancellationToken token)
         {
             // ONLY RE-MESH IF THIS CHUNK IS DIRTY!
@@ -212,7 +213,7 @@ namespace Minecraft_Clone.World.Chunks
                 UpdateLiquidMeshList(chunkIndex, liquidResult);
                 return true;
             });
-        }
+        }*/
 
         public void DisposeMesh(Vector3i index)
         {
