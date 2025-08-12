@@ -4,6 +4,7 @@ using Minecraft_Clone.World;
 using Minecraft_Clone.World.Chunks;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
+using System.Collections.Concurrent;
 using static Minecraft_Clone.Graphics.VBO;
 
 public class ChunkManager
@@ -36,11 +37,13 @@ public class ChunkManager
     // The list of all chunks that (could) be rendered, therefore should be readied
     List<Vector3i> ActivationList = new List<Vector3i>();
     List<Vector3i> LastActivations = new List<Vector3i>();
-    Dictionary<Vector3i, Chunk> Chunks = new Dictionary<Vector3i, Chunk>();
+    ConcurrentDictionary<Vector3i, Chunk> Chunks = new ConcurrentDictionary<Vector3i, Chunk>();
+
+
 
     public ChunkRenderer renderer = new ChunkRenderer();
 
-    int maxChunkTasks = 10;
+    int maxChunkTasks = 16;
 
     List<Chunk> ChunkList()
     {
@@ -52,11 +55,11 @@ public class ChunkManager
         return result;
     }
 
-    public async void Update(Camera camera, float time, Vector3 sunDirection)
+    public void Update(Camera camera, float time, Vector3 sunDirection)
     {
         int chunkTasks = 0;
 
-        ActivationList = ListActiveChunks((0, 0, 0), 3, 3, 3, 1);
+        ActivationList = ListActiveChunks(camera.position, 4, 3, 3, 1);
 
         // deactivate chunks that are not in the list of active chunks
         foreach (var idx in LastActivations)
@@ -74,12 +77,12 @@ public class ChunkManager
             if (!Chunks.ContainsKey(idx))
             {
                 Chunk newChunk = new Chunk();
-                Chunks.Add(idx, newChunk);
+                Chunks.TryAdd(idx, newChunk);
             }
             else
             {
                 Chunk chunk = Chunks[idx];
-                Console.WriteLine($"{idx}:{chunk.GetState().ToString()}");
+                //Console.WriteLine($"{idx}:{chunk.GetState().ToString()}");
                 // depending on the state of each chunk, do something different
                 switch (chunk.GetState())
                 {
@@ -88,7 +91,8 @@ public class ChunkManager
                         {
                             chunkTasks++;
                             chunk.SetState(ChunkState.GENERATING);
-                            await GenerateChunkAsync(chunk, idx, new CancellationToken());
+                            GenerateChunkAsync(chunk, idx, new CancellationToken());
+                            chunk.SetState(ChunkState.GENERATED);
                         }
                         break;
                     case ChunkState.GENERATING:
@@ -99,7 +103,8 @@ public class ChunkManager
                         {
                             chunkTasks++;
                             chunk.SetState(ChunkState.MESHING);
-                            await GenerateMeshAsync(idx, ChunkList(), new CancellationToken());
+                            GenerateMeshAsync(idx, ChunkList(), new CancellationToken());
+                            chunk.SetState(ChunkState.MESHED);
                         }
                         break;
                     case ChunkState.MESHING:
@@ -124,23 +129,28 @@ public class ChunkManager
         GL.DepthMask(false);
         foreach (var idx in ActivationList)
         {
-            if (Chunks[idx].GetState() == ChunkState.VISIBLE)
-                renderer.RenderChunk(Chunks[idx].liquidMesh, camera, idx, time, sunDirection);
+            var safe = TryGetChunkAtIndex(idx, out var chunk);
+            if (safe && chunk.GetState() == ChunkState.VISIBLE)
+                renderer.RenderChunk(chunk.liquidMesh, camera, idx, time, sunDirection);
         }
         GL.DepthMask(true);
 
-        LastActivations = ActivationList;
+        LastActivations = new List<Vector3i>(ActivationList);
     }
 
     public void DisposeChunk(Vector3i index)
     {
         Chunks[index].DisposeMeshes();
-        Chunks.Remove(index);
+        Chunks.TryRemove(index, out var val);
     }
 
-    public List<Vector3i> ListActiveChunks(Vector3i centerIndex, int horizontalRadius, int upRadius, int downRadius, int minY)
+    public List<Vector3i> ListActiveChunks(Vector3 centerWorldPos, int horizontalRadius, int upRadius, int downRadius, int minY)
     {
         List<Vector3i> result = new List<Vector3i>();
+        Vector3i centerIndex = WorldPosToChunkIndex((
+                                (int)MathF.Floor(centerWorldPos.X),
+                                (int)MathF.Floor(centerWorldPos.Y),
+                                (int)MathF.Floor(centerWorldPos.Z)));
 
         for (int x = -horizontalRadius; x < horizontalRadius; x++)
         {
@@ -167,27 +177,29 @@ public class ChunkManager
         return false;
     }
 
-    public bool TryGetBlockAtWorldPosition(Vector3i worldIndex, out Block result)
+    public Vector3i WorldPosToChunkIndex(Vector3i worldIndex, int chunkSize  = Chunk.SIZE) {
+        int chunkX = (int)Math.Floor(worldIndex.X / (double)chunkSize);
+        int chunkY = (int)Math.Floor(worldIndex.Y / (double)chunkSize);
+        int chunkZ = (int)Math.Floor(worldIndex.Z / (double)chunkSize);
+        return new Vector3i(chunkX, chunkY, chunkZ);
+    }
+
+    public bool TryGetBlockAtWorldPosition(Vector3i worldIndex, out Block result, int chunkSize = Chunk.SIZE)
     {
         result = default;
-        int size = Chunk.SIZE;
 
-        int chunkX = (int)Math.Floor(worldIndex.X / (double)size);
-        int chunkY = (int)Math.Floor(worldIndex.Y / (double)size);
-        int chunkZ = (int)Math.Floor(worldIndex.Z / (double)size);
-
-        Vector3i chunkIndex = new Vector3i(chunkX, chunkY, chunkZ);
+        Vector3i chunkIndex = WorldPosToChunkIndex(worldIndex, chunkSize);
 
         Vector3i localBlockPos = new Vector3i(
-            worldIndex.X - chunkX * size,
-            worldIndex.Y - chunkY * size,
-            worldIndex.Z - chunkZ * size
+            worldIndex.X - chunkIndex.X * chunkSize,
+            worldIndex.Y - chunkIndex.Y * chunkSize,
+            worldIndex.Z - chunkIndex.Z * chunkSize
         );
 
         // sanity check (should not be necessary if floor division is correct)
-        if (localBlockPos.X < 0 || localBlockPos.X >= size ||
-            localBlockPos.Y < 0 || localBlockPos.Y >= size ||
-            localBlockPos.Z < 0 || localBlockPos.Z >= size)
+        if (localBlockPos.X < 0 || localBlockPos.X >= chunkSize ||
+            localBlockPos.Y < 0 || localBlockPos.Y >= chunkSize ||
+            localBlockPos.Z < 0 || localBlockPos.Z >= chunkSize)
         {
             return false;
         }
@@ -240,8 +252,6 @@ public class ChunkManager
                     }
                 }
             }
-
-            chunk.SetState(ChunkState.GENERATED);
         });
     }
 
@@ -252,7 +262,6 @@ public class ChunkManager
         var thisChunkExists = TryGetChunkAtIndex(chunkIndex, out var chunk);
 
         if(thisChunkExists && chunk.GetState() == ChunkState.VISIBLE) return Task.FromResult(false);
-
 
         return Task.Run(() =>
         {
@@ -422,8 +431,6 @@ public class ChunkManager
             }
             chunk.solidMesh = solidResult;
             chunk.liquidMesh = liquidResult;
-
-            chunk.SetState(ChunkState.MESHED);
             return true;
         });
     }
