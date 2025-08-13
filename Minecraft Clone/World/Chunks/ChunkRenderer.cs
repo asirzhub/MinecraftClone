@@ -8,17 +8,8 @@ namespace Minecraft_Clone.World.Chunks
 {
     public class ChunkRenderer
     {
-        public int blockVBO;
-        public int blockVAO;
-        public int blockIBO;
         public Texture blockTexture;
         public Shader blockShader;
-
-        public int waterVBO;
-        public int waterVAO;
-        public int waterIBO;
-        public Texture waterTexture;
-        public Shader waterShader;
 
         public float waterOffset = 0.15f;
         public float waterWaveAmplitude = 0.05f;
@@ -29,8 +20,6 @@ namespace Minecraft_Clone.World.Chunks
         {
             blockShader = new Shader("PackedBlock.vert", "PackedBlock.frag");
             blockTexture = new Texture("textures.png");
-            waterShader = new Shader("default.vert", "default.frag");
-            waterTexture = new Texture("textures.png");
         }
 
         public void RenderChunk(MeshData mesh, Camera camera, Vector3i index, float time, Vector3 sunDirection)
