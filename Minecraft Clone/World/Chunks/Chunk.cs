@@ -28,6 +28,16 @@ namespace Minecraft_Clone.World.Chunks
         public MeshData solidMesh = new();
         public MeshData liquidMesh = new();
 
+        public bool TryMarkDirty()
+        {
+            if (LegalTransitions[ChunkState.DIRTY].Contains(state))
+            {
+                SetState(ChunkState.DIRTY);
+                return true;
+            }
+            return false;
+        }
+
         // practice chunk safety: enforce state transitions
         // you can't transition into GENERATING - only happens at birth
         // {result state , beginning state(s) allowed}
@@ -37,9 +47,9 @@ namespace Minecraft_Clone.World.Chunks
             { ChunkState.GENERATED, new() { ChunkState.GENERATING} },
             { ChunkState.MESHING, new(){ ChunkState.DIRTY, ChunkState.GENERATED, ChunkState.MESHING } },
             { ChunkState.MESHED, new() { ChunkState.MESHING} },
-            { ChunkState.VISIBLE, new(){ ChunkState.MESHED, ChunkState.INVISIBLE} },
-            { ChunkState.INVISIBLE, new(){ChunkState.MESHED, ChunkState.VISIBLE } },
-            { ChunkState.DIRTY, new(){ ChunkState.VISIBLE} }
+            { ChunkState.VISIBLE, new(){ ChunkState.MESHED, ChunkState.INVISIBLE, ChunkState.VISIBLE} },
+            { ChunkState.INVISIBLE, new(){ChunkState.MESHED, ChunkState.VISIBLE, ChunkState.INVISIBLE } },
+            { ChunkState.DIRTY, new(){ ChunkState.VISIBLE, ChunkState.MESHED} }
         };
         public void SetState(ChunkState NewState)
         {

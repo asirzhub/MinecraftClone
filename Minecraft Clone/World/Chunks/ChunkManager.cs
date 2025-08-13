@@ -5,32 +5,15 @@ using Minecraft_Clone.World.Chunks;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using System.Collections.Concurrent;
+using System;
 using static Minecraft_Clone.Graphics.VBO;
+using System.Reflection.Metadata.Ecma335;
 
 public class ChunkManager
 {
-    // terminology:
-    // active means that the chunk might need to immediately be render-ready, so it must be in ram
-    // inactive is just null - the chunk has been removed from ram
-
-    // Steps:
-    // Check if any chunks need to be loaded.
-    // Check if any chunks need to be unloaded, unload them and dispose their mesh.
-    // Check if any chunks have been loaded, but need to be setup(voxel configuration, set active blocks, etc...).
-    // Check if any chunks need to be rebuilt(i.e.a chunk was modified last frame and needs mesh rebuild).
-    // Update the chunk visibility list(this is a list of all chunks that could potentially be rendered)
-
-    // chunk state machine:
-    //                                      marked dirty (block update)
-    //                                       ,_____________________,
-    //                                       V                     |
-    // birth -> generating -> generated -> meshing -> meshed -> visible <--> invisible
-    //                                                               (un)culled
-    // 
-    // all states can lead to death
-
-    int seaLevel = 0;
-    float noiseScale = 0.01f;
+    static int seaLevel = 0;
+    static float noiseScale = 0.01f;
+    static int maxChunkTasks = 8;
 
     public PerlinNoise noise = new PerlinNoise();
 
@@ -39,11 +22,49 @@ public class ChunkManager
     List<Vector3i> LastActivations = new List<Vector3i>();
     ConcurrentDictionary<Vector3i, Chunk> Chunks = new ConcurrentDictionary<Vector3i, Chunk>();
 
+    public class CompletedMesh
+    {
+        public Vector3i Index;
+        public MeshData SolidMesh;
+        public MeshData LiquidMesh;
 
+        public CompletedMesh(Vector3i index, MeshData solidMesh, MeshData liquidMesh)
+        {
+            this.Index = index;
+            this.SolidMesh = solidMesh;
+            this.LiquidMesh = liquidMesh;
+        }
+
+        public void Dispose() {
+            this.SolidMesh.Dispose();
+            this.LiquidMesh.Dispose();            
+        }
+    };
+
+    ConcurrentQueue<CompletedMesh> completedMeshes = new();
+    ConcurrentDictionary<Vector3i, CancellationTokenSource> ChunkCancelTokens = new();
+    SemaphoreSlim MeshSemaphore = new(maxChunkTasks);
+
+    public class CompletedChunk
+    {
+        public Vector3i Index;
+        public Block[] Blocks;
+
+        public CompletedChunk(Vector3i index, Block[] blocks)
+        {
+            this.Index = index;
+            this.Blocks = blocks;
+        }
+
+        public void Dispose() {
+            Array.Clear(this.Blocks);
+        }
+    }
+
+    ConcurrentQueue<CompletedChunk> CompletedChunkBlocks = new();
+    SemaphoreSlim ChunkGenSemaphore = new(maxChunkTasks);
 
     public ChunkRenderer renderer = new ChunkRenderer();
-
-    int maxChunkTasks = 16;
 
     List<Chunk> ChunkList()
     {
@@ -55,11 +76,64 @@ public class ChunkManager
         return result;
     }
 
+    public Vector3i currentChunk = new();
+
     public void Update(Camera camera, float time, Vector3 sunDirection)
     {
-        int chunkTasks = 0;
+        ActivationList = ListActiveChunks(camera.position, 4, 3, 1);
 
-        ActivationList = ListActiveChunks(camera.position, 4, 3, 3, 1);
+        currentChunk = WorldPosToChunkIndex(Vec3ToVec3i(camera.position));
+
+        // move chunk block data if there's any ready
+        while (CompletedChunkBlocks.TryDequeue(out var cb))
+        {
+            // chunk was removed at some point
+            if (!Chunks.TryGetValue(cb.Index, out var chunk))
+            {
+                cb.Dispose();
+                continue;
+            }
+            // or if it was cancelled
+            if (ChunkCancelTokens.TryGetValue(cb.Index, out var tokenSource) && tokenSource.IsCancellationRequested)
+            {
+                cb.Dispose();                
+                continue;
+            }
+
+            chunk.blocks = cb.Blocks;
+            chunk.SetState(ChunkState.GENERATED);
+        }
+
+        // move chunk mesh data around as it is readied
+        while (completedMeshes.TryDequeue(out var cm))
+        {
+            // chunk was removed at some point
+            if (!Chunks.TryGetValue(cm.Index, out var chunk))
+            {
+                cm.Dispose();
+                continue;
+            }
+
+            // if the chunk can't make the valid state transition, skip
+            if (chunk.GetState() == ChunkState.BIRTH) continue;
+
+            // or if the chunk has been canceled
+            if (ChunkCancelTokens.TryGetValue(cm.Index, out var tokenSource) && tokenSource.IsCancellationRequested)
+            {
+                cm.Dispose();
+                continue;
+            }
+
+            chunk.DisposeMeshes(); // clear gpu data
+
+            chunk.solidMesh = cm.SolidMesh;
+            chunk.liquidMesh = cm.LiquidMesh;
+
+            chunk.solidMesh.Upload();
+            chunk.liquidMesh.Upload();
+
+            chunk.SetState(ChunkState.MESHED);
+        }
 
         // deactivate chunks that are not in the list of active chunks
         foreach (var idx in LastActivations)
@@ -82,35 +156,29 @@ public class ChunkManager
             else
             {
                 Chunk chunk = Chunks[idx];
+                var state = chunk.GetState();
+
+                // manage culling here
+                //if (state == ChunkState.VISIBLE || state == ChunkState.INVISIBLE)
+                //    chunk.SetState(IsChunkVisible(idx, time, camera) ? ChunkState.VISIBLE : ChunkState.INVISIBLE);
+
                 //Console.WriteLine($"{idx}:{chunk.GetState().ToString()}");
                 // depending on the state of each chunk, do something different
                 switch (chunk.GetState())
                 {
                     case ChunkState.BIRTH:
-                        if(chunkTasks < maxChunkTasks)
-                        {
-                            chunkTasks++;
-                            chunk.SetState(ChunkState.GENERATING);
-                            GenerateChunkAsync(chunk, idx, new CancellationToken());
-                            chunk.SetState(ChunkState.GENERATED);
-                        }
+                        StartGenerationJob(idx);
                         break;
                     case ChunkState.GENERATING:
-                        // wait until its done
                         break;
                     case ChunkState.GENERATED:
-                        if (chunkTasks < maxChunkTasks)
-                        {
-                            chunkTasks++;
-                            chunk.SetState(ChunkState.MESHING);
-                            GenerateMeshAsync(idx, ChunkList(), new CancellationToken());
-                            chunk.SetState(ChunkState.MESHED);
-                        }
+                        StartMeshJob(idx);
                         break;
                     case ChunkState.MESHING:
                         //wait until its done
                         break;
                     case ChunkState.MESHED:
+                        // HERE
                         chunk.SetState(ChunkState.VISIBLE);
                         break;
                     case ChunkState.VISIBLE:
@@ -120,7 +188,7 @@ public class ChunkManager
                         // dont call the draw calls
                         break;
                     case ChunkState.DIRTY:
-                        // re-mesh it
+                        StartMeshJob(idx, isRebuild: true);
                         break;
                 }
             }
@@ -138,28 +206,151 @@ public class ChunkManager
         LastActivations = new List<Vector3i>(ActivationList);
     }
 
+    public static Vector3 ProjectVector(Vector3 u, Vector3 v, out bool backward)
+    {
+        // Calculate the dot product of u and v
+        float dotProduct = Vector3.Dot(u, v);
+
+        backward = dotProduct < 0;
+
+        // Calculate the squared magnitude of v
+        float vSquaredMagnitude = v.LengthSquared; // Or v.Length * v.Length;
+
+        // Calculate the scalar multiple
+        float scalar = dotProduct / vSquaredMagnitude;
+
+        // Multiply the scalar by vector v to get the projection
+        return v * scalar;
+    }
+
+    public Vector3i Vec3ToVec3i(Vector3 input) {
+        var result = new Vector3i();
+        result.X = (int)MathF.Round(input.X);
+        result.Y = (int)MathF.Round(input.Y);
+        result.Z = (int)MathF.Round(input.Z);
+        return result;
+    }
+
+    void StartMeshJob(Vector3i index, bool isRebuild = false)
+    {
+        if (!Chunks.TryGetValue(index, out Chunk chunk)) return;
+
+        if (isRebuild)
+        {
+            List<Vector3i> neighborVectors = new List<Vector3i>() {
+                                            Vector3i.UnitX, -Vector3i.UnitX,
+                                            Vector3i.UnitY, -Vector3i.UnitY,
+                                            Vector3i.UnitZ, -Vector3i.UnitZ,};
+
+            // mark neighbor chunks dirty
+            foreach (var v in neighborVectors)
+            {
+                if (Chunks.TryGetValue(index + v, out var neighbor))
+                    neighbor.TryMarkDirty();
+            }
+        }
+
+        // Avoid starting another mesh if already meshing (optional)
+        if (chunk.GetState() == ChunkState.MESHING) return;
+
+        chunk.SetState(ChunkState.MESHING);
+
+        var cts = new CancellationTokenSource();
+        ChunkCancelTokens[index] = cts;
+
+        // start background worker (no GL calls here, no SetState here)
+        _ = Task.Run(async () =>
+        {
+            await MeshSemaphore.WaitAsync(cts.Token);
+            try
+            {
+                var completed = await BuildMesh(index, ChunkList(), cts.Token);
+                completedMeshes.Enqueue(completed);
+            }
+            catch (OperationCanceledException) { /* canceled */ }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Mesh build failed for {index}: {ex}");
+            }
+            finally
+            {
+                MeshSemaphore.Release();
+            }
+        }, cts.Token);
+    }
+
+    void StartGenerationJob(Vector3i index)
+    {
+        if (!Chunks.TryGetValue(index, out Chunk chunk)) return;
+
+        // Avoid starting another mesh if already meshing 
+        if (chunk.GetState() == ChunkState.MESHING) return;
+
+        chunk.SetState(ChunkState.GENERATING);
+
+        var cts = new CancellationTokenSource();
+        ChunkCancelTokens[index] = cts;
+
+        // start background worker (no GL calls here, no SetState here)
+        _ = Task.Run(async () =>
+        {
+            await ChunkGenSemaphore.WaitAsync(cts.Token);
+            try
+            {
+                // Await BuildMesh instead of .Result so we don't block the thread pool
+                var completed = await BuildBlocks(index, cts.Token);
+                // Enqueue the CPU-side mesh for the main thread to apply
+                CompletedChunkBlocks.Enqueue(completed);
+            }
+            catch (OperationCanceledException) { /* canceled */ }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Block generation failed for {index}: {ex}");
+            }
+            finally
+            {
+                ChunkGenSemaphore.Release();
+            }
+        }, cts.Token);
+
+    }
+
     public void DisposeChunk(Vector3i index)
     {
         Chunks[index].DisposeMeshes();
         Chunks.TryRemove(index, out var val);
     }
 
-    public List<Vector3i> ListActiveChunks(Vector3 centerWorldPos, int horizontalRadius, int upRadius, int downRadius, int minY)
+    public List<Vector3i> ListActiveChunks(Vector3 centerWorldPos, int horizontalRadius, int verticalRadius, int minY)
     {
-        List<Vector3i> result = new List<Vector3i>();
+        List<Vector3i> result = new();
+
         Vector3i centerIndex = WorldPosToChunkIndex((
                                 (int)MathF.Floor(centerWorldPos.X),
                                 (int)MathF.Floor(centerWorldPos.Y),
                                 (int)MathF.Floor(centerWorldPos.Z)));
+        result.Add(centerIndex);
 
-        for (int x = -horizontalRadius; x < horizontalRadius; x++)
+        List<int> yValues = new() { centerIndex.Y };
+        for(int i = 1; i <= verticalRadius; i++)
         {
-            for (int z = -horizontalRadius; z < horizontalRadius; z++)
+            yValues.Add(centerIndex.Y + i);
+            yValues.Add(centerIndex.Y - i);
+            result.Add(centerIndex + i * Vector3i.UnitY);
+            result.Add(centerIndex - i * Vector3i.UnitY);
+        }
+
+        foreach(var y in yValues)
+        {
+            for(int r = 0; r <= horizontalRadius; r++)
             {
-                for (int y = -downRadius; y < upRadius; y++)
-                {
-                    result.Add(centerIndex + (x, y, z));
-                }
+                for(int h = -(r); h < r; h++)
+            {
+                result.Add(centerIndex + r * Vector3i.UnitX + h * Vector3i.UnitZ + y * Vector3i.UnitY);
+                result.Add(centerIndex + r * -Vector3i.UnitZ + h * Vector3i.UnitX + y * Vector3i.UnitY);
+                result.Add(centerIndex + r * -Vector3i.UnitX + h * -Vector3i.UnitZ + y * Vector3i.UnitY);
+                result.Add(centerIndex + r * Vector3i.UnitZ + h * -Vector3i.UnitX  + y * Vector3i.UnitY);
+            }
             }
         }
 
@@ -169,15 +360,19 @@ public class ChunkManager
     public bool TryGetChunkAtIndex(Vector3i index, out Chunk result)
     {
         result = default;
-        if (Chunks.ContainsKey(index))
+
+        var exists = Chunks.TryGetValue(index, out var chunk);
+
+        if (exists)
         {
-            result = Chunks[index];
+            result = chunk;
             return true;
         }
         return false;
     }
 
-    public Vector3i WorldPosToChunkIndex(Vector3i worldIndex, int chunkSize  = Chunk.SIZE) {
+    public Vector3i WorldPosToChunkIndex(Vector3i worldIndex, int chunkSize = Chunk.SIZE)
+    {
         int chunkX = (int)Math.Floor(worldIndex.X / (double)chunkSize);
         int chunkY = (int)Math.Floor(worldIndex.Y / (double)chunkSize);
         int chunkZ = (int)Math.Floor(worldIndex.Z / (double)chunkSize);
@@ -212,9 +407,11 @@ public class ChunkManager
         return false;
     }
 
-    public async Task GenerateChunkAsync(Chunk chunk, Vector3i chunkIndex, CancellationToken token)
+    public Task<CompletedChunk> BuildBlocks(Vector3i chunkIndex, CancellationToken token)
     {
-        await Task.Run(() =>
+        var tempChunk = new Chunk();
+
+        return Task.Run(() =>
         {
             //watch.Start();
             int totalBlocks = 0;
@@ -247,24 +444,32 @@ public class ChunkManager
                         if (worldY < landBias && worldY > -64)
                             type = BlockType.STONE;
 
-                        chunk.SetBlock(x, y, z, type);
+                        if (worldY < -50)
+                            type = BlockType.AIR;
+
+                        tempChunk.SetBlock(x, y, z, type);
                         if (type != BlockType.AIR) totalBlocks++;
                     }
                 }
             }
+            return new CompletedChunk(chunkIndex, tempChunk.blocks);
         });
     }
 
-    public Task<bool> GenerateMeshAsync(Vector3i chunkIndex, List<Chunk> chunks, CancellationToken token)
+    public Task<CompletedMesh> BuildMesh(Vector3i chunkIndex, List<Chunk> chunks, CancellationToken token)
     {
-        
         // no remeshing visible chunks
-        var thisChunkExists = TryGetChunkAtIndex(chunkIndex, out var chunk);
+        bool thisChunkExists = TryGetChunkAtIndex(chunkIndex, out var chunk);
 
-        if(thisChunkExists && chunk.GetState() == ChunkState.VISIBLE) return Task.FromResult(false);
-
-        return Task.Run(() =>
+        // just keep waiting until the chunk exists
+        while (!thisChunkExists)
         {
+            thisChunkExists = TryGetChunkAtIndex(chunkIndex, out chunk);
+        }
+
+        return Task.Run(async () =>
+        {
+            await Task.Delay(2);
 
             Vector3i localOrigin = chunkIndex * Chunk.SIZE;
             bool forwardChunkExists = TryGetChunkAtIndex(chunkIndex + new Vector3i(0, 0, 1), out Chunk forwardChunk);
@@ -429,9 +634,7 @@ public class ChunkManager
                     }
                 }
             }
-            chunk.solidMesh = solidResult;
-            chunk.liquidMesh = liquidResult;
-            return true;
+            return new CompletedMesh(chunkIndex, solidResult, liquidResult);
         });
     }
 }

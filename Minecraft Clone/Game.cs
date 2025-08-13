@@ -73,7 +73,7 @@ namespace Minecraft_Clone
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
             // Render sky first
-            skyRender.SetSunDirection(Vector3.Transform(skyRender.sunDirection, new Quaternion((float)args.Time / 15f, 0f, 0f)));
+            skyRender.SetSunDirection(Vector3.Transform(skyRender.sunDirection, new Quaternion((float)args.Time / 30f, 0f, 0f)));
             skyRender.RenderSky(camera);
 
             //await chunkManager.UpdateAsync(camera, timeElapsed, skyRender.sunDirection.Normalized());
@@ -88,7 +88,7 @@ namespace Minecraft_Clone
 
             if (frameTimeAccumulator >= 0.25)
             {
-                Title = $"game - FPS: {frameCount * 4}";
+                Title = $"game - FPS: {frameCount * 4} - Position: {camera.position} - Chunk: {chunkManager.currentChunk}";
                 frameTimeAccumulator = 0.0;
                 frameCount = 0;
             }
