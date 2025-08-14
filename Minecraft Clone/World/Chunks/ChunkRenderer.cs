@@ -57,8 +57,6 @@ namespace Minecraft_Clone.World.Chunks
             DrawElementsType.UnsignedInt,
             0
             );
-
         }
-
     }
 }

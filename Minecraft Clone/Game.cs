@@ -11,12 +11,8 @@ namespace Minecraft_Clone
     class Game : GameWindow
     {
         Camera camera;
+        public bool focused = true;
 
-        // world data
-        int seed = 46;
-        float noiseScale = 0.01f;
-
-        //chunks work in this order
         public ChunkManager chunkManager;
         SkyRender skyRender;
 
@@ -43,16 +39,11 @@ namespace Minecraft_Clone
             skyRender = new SkyRender((0.4f, 1f, -1f));
         }
 
-        // first frame activities
-        float[] xs = new float[100];
-        float[] ys = new float[100];
         protected override void OnLoad()
         {
             base.OnLoad();
             GL.ClearColor(0.0f, 0.0f, 1.0f, 1.0f);
 
-
-            // some clean-up stuff
             CursorState = CursorState.Grabbed;
 
             //VSync = VSyncMode.On;
@@ -67,7 +58,7 @@ namespace Minecraft_Clone
         }
 
         // render stuff for each frame 
-        protected override async void OnRenderFrame(FrameEventArgs args)
+        protected override void OnRenderFrame(FrameEventArgs args)
         {
             base.OnRenderFrame(args);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
@@ -75,8 +66,6 @@ namespace Minecraft_Clone
             // Render sky first
             skyRender.SetSunDirection(Vector3.Transform(skyRender.sunDirection, new Quaternion((float)args.Time / 30f, 0f, 0f)));
             skyRender.RenderSky(camera);
-
-            //await chunkManager.UpdateAsync(camera, timeElapsed, skyRender.sunDirection.Normalized());
 
             chunkManager.Update(camera, timeElapsed, skyRender.sunDirection.Normalized());
 
@@ -86,9 +75,9 @@ namespace Minecraft_Clone
             frameTimeAccumulator += args.Time;
             frameCount++;
 
-            if (frameTimeAccumulator >= 0.25)
+            if (frameTimeAccumulator >= 0.5)
             {
-                Title = $"game - FPS: {frameCount * 4} - Position: {camera.position} - Chunk: {chunkManager.currentChunk}";
+                Title = $"game - FPS: {frameCount * 2} - Position: {camera.position} - Chunk: {chunkManager.currentChunk}";
                 frameTimeAccumulator = 0.0;
                 frameCount = 0;
             }
@@ -112,7 +101,9 @@ namespace Minecraft_Clone
             KeyboardState input = KeyboardState;
 
             base.OnUpdateFrame(args);
-            camera.Update(input, mouse, args);
+
+            if(focused)
+                camera.Update(input, mouse, args);
 
             timeElapsed += (float)args.Time;
 
@@ -120,12 +111,18 @@ namespace Minecraft_Clone
             if (KeyboardState.IsKeyPressed(Keys.Escape))
             {
                 if (CursorState == CursorState.Grabbed)
+                {
                     CursorState = CursorState.Normal;
+                    focused = false;
+                }
                 else
                     Close();
             }
             if (MouseState.IsButtonPressed(MouseButton.Left))
+            {
                 CursorState = CursorState.Grabbed;
+                focused = true;
+            }
         }
 
         protected override void OnUnload()

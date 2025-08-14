@@ -59,8 +59,6 @@ namespace Minecraft_Clone.World.Chunks
                 state = NewState;
         }
 
-        public bool IsRenderable => (state != ChunkState.GENERATING && state != ChunkState.MESHING); // can't generate an ungenned-unmeshed chunk!
-
         // default new chunk state is generating state... maybe later add "READING" to read from disk cache
         public Chunk(ChunkState state = ChunkState.BIRTH) { this.state = state; }
 
