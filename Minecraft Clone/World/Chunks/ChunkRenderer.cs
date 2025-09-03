@@ -24,6 +24,9 @@ namespace Minecraft_Clone.World.Chunks
 
         public void RenderChunk(MeshData mesh, Camera camera, Vector3i index, float time, Vector3 sunDirection)
         {
+            // exit if there's no mesh data
+            if (mesh == null || mesh.Vertices.Count == 0) return;
+
             blockShader.Bind();
             blockTexture.Bind();
 
