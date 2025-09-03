@@ -3,14 +3,14 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Minecraft_Clone.World
 {
-    public class PerlinNoise
+    public class NoiseKit
     {
         private int[] permutation;
 
         // <summary>
         /// Perlin Noise I got chatgpt to write for me
         /// </summary>
-        public PerlinNoise(int seed = 0)
+        public NoiseKit(int seed = 0)
         {
             Random rand = new Random(seed);
             permutation = new int[512];

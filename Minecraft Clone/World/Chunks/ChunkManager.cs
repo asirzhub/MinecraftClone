@@ -13,15 +13,17 @@ public class ChunkManager
     // world generation parameters
     static int seaLevel = 0;
     static float noiseScale = 0.01f;
-    public PerlinNoise noise = new PerlinNoise();
+    public NoiseKit noise = new NoiseKit();
 
     // needs no introduction
     public ChunkRenderer renderer = new ChunkRenderer();
+    public WorldGenerator worldGenerator = new WorldGenerator();
 
     public Vector3i currentChunkIndex = new();
     public int radius = 10;
     public int maxChunkTasks = 24;
     public float expiryTime = 2f;
+
 
     // store every chunk instance in Chunks:
     ConcurrentDictionary<Vector3i, Chunk> ActiveChunks = new ConcurrentDictionary<Vector3i, Chunk>();
@@ -98,23 +100,9 @@ public class ChunkManager
                         int worldX = chunkIndex.X * Chunk.SIZE + x;
                         int worldY = chunkIndex.Y * Chunk.SIZE + y;
                         int worldZ = chunkIndex.Z * Chunk.SIZE + z;
-                        BlockType type = BlockType.AIR;
 
-                        if (worldY < seaLevel)
-                        {
-                            type = BlockType.AIR;
-                        }
-
-                        var landBias = 3 * Chunk.SIZE * (noise.Noise((float)worldX * noiseScale, (float)worldZ * noiseScale) - 0.5);
-
-                        if (worldY <= seaLevel)
-                            type = BlockType.WATER;
-
-                        if (worldY < landBias && worldY > -64)
-                            type = BlockType.STONE;
-
-                        if (worldY < -50)
-                            type = BlockType.AIR;
+                        // offload world gen code to the generator. facade pattern
+                        BlockType type = worldGenerator.GetBlockAtWorldPos((worldX, worldY, worldZ));
 
                         tempChunk.SetBlock(x, y, z, type);
                         if (type != BlockType.AIR) totalBlocks++;
