@@ -17,16 +17,23 @@ namespace Minecraft_Clone.World.Chunks
         DIRTY
     };
 
+
     public class Chunk
     {
         public const int SIZE = 32; // same size in all coordinates
         private ChunkState state;
         public ChunkState GetState() { return state; }
+        public bool NeighborReady => !((state == ChunkState.BIRTH) || (state == ChunkState.GENERATING));
 
-        public Block[] blocks = new Block[SIZE * SIZE * SIZE];
+        public bool IsEmpty { 
+            get => isEmpty; 
+            set => isEmpty = value; }
 
-        public MeshData solidMesh = new();
-        public MeshData liquidMesh = new();
+        public byte[] blocks;
+        private bool isEmpty = true;
+
+        public MeshData solidMesh;
+        public MeshData liquidMesh;
 
         public bool TryMarkDirty()
         {
@@ -43,7 +50,7 @@ namespace Minecraft_Clone.World.Chunks
         // {result state , beginning state(s) allowed}
         public static readonly Dictionary<ChunkState, List<ChunkState>> LegalTransitions = new()
         {
-            {ChunkState.GENERATING, new(){ ChunkState.BIRTH } },
+            { ChunkState.GENERATING, new(){ ChunkState.BIRTH } },
             { ChunkState.GENERATED, new() { ChunkState.GENERATING} },
             { ChunkState.MESHING, new(){ ChunkState.DIRTY, ChunkState.GENERATED, ChunkState.MESHING } },
             { ChunkState.MESHED, new() { ChunkState.MESHING} },
@@ -62,11 +69,24 @@ namespace Minecraft_Clone.World.Chunks
         // default new chunk state is generating state... maybe later add "READING" to read from disk cache
         public Chunk(ChunkState state = ChunkState.BIRTH) { this.state = state; }
 
-        public Block GetBlock(int x, int y, int z) 
-            => blocks[(y * SIZE + z) * SIZE + x];
+        public Block GetBlock(int x, int y, int z)
+        {
+            if (IsEmpty) return new Block(BlockType.AIR);
+            var type = (BlockType)blocks[(y * SIZE + z) * SIZE + x];
+            return new Block(type);
+        }
 
-        public void SetBlock(int x, int y, int z, BlockType type) 
-            => blocks[(y * SIZE + z) * SIZE + x] = new Block(type);
+        public void SetBlock(int x, int y, int z, BlockType type)
+        {
+            if (IsEmpty && type == BlockType.AIR) return;
+
+            if (IsEmpty)
+            {
+                IsEmpty = false;
+                blocks = new byte[SIZE * SIZE * SIZE];
+            }
+            blocks[(y * SIZE + z) * SIZE + x] = (byte)type;
+        }
 
         public void FillWithBlock(BlockType blockType)
         {
@@ -85,8 +105,8 @@ namespace Minecraft_Clone.World.Chunks
 
         public void DisposeMeshes()
         {
-            solidMesh.Dispose();
-            liquidMesh.Dispose();
+            solidMesh?.Dispose();
+            liquidMesh?.Dispose();
         }
     }
 }
