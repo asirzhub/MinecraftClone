@@ -33,7 +33,7 @@ namespace Minecraft_Clone
             DepthBits = 24,
         })
         {
-            camera = new Camera(width, height, -1f * Vector3.UnitX + 4 * Vector3.UnitY);
+            camera = new Camera(width, height, -1f * Vector3.UnitX + 64 * Vector3.UnitY);
             this.width = width;
             this.height = height;
             skyRender = new SkyRender((0.4f, 1f, -1f));

@@ -11,8 +11,6 @@ using static Minecraft_Clone.Graphics.VBO;
 public class ChunkManager
 {
     // world generation parameters
-    static int seaLevel = 0;
-    static float noiseScale = 0.01f;
     public NoiseKit noise = new NoiseKit();
 
     // needs no introduction
@@ -175,6 +173,8 @@ public class ChunkManager
             bool topChunkExists = TryGetChunkAtIndex(chunkIndex + new Vector3i(0, +1, 0), out Chunk topChunk);
             bool belowChunkExists = TryGetChunkAtIndex(chunkIndex + new Vector3i(0, -1, 0), out Chunk belowChunk);
 
+            int seaLevel = worldGenerator.seaLevel;
+
             MeshData solidResult = new MeshData();
             uint solidVertexOffset = 0;
 
@@ -336,9 +336,12 @@ public class ChunkManager
 
     public void Update(Camera camera, float frameTime, float time, Vector3 sunDirection)
     {
-        ActiveChunksIndices = ListActiveChunksIndices(camera.position, radius, radius / 2, 1);
+        ActiveChunksIndices = ListActiveChunksIndices(camera.position, radius, radius/2);
 
-        currentChunkIndex = ActiveChunksIndices[0]; // first index in the list is always the center index  
+        currentChunkIndex = WorldPosToChunkIndex((
+                                (int)MathF.Floor(camera.position.X),
+                                (int)MathF.Floor(camera.position.Y),
+                                (int)MathF.Floor(camera.position.Z))); ; // first index in the list is always the center index  
 
         // for each CompletedChunkBlocks, move data from the queue into the respective chunk. MARK STATE
         while (CompletedBlocksQueue.TryDequeue(out var result))
@@ -349,7 +352,7 @@ public class ChunkManager
             c.IsEmpty = result.isEmpty;
             c.SetState(ChunkState.GENERATED);
             RunningTasks.TryRemove(result.index, out _);
-            if (c.IsEmpty) Console.WriteLine(result.index + " was empty!");
+            //if (c.IsEmpty) Console.WriteLine(result.index + " was empty!");
         }
 
         // for each CompletedMesh, move data from the queue into the respective chunk. MARK STATE
@@ -422,6 +425,7 @@ public class ChunkManager
         {
             if (kvp.Value > expiryTime)
             {
+                ExpiredChunkLifetimes.TryRemove(kvp.Key, out _);
                 DisposeChunk(kvp.Key);
             }
             // unexpired chunks will wait a little longer
@@ -470,38 +474,47 @@ public class ChunkManager
     }
 
     // generates the list of chunk indices that need to be ready. starts centered around the player's position
-    public List<Vector3i> ListActiveChunksIndices(Vector3 centerWorldPos, int horizontalRadius, int verticalRadius, int minY)
+    public List<Vector3i> ListActiveChunksIndices(Vector3 centerWorldPos, int horizontalRadius, int verticalRadius)
     {
         List<Vector3i> result = new();
 
-        Vector3i centerIndex = WorldPosToChunkIndex((
-                                (int)MathF.Floor(centerWorldPos.X),
-                                (int)MathF.Floor(centerWorldPos.Y),
-                                (int)MathF.Floor(centerWorldPos.Z)));
-        result.Add(centerIndex);
+        Vector3i centerIndex = currentChunkIndex;
+        //result.Add(centerIndex);
 
-        List<int> yValues = new() { centerIndex.Y };
-        for (int i = 1; i <= verticalRadius; i++)
+        for (int x = -horizontalRadius; x <= horizontalRadius; x++)
         {
-            yValues.Add(centerIndex.Y + i);
-            yValues.Add(centerIndex.Y - i);
-            result.Add(centerIndex + i * Vector3i.UnitY);
-            result.Add(centerIndex - i * Vector3i.UnitY);
-        }
-
-        foreach (var y in yValues)
-        {
-            for (int r = 0; r <= horizontalRadius; r++)
+            for (int z = -horizontalRadius; z <= horizontalRadius; z++)
             {
-                for (int h = -(r); h < r; h++)
+                for (int y = -verticalRadius; y <= verticalRadius; y++)
                 {
-                    result.Add(centerIndex + r * Vector3i.UnitX + h * Vector3i.UnitZ + y * Vector3i.UnitY);
-                    result.Add(centerIndex + r * -Vector3i.UnitZ + h * Vector3i.UnitX + y * Vector3i.UnitY);
-                    result.Add(centerIndex + r * -Vector3i.UnitX + h * -Vector3i.UnitZ + y * Vector3i.UnitY);
-                    result.Add(centerIndex + r * Vector3i.UnitZ + h * -Vector3i.UnitX + y * Vector3i.UnitY);
+                    result.Add(centerIndex + (x, y, z));
                 }
             }
         }
+
+        // old buggy center-first generation. to fix later
+        //List<int> yValues = new() { centerIndex.Y };
+        //for (int i = 1; i <= verticalRadius; i++)
+        //{
+        //    yValues.Add(centerIndex.Y + i);
+        //    yValues.Add(centerIndex.Y - i);
+        //    result.Add(centerIndex + i * Vector3i.UnitY);
+        //    result.Add(centerIndex - i * Vector3i.UnitY);
+        //}
+
+        //foreach (var y in yValues)
+        //{
+        //    for (int r = 0; r <= horizontalRadius; r++)
+        //    {
+        //        for (int h = -(r); h < r; h++)
+        //        {
+        //            result.Add(centerIndex + r * Vector3i.UnitX + h * Vector3i.UnitZ + y * Vector3i.UnitY);
+        //            result.Add(centerIndex + r * -Vector3i.UnitZ + h * Vector3i.UnitX + y * Vector3i.UnitY);
+        //            result.Add(centerIndex + r * -Vector3i.UnitX + h * -Vector3i.UnitZ + y * Vector3i.UnitY);
+        //            result.Add(centerIndex + r * Vector3i.UnitZ + h * -Vector3i.UnitX + y * Vector3i.UnitY);
+        //        }
+        //    }
+        //}
 
         return result;
     }

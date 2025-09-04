@@ -10,9 +10,11 @@ namespace Minecraft_Clone.World
 {
     public class WorldGenerator
     {
-        public int seaLevel = 50;
+        public int seaLevel = 64;
+        public int maxHeight = 128;
         public float noiseScale = 0.01f;
         public NoiseKit noise = new NoiseKit();
+
 
         public BlockType GetBlockAtWorldPos(Vector3i blockWorldPos)
         {
@@ -20,23 +22,25 @@ namespace Minecraft_Clone.World
             int worldY = blockWorldPos.Y;
             int worldZ = blockWorldPos.Z;
 
-            BlockType type = BlockType.AIR;
+            BlockType type = BlockType.AIR; // default situation
 
-            if (worldY < seaLevel)
-            {
-                type = BlockType.AIR;
-            }
+            // three layers of 2d noise
+            // layer 1: continental (sea vs land) (2 octavees)
+            // layer 2: regional (plains vs mountains) (3 octaves)
+            // layer 3: local (mountain details, plain hills) (4 octaves)
 
-            var landBias = 3 * Chunk.SIZE * (noise.Noise((float)worldX * noiseScale, (float)worldZ * noiseScale) - 0.5);
+            // one layer of 3d noise for volumetric mountains
 
-            if (worldY <= seaLevel)
-                type = BlockType.WATER;
+            float layer1 = noise.Noise((float)worldX * noiseScale/4, (float)worldZ * noiseScale/4);
+            // scale from [0, 1] -> [lowestWorldY, maxHeight] for continential
+            layer1 = layer1 * (maxHeight);
 
-            if (worldY < landBias && worldY > -64)
-                type = BlockType.STONE;
+            //float layer2 = noise
 
-            if (worldY < -50)
-                type = BlockType.AIR;
+            if (worldY < seaLevel) type = BlockType.WATER;
+            if (worldY < layer1) type = BlockType.STONE;
+ 
+
 
             return type;
         }
