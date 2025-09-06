@@ -17,7 +17,6 @@ namespace Minecraft_Clone.World.Chunks
         DIRTY
     };
 
-
     public class Chunk
     {
         public const int SIZE = 32; // same size in all coordinates
