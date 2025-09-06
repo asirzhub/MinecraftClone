@@ -7,6 +7,7 @@ using OpenTK.Mathematics;
 using System.Collections.Concurrent;
 using System;
 using static Minecraft_Clone.Graphics.VBO;
+using System.Diagnostics;
 
 public class ChunkManager
 {
@@ -341,6 +342,8 @@ public class ChunkManager
 
     public void Update(Camera camera, float frameTime, float time, Vector3 sunDirection)
     {
+        bool updateIndices = (time % 5f < 0.01f);
+
         totalRenderCalls = 0;
         if (!chunkTasksHalved)
         {
@@ -352,7 +355,8 @@ public class ChunkManager
             }
         }
 
-        ActiveChunksIndices = ListActiveChunksIndices(camera.position, radius, radius / 2);
+        if(updateIndices)
+            ActiveChunksIndices = ListActiveChunksIndices(camera.position, radius, radius / 2);
 
         currentChunkIndex = WorldPosToChunkIndex((
                                 (int)MathF.Floor(camera.position.X),
@@ -449,7 +453,8 @@ public class ChunkManager
                 ExpiredChunkLifetimes[kvp.Key] = kvp.Value + frameTime;
         }
 
-        LastActivationChunksIndices = new List<Vector3i>(ActiveChunksIndices);
+        if (updateIndices)
+            LastActivationChunksIndices = new List<Vector3i>(ActiveChunksIndices);
     }
 
     public void MarkExpired(Vector3i idx)
@@ -531,7 +536,7 @@ public class ChunkManager
                 }
             }
         }
-
+        
         return result;
     }
 
