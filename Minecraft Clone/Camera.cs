@@ -7,7 +7,7 @@ namespace Minecraft_Clone
     public class Camera
     {
         // camera properties
-        private float speed = 5f;
+        private float speed = 10f;
         public float screenwidth;
         public float screenheight;
         private float sensitivity = 10f;
@@ -22,7 +22,7 @@ namespace Minecraft_Clone
         private float pitch;
         private float yaw;
 
-        private bool firstMove = true;
+        public bool firstMove = true;
         public Vector2 lastPos;
 
         // <summary>

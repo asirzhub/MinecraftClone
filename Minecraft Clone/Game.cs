@@ -33,7 +33,7 @@ namespace Minecraft_Clone
             DepthBits = 24,
         })
         {
-            camera = new Camera(width, height, -1f * Vector3.UnitX + 4 * Vector3.UnitY);
+            camera = new Camera(width, height, -1f * Vector3.UnitX + 64 * Vector3.UnitY);
             this.width = width;
             this.height = height;
             skyRender = new SkyRender((0.4f, 1f, -1f));
@@ -46,11 +46,12 @@ namespace Minecraft_Clone
 
             CursorState = CursorState.Grabbed;
 
-            //VSync = VSyncMode.On;
+            VSync = VSyncMode.Adaptive;
             GL.Enable(EnableCap.DepthTest);
             GL.Enable(EnableCap.CullFace);
             GL.Enable(EnableCap.Blend);
             GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+            GL.Enable(EnableCap.Multisample);
 
             chunkManager = new ChunkManager();
 
@@ -80,7 +81,8 @@ namespace Minecraft_Clone
                 Title = $"game - FPS: {frameCount * 2} | " +
                     $"Position: {camera.position} | " +
                     $"Chunk: {chunkManager.currentChunkIndex} | " +
-                    $"Chunk Tasks: {chunkManager.taskCount}/{chunkManager.maxChunkTasks}";
+                    $"Chunk Tasks: {chunkManager.taskCount}/{chunkManager.maxChunkTasks} | " +
+                    $"Render Calls: {chunkManager.totalRenderCalls}";
                 frameTimeAccumulator = 0.0;
                 frameCount = 0;
             }
@@ -117,6 +119,7 @@ namespace Minecraft_Clone
                 {
                     CursorState = CursorState.Normal;
                     focused = false;
+                    camera.firstMove = false;
                 }
                 else
                     Close();
@@ -125,6 +128,17 @@ namespace Minecraft_Clone
             {
                 CursorState = CursorState.Grabbed;
                 focused = true;
+                camera.firstMove = true;
+            }
+
+            if (KeyboardState.IsKeyPressed(Keys.Period))
+            {
+                chunkManager.radius++;
+            }
+
+            if (KeyboardState.IsKeyPressed(Keys.Comma))
+            {
+                chunkManager.radius--;
             }
         }
 
@@ -139,8 +153,8 @@ namespace Minecraft_Clone
     {
         static void Main(string[] args)
         {
-            var game = new Game(1280, 720, "game");
-            game.Run();
+            Game G = new Game(1280, 720, "game");
+            G.Run();
         }
     }
 }

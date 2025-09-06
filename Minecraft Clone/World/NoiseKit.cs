@@ -3,14 +3,12 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Minecraft_Clone.World
 {
-    public class PerlinNoise
+    public class NoiseKit
     {
         private int[] permutation;
 
-        // <summary>
         /// Perlin Noise I got chatgpt to write for me
-        /// </summary>
-        public PerlinNoise(int seed = 0)
+        public NoiseKit(int seed = 0)
         {
             Random rand = new Random(seed);
             permutation = new int[512];
@@ -104,44 +102,41 @@ namespace Minecraft_Clone.World
                    ((h & 2) == 0 ? v : -v);
         }
 
-        public float FractalNoise(float x, float y, int octaves = 3, float lacunarity = 2.4f, float gain = 0.5f)
+        // 2D FBM
+        public float Fbm2D(float x, float y, int octaves = 4, float lacunarity = 2f, float gain = 0.5f)
         {
             float total = 0f;
             float amplitude = 1f;
             float frequency = 1f;
-            float maxValue = 0f; // used for normalization
-
+            float max = 0f;
             for (int i = 0; i < octaves; i++)
             {
-                total += Noise(x * frequency, y * frequency) * amplitude;
-                maxValue += amplitude;
-
+                total += (Noise(x * frequency, y * frequency) * 2f - 1f) * amplitude; // center around 0
+                max += amplitude;
                 amplitude *= gain;
                 frequency *= lacunarity;
             }
-
-            return total / maxValue; // normalize to [0,1]
+            // normalize back to [0,1]
+            return (total / max) * 0.5f + 0.5f;
         }
 
-        public float FractalNoise(float x, float y, float z, int octaves = 3, float lacunarity = 2.4f, float gain = 0.5f)
+
+        // 3D FBM
+        public float Fbm3D(float x, float y, float z, int octaves = 3, float lacunarity = 2f, float gain = 0.5f)
         {
             float total = 0f;
             float amplitude = 1f;
             float frequency = 1f;
-            float maxValue = 0f; // used for normalization
-
+            float max = 0f;
             for (int i = 0; i < octaves; i++)
             {
-                total += Noise(x * frequency, y * frequency, z * frequency) * amplitude;
-                maxValue += amplitude;
-
+                total += (Noise(x * frequency, y * frequency, z * frequency) * 2f - 1f) * amplitude;
+                max += amplitude;
                 amplitude *= gain;
                 frequency *= lacunarity;
             }
-
-            return total / maxValue; // normalize to [0,1]
+            return (total / max) * 0.5f + 0.5f;
         }
-
     }
 }
 
