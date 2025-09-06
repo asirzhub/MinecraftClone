@@ -395,6 +395,13 @@ public class ChunkManager
                 if (ExpiredChunkLifetimes.ContainsKey(idx))
                     ExpiredChunkLifetimes.TryRemove(idx, out _);
 
+                // determine if the chunk is in view or not (culling)
+
+                
+
+                if(state == ChunkState.VISIBLE || state == ChunkState.INVISIBLE)
+                        resultChunk.SetState(IsChunkInView(camera, idx)? ChunkState.VISIBLE : ChunkState.INVISIBLE);
+
                 switch (state)
                 {
                     case ChunkState.BIRTH:
@@ -455,6 +462,23 @@ public class ChunkManager
 
         if (updateIndices)
             LastActivationChunksIndices = new List<Vector3i>(ActiveChunksIndices);
+    }
+
+    public bool IsChunkInView(Camera camera, Vector3i idx)
+    {
+        Vector3 chunkWorldCoord = idx * Chunk.SIZE + Vector3.One * Chunk.SIZE/2; // center of the chunk
+
+        Vector3 chunkToCamera = chunkWorldCoord - camera.position;
+
+        if (chunkToCamera.LengthFast < 2 * Chunk.SIZE) // if the chunk is too close, exit out with true
+            return true;
+
+        float angle = Vector3.CalculateAngle(camera.front, chunkToCamera);
+
+        if (angle < 1.2f) // if within view, true
+            return true;
+
+        return false;
     }
 
     public void MarkExpired(Vector3i idx)
