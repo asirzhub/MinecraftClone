@@ -82,7 +82,8 @@ namespace Minecraft_Clone
                     $"Position: {camera.position} | " +
                     $"Chunk: {chunkManager.currentChunkIndex} | " +
                     $"Chunk Tasks: {chunkManager.taskCount}/{chunkManager.maxChunkTasks} | " +
-                    $"Render Calls: {chunkManager.totalRenderCalls}";
+                    $"Render Calls: {chunkManager.totalRenderCalls} | " + 
+                    $"Render Distance: {chunkManager.radius}";
                 frameTimeAccumulator = 0.0;
                 frameCount = 0;
             }

@@ -7,6 +7,7 @@ using OpenTK.Mathematics;
 using System.Collections.Concurrent;
 using System;
 using static Minecraft_Clone.Graphics.VBO;
+using System.Diagnostics;
 
 public class ChunkManager
 {
@@ -341,6 +342,8 @@ public class ChunkManager
 
     public void Update(Camera camera, float frameTime, float time, Vector3 sunDirection)
     {
+        bool updateIndices = (time % 5f < 0.01f);
+
         totalRenderCalls = 0;
         if (!chunkTasksHalved)
         {
@@ -352,7 +355,8 @@ public class ChunkManager
             }
         }
 
-        ActiveChunksIndices = ListActiveChunksIndices(camera.position, radius, radius / 2);
+        if(updateIndices)
+            ActiveChunksIndices = ListActiveChunksIndices(camera.position, radius, radius / 2);
 
         currentChunkIndex = WorldPosToChunkIndex((
                                 (int)MathF.Floor(camera.position.X),
@@ -390,6 +394,13 @@ public class ChunkManager
                 // un-expire chunks that were expired but need to be brought back before expiry
                 if (ExpiredChunkLifetimes.ContainsKey(idx))
                     ExpiredChunkLifetimes.TryRemove(idx, out _);
+
+                // determine if the chunk is in view or not (culling)
+
+                
+
+                if(state == ChunkState.VISIBLE || state == ChunkState.INVISIBLE)
+                        resultChunk.SetState(IsChunkInView(camera, idx)? ChunkState.VISIBLE : ChunkState.INVISIBLE);
 
                 switch (state)
                 {
@@ -449,7 +460,25 @@ public class ChunkManager
                 ExpiredChunkLifetimes[kvp.Key] = kvp.Value + frameTime;
         }
 
-        LastActivationChunksIndices = new List<Vector3i>(ActiveChunksIndices);
+        if (updateIndices)
+            LastActivationChunksIndices = new List<Vector3i>(ActiveChunksIndices);
+    }
+
+    public bool IsChunkInView(Camera camera, Vector3i idx)
+    {
+        Vector3 chunkWorldCoord = idx * Chunk.SIZE + Vector3.One * Chunk.SIZE/2; // center of the chunk
+
+        Vector3 chunkToCamera = chunkWorldCoord - camera.position;
+
+        if (chunkToCamera.LengthFast < 2 * Chunk.SIZE) // if the chunk is too close, exit out with true
+            return true;
+
+        float angle = Vector3.CalculateAngle(camera.front, chunkToCamera);
+
+        if (angle < 1.2f) // if within view, true
+            return true;
+
+        return false;
     }
 
     public void MarkExpired(Vector3i idx)
@@ -531,7 +560,7 @@ public class ChunkManager
                 }
             }
         }
-
+        
         return result;
     }
 

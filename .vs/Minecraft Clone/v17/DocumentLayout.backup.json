@@ -3,12 +3,16 @@
   "WorkspaceRootPath": "A:\\Game Dev\\MinecraftClone\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|a:\\game dev\\minecraftclone\\minecraft clone\\world\\worldgenerator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\world\\worldgenerator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|a:\\game dev\\minecraftclone\\minecraft clone\\game.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\game.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|a:\\game dev\\minecraftclone\\minecraft clone\\world\\chunks\\chunkmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\world\\chunks\\chunkmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|a:\\game dev\\minecraftclone\\minecraft clone\\world\\worldgenerator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\world\\worldgenerator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|a:\\game dev\\minecraftclone\\minecraft clone\\world\\noisekit.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -21,10 +25,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|a:\\game dev\\minecraftclone\\minecraft clone\\shaders\\sky.frag||{8B382828-6202-11D1-8870-0000F87579D2}",
       "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\shaders\\sky.frag||{8B382828-6202-11D1-8870-0000F87579D2}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|a:\\game dev\\minecraftclone\\minecraft clone\\game.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|solutionrelative:minecraft clone\\game.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{55A4A0B5-269B-40CF-B4B7-AF37F5D49F2D}|Minecraft Clone\\Minecraft Clone.csproj|a:\\game dev\\minecraftclone\\minecraft clone\\world\\chunks\\chunk.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -46,17 +46,17 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 6,
+          "SelectedChildIndex": 0,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 0,
               "Title": "Game.cs",
               "DocumentMoniker": "A:\\Game Dev\\MinecraftClone\\Minecraft Clone\\Game.cs",
               "RelativeDocumentMoniker": "Minecraft Clone\\Game.cs",
               "ToolTip": "A:\\Game Dev\\MinecraftClone\\Minecraft Clone\\Game.cs",
               "RelativeToolTip": "Minecraft Clone\\Game.cs",
-              "ViewState": "AgIAACoAAAAAAAAAAAAowDcAAAAuAAAAAAAAAA==",
+              "ViewState": "AgIAAEUAAAAAAAAAAAAAwE0AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-08-07T04:37:00.661Z",
               "IsPinned": true,
@@ -70,7 +70,7 @@
               "RelativeDocumentMoniker": "Minecraft Clone\\World\\Chunks\\ChunkManager.cs",
               "ToolTip": "A:\\Game Dev\\MinecraftClone\\Minecraft Clone\\World\\Chunks\\ChunkManager.cs",
               "RelativeToolTip": "Minecraft Clone\\World\\Chunks\\ChunkManager.cs",
-              "ViewState": "AgIAAHUAAAAAAAAAAAAIwBQAAABMAAAAAAAAAA==",
+              "ViewState": "AgIAALoBAAAAAAAAAAAQwNsBAABGAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-08-08T02:24:20.854Z",
               "IsPinned": true,
@@ -81,12 +81,8 @@
               "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
             },
             {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{cce594b6-0c39-4442-ba28-10c64ac7e89f}"
-            },
-            {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 5,
               "Title": "sky.frag",
               "DocumentMoniker": "A:\\Game Dev\\MinecraftClone\\Minecraft Clone\\Shaders\\sky.frag",
               "RelativeDocumentMoniker": "Minecraft Clone\\Shaders\\sky.frag",
@@ -94,8 +90,7 @@
               "RelativeToolTip": "Minecraft Clone\\Shaders\\sky.frag",
               "ViewState": "AgIAAAwAAAAAAAAAAAAAABYAAAAzAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2025-09-06T14:13:12.523Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-09-06T14:13:12.523Z"
             },
             {
               "$type": "Document",
@@ -111,16 +106,15 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
               "Title": "WorldGenerator.cs",
               "DocumentMoniker": "A:\\Game Dev\\MinecraftClone\\Minecraft Clone\\World\\WorldGenerator.cs",
               "RelativeDocumentMoniker": "Minecraft Clone\\World\\WorldGenerator.cs",
               "ToolTip": "A:\\Game Dev\\MinecraftClone\\Minecraft Clone\\World\\WorldGenerator.cs",
               "RelativeToolTip": "Minecraft Clone\\World\\WorldGenerator.cs",
-              "ViewState": "AgIAAAsAAAAAAAAAAAAiwBgAAAAmAAAAAAAAAA==",
+              "ViewState": "AgIAAA0AAAAAAAAAAAAqwBwAAAAsAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-05T16:32:49.583Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-09-05T16:32:49.583Z"
             },
             {
               "$type": "Document",
@@ -132,12 +126,11 @@
               "RelativeToolTip": "Minecraft Clone\\World\\Chunks\\Chunk.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-06T14:33:52.221Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-08-06T14:33:52.221Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 4,
               "Title": "BlockTypeData.cs",
               "DocumentMoniker": "A:\\Game Dev\\MinecraftClone\\Minecraft Clone\\World\\BlockTypeData.cs",
               "RelativeDocumentMoniker": "Minecraft Clone\\World\\BlockTypeData.cs",
@@ -145,12 +138,11 @@
               "RelativeToolTip": "Minecraft Clone\\World\\BlockTypeData.cs",
               "ViewState": "AgIAAC8AAAAAAAAAAAAwwDQAAAAlAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-04T15:21:41.782Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-09-04T15:21:41.782Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "NoiseKit.cs",
               "DocumentMoniker": "A:\\Game Dev\\MinecraftClone\\Minecraft Clone\\World\\NoiseKit.cs",
               "RelativeDocumentMoniker": "Minecraft Clone\\World\\NoiseKit.cs",
@@ -158,8 +150,7 @@
               "RelativeToolTip": "Minecraft Clone\\World\\NoiseKit.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAqwAoAAAAPAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-03T01:46:12.137Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-09-03T01:46:12.137Z"
             },
             {
               "$type": "Document",
