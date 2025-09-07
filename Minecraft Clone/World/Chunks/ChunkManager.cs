@@ -14,7 +14,7 @@ public class ChunkManager
     // needs no introduction
     public ChunkRenderer renderer = new ChunkRenderer();
     public ChunkGenerator generator = new ChunkGenerator();
-    public WorldGenerator worldGenerator = new WorldGenerator(512);
+    public WorldGenerator worldGenerator = new WorldGenerator(2);
 
     public Vector3i currentChunkIndex = new();
     public int radius = 9;
