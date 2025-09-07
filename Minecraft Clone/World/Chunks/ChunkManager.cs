@@ -35,6 +35,7 @@ public class ChunkManager
 
     // worker threads deposit results in these
     ConcurrentQueue<ChunkGenerator.CompletedChunkBlocks> CompletedBlocksQueue = new();
+    ConcurrentQueue<ChunkGenerator.CompletedChunkBlocks> CompletedFeaturesQueue = new();
     ConcurrentQueue<CompletedMesh> CompletedMeshQueue = new();
 
     // worker tasks list to control the number of worker threads
@@ -314,6 +315,16 @@ public class ChunkManager
             RunningTasks.TryRemove(resultChunk.index, out _);
         }
 
+        // for each CompletedChunkBlocks, move data from the queue into the respective chunk. MARK STATE
+        while (CompletedFeaturesQueue.TryDequeue(out var resultChunk))
+        {
+            Chunk targetChunk = ActiveChunks[resultChunk.index];
+            targetChunk.blocks = resultChunk.blocks;
+            targetChunk.IsEmpty = resultChunk.isEmpty;
+            targetChunk.SetState(ChunkState.FEATURED);
+            RunningTasks.TryRemove(resultChunk.index, out _);
+        }
+
         // for each CompletedMesh, move data from the queue into the respective chunk. MARK STATE
         while (CompletedMeshQueue.TryDequeue(out var resultChunk))
         {
@@ -347,7 +358,7 @@ public class ChunkManager
                         // if theres room to add a generation job for a new chunk, do it
                         if (RunningTasks.Count < maxChunkTasks)
                         {
-                            ActiveChunks[idx].SetState(ChunkState.GENERATING);
+                            resultChunk.SetState(ChunkState.GENERATING);
                             CancellationTokenSource cts = new CancellationTokenSource();
                             RunningTasksCTS.TryAdd(idx, cts);
                             RunningTasks.TryAdd(idx, generator.GenerationTask(idx, cts, worldGenerator, CompletedBlocksQueue));
@@ -355,6 +366,23 @@ public class ChunkManager
 
                         break;
                     case ChunkState.GENERATED:
+                        if (AreNeighborsGenerated(idx) && RunningTasks.Count < maxChunkTasks)
+                        {
+                            resultChunk.SetState(ChunkState.FEATURING);
+                            if (resultChunk.hasGrass)
+                            {
+                                ChunkGenerator.CompletedChunkBlocks tempChunkBlocks = new ChunkGenerator.CompletedChunkBlocks(idx, resultChunk.blocks, resultChunk.IsEmpty, resultChunk.hasGrass);
+                                CancellationTokenSource cts = new CancellationTokenSource();
+                                RunningTasksCTS.TryAdd(idx, cts);
+                                RunningTasks.TryAdd(idx, generator.FeatureAddingTask(tempChunkBlocks, cts, worldGenerator, CompletedFeaturesQueue));
+                            }
+                            else // skip non-grass-containing chunks
+                            {
+                                resultChunk.SetState(ChunkState.FEATURED);
+                            }
+                        }
+                        break;
+                    case ChunkState.FEATURED:
                         // if the chunk has blocks neighbors with blocks and theres room for a task, make mesh for it
                         if (AreNeighborsGenerated(idx) && RunningTasks.Count < maxChunkTasks)
                             RunningTasks.TryAdd(idx, MeshTask(idx));

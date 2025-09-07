@@ -9,13 +9,13 @@ namespace Minecraft_Clone.World.SurfaceFeatures
         public byte[] blocks { get; set; }
 
         int seed;
-        Random RNG;
+        public Random RNG;
 
         public Tree(int seed)
         {
-            //RNG = new Random(seed);
-            //this.seed = seed;
-            //this.featureType = SurfaceFeatureType.TREE;
+            RNG = new Random(seed);
+            this.seed = seed;
+            featureType = SurfaceFeatureType.TREE;
         }
 
         public void GrowTree(Vector3i scale)

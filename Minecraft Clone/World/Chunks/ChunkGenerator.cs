@@ -1,10 +1,12 @@
-﻿using OpenTK.Mathematics;
+﻿using Minecraft_Clone.World.SurfaceFeatures;
+using OpenTK.Mathematics;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static Minecraft_Clone.World.Chunks.ChunkGenerator;
 
 namespace Minecraft_Clone.World.Chunks
 {
@@ -17,7 +19,7 @@ namespace Minecraft_Clone.World.Chunks
             public bool isEmpty;
             public bool hasGrass;
             public byte[] blocks;
-
+            
             public CompletedChunkBlocks(Vector3i index, byte[] blocks, bool isEmpty, bool hasGrass)
             {
                 this.index = index;
@@ -65,10 +67,52 @@ namespace Minecraft_Clone.World.Chunks
                 }
             }
 
-            //if (tempChunk.hasGrass)
-            //    worldGenerator.GrowTrees(chunkIndex, tempChunk);
-
             return new CompletedChunkBlocks(chunkIndex, tempChunk.blocks, tempChunk.IsEmpty, tempChunk.hasGrass);
+        }
+
+        // chunk's feature generation kick-off fxn
+        public Task FeatureAddingTask(CompletedChunkBlocks completedChunkBlocks, CancellationTokenSource cts, WorldGenerator worldGenerator, ConcurrentQueue<CompletedChunkBlocks> queue)
+        {
+            // async wrapper for the long part of the operation
+            return Task.Run(async () =>
+            {
+                var result = await GenerateFeatures(completedChunkBlocks, cts.Token, worldGenerator);
+                queue.Enqueue(result);
+            });
+        }
+
+        // generates the blocks for a given chunk and world generator 
+        async Task<CompletedChunkBlocks> GenerateFeatures(CompletedChunkBlocks completedChunkBlocks, CancellationToken token, WorldGenerator worldGenerator)
+        {
+            return completedChunkBlocks;
+        }
+
+        // surface feature: tree
+        private Tree tree = new(-1);
+
+        public void GrowTrees(Vector3i chunkIdx, Chunk chunk, int count = 1)
+        {
+            Vector3i treeRootLocalCoord = (Chunk.SIZE / 2, Chunk.SIZE / 2, Chunk.SIZE / 2);
+            while (count > 0)
+            {
+                count--;
+                Vector3i scale = (5, 6, 5);
+                tree.GrowTree(scale);
+                tree.RNG.Next(chunkIdx.X * chunkIdx.Y + chunkIdx.Z * chunkIdx.Y);
+
+                for (int x = 0; x < scale.X; x++)
+                {
+                    for (int y = 0; y < scale.Y; y++)
+                    {
+                        for (int z = 0; z < scale.Z; z++)
+                        {
+                            var block = tree.blocks[(y * scale.Y + z) * scale.Z + x];
+                            // transform from tree coordinates to chunk coordinates
+                            chunk.SetBlock(treeRootLocalCoord, (BlockType)block);
+                        }
+                    }
+                }
+            }
         }
     }
 }

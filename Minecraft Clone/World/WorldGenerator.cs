@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace Minecraft_Clone.World
 {
@@ -42,9 +43,6 @@ namespace Minecraft_Clone.World
         // Noise
         public readonly NoiseKit noise;
         public int seed = 0;
-
-        // surface feature tracking
-        //private Tree tree = new();
 
         public WorldGenerator(int seed = 0)
         {
@@ -116,12 +114,6 @@ namespace Minecraft_Clone.World
         private static float Clamp(float v, float min, float max) => v < min ? min : (v > max ? max : v);
 
         private static float Lerp(float a, float b, float t) => a + (b - a) * t;
-
-        public void GrowTrees(Vector3i chunkIdx, Chunk chunk, float threshold)
-        {
-
-        }
-
     }
 
 }
