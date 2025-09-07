@@ -29,54 +29,41 @@ namespace Minecraft_Clone.World.Chunks
                 Array.Clear(this.blocks);
             }
         }
+
         // chunk's block generation kick-off fxn
         public Task GenerationTask(Vector3i index, CancellationTokenSource cts, WorldGenerator worldGenerator, ConcurrentQueue<CompletedChunkBlocks> queue)
         {
-
+            // async wrapper for the long part of the operation
             return Task.Run(async () =>
             {
-
                 var result = await GenerateBlocks(index, cts.Token, worldGenerator);
-
-                //OnComplete.Invoke();
                 queue.Enqueue(result);
-                //RunningTasks.TryRemove(index, out _);
-                //RunningTasksCTS.TryRemove(index, out _);
             });
         }
-        Task<CompletedChunkBlocks> GenerateBlocks(Vector3i chunkIndex, CancellationToken token, WorldGenerator worldGenerator)
+
+        // generates the blocks for a given chunk and world generator 
+        async Task<CompletedChunkBlocks> GenerateBlocks(Vector3i chunkIndex, CancellationToken token, WorldGenerator worldGenerator)
         {
             var tempChunk = new Chunk();
 
-            return Task.Run(() =>
+            for (int x = 0; x < Chunk.SIZE; x++)
             {
-                int totalBlocks = 0;
-
-                // for each block in the 16×16×16 volume...
-                for (int x = 0; x < Chunk.SIZE; x++)
+                for (int y = Chunk.SIZE - 1; y >= 0; y--)
                 {
-                    for (int y = Chunk.SIZE - 1; y >= 0; y--)
+                    for (int z = 0; z < Chunk.SIZE; z++)
                     {
-                        for (int z = 0; z < Chunk.SIZE; z++)
-                        {
-                            token.ThrowIfCancellationRequested();
+                        token.ThrowIfCancellationRequested();
 
-                            // compute world-space coordinate of this block
-                            int worldX = chunkIndex.X * Chunk.SIZE + x;
-                            int worldY = chunkIndex.Y * Chunk.SIZE + y;
-                            int worldZ = chunkIndex.Z * Chunk.SIZE + z;
+                        int worldX = chunkIndex.X * Chunk.SIZE + x;
+                        int worldY = chunkIndex.Y * Chunk.SIZE + y;
+                        int worldZ = chunkIndex.Z * Chunk.SIZE + z;
 
-                            // offload world gen code to the generator. facade pattern
-                            BlockType type = worldGenerator.GetBlockAtWorldPos((worldX, worldY, worldZ));
-
-                            tempChunk.SetBlock(x, y, z, type);
-                            if (type != BlockType.AIR) totalBlocks++;
-                        }
+                        tempChunk.SetBlock(x, y, z, worldGenerator.GetBlockAtWorldPos((worldX, worldY, worldZ)));
                     }
                 }
-                return new CompletedChunkBlocks(chunkIndex, tempChunk.blocks, tempChunk.IsEmpty);
-            });
-        }
+            }
 
+            return new CompletedChunkBlocks(chunkIndex, tempChunk.blocks, tempChunk.IsEmpty);
+        }
     }
 }

@@ -93,7 +93,7 @@ namespace Minecraft_Clone.World
             return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
         }
 
-        float Grad(int hash, float x, float y, float z)
+        private static float Grad(int hash, float x, float y, float z)
         {
             int h = hash & 15;
             float u = h < 8 ? x : y;

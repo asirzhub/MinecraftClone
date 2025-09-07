@@ -21,21 +21,23 @@ public class ChunkManager
     public int maxChunkTasks;
     public bool chunkTasksHalved = false;
     public float chunkTaskHalftime = 20f;// after 20 seconds, half the chunk tasks (prioritize speed at first, then smoothness)
-    public float expiryTime = 2f;
+    public float expiryTime = 2f; // how long a chunk can be "inactive" before disposed from ram?
 
     // store every chunk instance in Chunks:
     ConcurrentDictionary<Vector3i, Chunk> ActiveChunks = new ConcurrentDictionary<Vector3i, Chunk>();
+    
+    // independant lists to keep track of chunks that actually matter
     List<Vector3i> ActiveChunksIndices = new List<Vector3i>();
     List<Vector3i> LastActivationChunksIndices = new List<Vector3i>();
 
     // also store a list for chunks that are about to be deleted from memory (hysterisis/thrashing management)
     ConcurrentDictionary<Vector3i, float> ExpiredChunkLifetimes = new ConcurrentDictionary<Vector3i, float>();
 
-    // worker result classes, one for mesh worker and one for chunk generation worker
+    // worker threads deposit results in these
     ConcurrentQueue<ChunkGenerator.CompletedChunkBlocks> CompletedBlocksQueue = new();
     ConcurrentQueue<CompletedMesh> CompletedMeshQueue = new();
 
-    // worker tasks list
+    // worker tasks list to control the number of worker threads
     ConcurrentDictionary<Vector3i, Task> RunningTasks = new();
     ConcurrentDictionary<Vector3i, CancellationTokenSource> RunningTasksCTS = new();
 
@@ -43,10 +45,13 @@ public class ChunkManager
 
     public ChunkManager()
     {
+        // idk if this is the best way might change later
         maxChunkTasks = (int)(Environment.ProcessorCount -1);
     }
 
-    
+    //===============================================================================================
+    // Meshing will be moved to a different script soon
+
     // chunk mesh delivery class
     public class CompletedMesh
     {
@@ -270,13 +275,15 @@ public class ChunkManager
         });
     }
 
-    public int totalRenderCalls = 0;
+    //===============================================================================================
 
+    // fun stat
+    public int totalRenderCalls = 0;
     public void Update(Camera camera, float frameTime, float time, Vector3 sunDirection)
     {
-        bool updateIndices = (time % 5f < 0.01f);
-
         totalRenderCalls = 0;
+
+        // reduce chunk tasks after first burst 
         if (!chunkTasksHalved)
         {
             chunkTaskHalftime -= frameTime;
@@ -287,7 +294,9 @@ public class ChunkManager
             }
         }
 
-        if(updateIndices)
+        bool updateIndices = (time % 5f < 0.01f); // relevant chunk indices refreshed every 5 seconds
+
+        if (updateIndices)
             ActiveChunksIndices = ListActiveChunksIndices(camera.position, radius, radius / 2);
 
         currentChunkIndex = WorldPosToChunkIndex((
@@ -296,29 +305,29 @@ public class ChunkManager
                                 (int)MathF.Floor(camera.position.Z))); ; // first index in the list is always the center index  
 
         // for each CompletedChunkBlocks, move data from the queue into the respective chunk. MARK STATE
-        while (CompletedBlocksQueue.TryDequeue(out var result))
+        while (CompletedBlocksQueue.TryDequeue(out var resultChunk))
         {
-            //Console.WriteLine(result.index);
-            Chunk c = ActiveChunks[result.index];
-            c.blocks = result.blocks;
-            c.IsEmpty = result.isEmpty;
-            c.SetState(ChunkState.GENERATED);
-            RunningTasks.TryRemove(result.index, out _);
-            //if (c.IsEmpty) Console.WriteLine(result.index + " was empty!");
+            Chunk targetChunk = ActiveChunks[resultChunk.index];
+            targetChunk.blocks = resultChunk.blocks;
+            targetChunk.IsEmpty = resultChunk.isEmpty;
+            targetChunk.SetState(ChunkState.GENERATED);
+            RunningTasks.TryRemove(resultChunk.index, out _);
         }
 
         // for each CompletedMesh, move data from the queue into the respective chunk. MARK STATE
-        while (CompletedMeshQueue.TryDequeue(out var result))
+        while (CompletedMeshQueue.TryDequeue(out var resultChunk))
         {
-            Chunk c = ActiveChunks[result.index];
-            c.solidMesh = result.solidMesh;
-            c.liquidMesh = result.liquidMesh;
-            c.SetState(ChunkState.MESHED);
-            RunningTasks.TryRemove(result.index, out _);
+            Chunk targetChunk = ActiveChunks[resultChunk.index];
+            targetChunk.solidMesh = resultChunk.solidMesh;
+            targetChunk.liquidMesh = resultChunk.liquidMesh;
+            targetChunk.SetState(ChunkState.MESHED);
+            RunningTasks.TryRemove(resultChunk.index, out _);
         }
 
+        // for every chunk that's still relevant
         foreach (var idx in ActiveChunksIndices)
         {
+            // if the chunk has existed already
             if (ActiveChunks.TryGetValue(idx, out var resultChunk))
             {
                 var state = resultChunk.GetState();
@@ -327,16 +336,15 @@ public class ChunkManager
                 if (ExpiredChunkLifetimes.ContainsKey(idx))
                     ExpiredChunkLifetimes.TryRemove(idx, out _);
 
-                // determine if the chunk is in view or not (culling)
-
-                
-
+                // determine if the chunk is in view or not (for culling)
                 if(state == ChunkState.VISIBLE || state == ChunkState.INVISIBLE)
                         resultChunk.SetState(IsChunkInView(camera, idx)? ChunkState.VISIBLE : ChunkState.INVISIBLE);
 
+                // different instructions for different chunk states
                 switch (state)
                 {
                     case ChunkState.BIRTH:
+                        // if theres room to add a generation job for a new chunk, do it
                         if (RunningTasks.Count < maxChunkTasks)
                         {
                             ActiveChunks[idx].SetState(ChunkState.GENERATING);
@@ -347,17 +355,20 @@ public class ChunkManager
 
                         break;
                     case ChunkState.GENERATED:
+                        // if the chunk has blocks neighbors with blocks and theres room for a task, make mesh for it
                         if (AreNeighborsGenerated(idx) && RunningTasks.Count < maxChunkTasks)
                             RunningTasks.TryAdd(idx, MeshTask(idx));
                         break;
 
                     case ChunkState.MESHED:
+                        // mark chunks with no mesh (all air) as invisible
                         resultChunk.SetState(ChunkState.VISIBLE);
                         if (resultChunk.IsEmpty)
                             resultChunk.SetState(ChunkState.INVISIBLE);
                         break;
 
                     case ChunkState.VISIBLE:
+                        // render visible chunks, count how many
                         var rendered = renderer.RenderChunk(resultChunk.solidMesh, camera, idx, time, sunDirection);
                         if (rendered) totalRenderCalls++;
                         break;
@@ -366,7 +377,7 @@ public class ChunkManager
                 }
             }
             else
-                ActiveChunks.TryAdd(idx, new Chunk());
+                ActiveChunks.TryAdd(idx, new Chunk()); // adding a brand new chunk to the system
         }
 
         // render water with no depth mask, after all solids were rendered
@@ -377,7 +388,7 @@ public class ChunkManager
 
         GL.DepthMask(true);
 
-        // assign expired chunks
+        // assign expired chunks to expiry list
         foreach (var idx in LastActivationChunksIndices)
         {
             if (!ActiveChunksIndices.Contains(idx))
@@ -397,14 +408,14 @@ public class ChunkManager
                 ExpiredChunkLifetimes[kvp.Key] = kvp.Value + frameTime;
         }
 
-        if (updateIndices)
+        if (updateIndices) // every 5 seconds
             LastActivationChunksIndices = new List<Vector3i>(ActiveChunksIndices);
     }
 
+    // naive frustrum culling using a cone frustrum
     public bool IsChunkInView(Camera camera, Vector3i idx)
     {
         Vector3 chunkWorldCoord = idx * Chunk.SIZE + Vector3.One * Chunk.SIZE/2; // center of the chunk
-
         Vector3 chunkToCamera = chunkWorldCoord - camera.position;
 
         if (chunkToCamera.LengthFast < 2 * Chunk.SIZE) // if the chunk is too close, exit out with true
@@ -418,6 +429,7 @@ public class ChunkManager
         return false;
     }
 
+    // idk why i thought this was easier but whatever might need it later on
     public void MarkExpired(Vector3i idx)
     {
         ExpiredChunkLifetimes.TryAdd(idx, 0f);
@@ -440,6 +452,7 @@ public class ChunkManager
         return true;
     }
 
+    // chunk disposal involves deleting all the chunk information from ram
     public void DisposeChunk(Vector3i index)
     {
         if (ActiveChunks.TryRemove(index, out var chunk))
@@ -477,6 +490,7 @@ public class ChunkManager
             new Vector3i( 0, 0,-1),
         };
 
+        // BFS chunk selector uses the queue
         while (queue.Count > 0)
         {
             var current = queue.Dequeue();
@@ -501,10 +515,10 @@ public class ChunkManager
         return result;
     }
 
+    // attempts to get a chunk from the list
     public bool TryGetChunkAtIndex(Vector3i index, out Chunk result)
     {
         result = default;
-
         var exists = ActiveChunks.TryGetValue(index, out var chunk);
 
         if (exists)
@@ -517,6 +531,7 @@ public class ChunkManager
         return false;
     }
 
+    // self explanatory
     public Vector3i WorldPosToChunkIndex(Vector3i worldIndex, int chunkSize = Chunk.SIZE)
     {
         int chunkX = (int)Math.Floor(worldIndex.X / (double)chunkSize);
@@ -525,6 +540,7 @@ public class ChunkManager
         return new Vector3i(chunkX, chunkY, chunkZ);
     }
 
+    // also self explanatory
     public bool TryGetBlockAtWorldPosition(Vector3i worldIndex, out Block result, int chunkSize = Chunk.SIZE)
     {
         result = default;
@@ -553,7 +569,7 @@ public class ChunkManager
         return false;
     }
 
-    // translates the existing chunk dictionary int just chunks list
+    // translates the existing chunk dictionary intp just chunks list
     List<Chunk> ChunkList()
     {
         var result = new List<Chunk>();

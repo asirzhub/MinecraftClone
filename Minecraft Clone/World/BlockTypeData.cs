@@ -36,8 +36,11 @@ namespace Minecraft_Clone.World
 
         public Vector2[] FaceUVs = new Vector2[6]; // 
 
-        public BlockTypeData(bool solid, bool transparent, Vector2 uniformUV) : this(solid, transparent, new[] { uniformUV, uniformUV, uniformUV, uniformUV, uniformUV, uniformUV }) { }
+        // for blocks with identical face textures on every side
+        public BlockTypeData(bool solid, bool transparent, Vector2 uniformUV) 
+            : this(solid, transparent, new[] { uniformUV, uniformUV, uniformUV, uniformUV, uniformUV, uniformUV }) { }
 
+        // for blocks with unique face textures on every side (log, grass, etc)
         public BlockTypeData(bool solid, bool transparent, Vector2[] faceUVs)
         {
             IsSolid = solid;
