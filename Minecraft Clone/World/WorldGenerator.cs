@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 
 namespace Minecraft_Clone.World
 {
+    // manages world generation...
     public class WorldGenerator
     {
         // World bounds
@@ -25,12 +26,13 @@ namespace Minecraft_Clone.World
         public float baseHeight = -200f;
         public float baseAmplitude = 510f;
 
+        // smaller details over terrain
         public float detailScale = 0.05f;
         public int detailOctaves = 2;       
         public float detailAmplitude = 15f;
 
         public int seaFloorDepth = 6;
-        public float seaFloorBlend = 0.75f;   // floor flattening
+        public float seaFloorBlend = 0.75f;   // sea floor flattening
         public int beachHalfWidth = 3;      // band around sea level for sand
 
         public int topsoilDepth = 1;
@@ -46,7 +48,8 @@ namespace Minecraft_Clone.World
             noise = new NoiseKit(seed);
         }
 
-        public float GetTerrainHeightAt(int worldX, int worldZ)
+        // function for calculating terrain height for a given block
+        float GetTerrainHeightAt(int worldX, int worldZ)
         {
             // continental/island
             float baseNoise = noise.Fbm2D(worldX * baseScale, worldZ * baseScale,
@@ -71,6 +74,7 @@ namespace Minecraft_Clone.World
             return Clamp(height, minHeight + 1, maxHeight - 1);
         }
 
+        // This is the function to generate terrain
         public BlockType GetBlockAtWorldPos(Vector3i pos)
         {
             int x = pos.X, y = pos.Y, z = pos.Z;

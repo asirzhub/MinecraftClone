@@ -6,6 +6,7 @@ using OpenTK.Windowing.Common;
 
 namespace Minecraft_Clone.World.Chunks
 {
+    // renderer handles rendering side of things for chunks
     public class ChunkRenderer
     {
         public Texture blockTexture;

@@ -6,6 +6,7 @@ namespace Minecraft_Clone.Graphics
     // Literally just information on how to make a cube
     public class CubeMesh : MeshData
     {
+        // english to track faces
         public enum Face
         {
             FRONT,

@@ -5,6 +5,7 @@ using static Minecraft_Clone.Graphics.VBO;
 
 namespace Minecraft_Clone.World.Chunks
 {
+    // Chunk State Machine states
     public enum ChunkState
     {
         BIRTH,
@@ -21,19 +22,23 @@ namespace Minecraft_Clone.World.Chunks
     {
         public const int SIZE = 32; // same size in all coordinates
         private ChunkState state;
-        public ChunkState GetState() { return state; }
-        public bool NeighborReady => !((state == ChunkState.BIRTH) || (state == ChunkState.GENERATING));
+        public ChunkState GetState() { return state; } // protect the state from being directly modified
+        public bool NeighborReady => !((state == ChunkState.BIRTH) || (state == ChunkState.GENERATING));// can the neighbor query this block for block existence?
 
+        // is the chunk empty?
         public bool IsEmpty { 
             get => isEmpty; 
             set => isEmpty = value; }
 
+        // limits unique blocks in the game to 256 which is fine
         public byte[] blocks;
         private bool isEmpty = true;
 
+        // Chunks store their mesh data
         public MeshData solidMesh;
         public MeshData liquidMesh;
 
+        // if a chunk is updated, it must be marked dirty (for a re-mesh)
         public bool TryMarkDirty()
         {
             if (LegalTransitions[ChunkState.DIRTY].Contains(state))
@@ -45,7 +50,6 @@ namespace Minecraft_Clone.World.Chunks
         }
 
         // practice chunk safety: enforce state transitions
-        // you can't transition into GENERATING - only happens at birth
         // {result state , beginning state(s) allowed}
         public static readonly Dictionary<ChunkState, List<ChunkState>> LegalTransitions = new()
         {
@@ -57,6 +61,7 @@ namespace Minecraft_Clone.World.Chunks
             { ChunkState.INVISIBLE, new(){ChunkState.MESHED, ChunkState.VISIBLE, ChunkState.INVISIBLE } },
             { ChunkState.DIRTY, new(){ ChunkState.VISIBLE, ChunkState.MESHED} }
         };
+        // Safe chunk state management to enforce legal state transitions
         public void SetState(ChunkState NewState)
         {
             if (!LegalTransitions[NewState].Contains(state))
@@ -68,6 +73,7 @@ namespace Minecraft_Clone.World.Chunks
         // default new chunk state is generating state... maybe later add "READING" to read from disk cache
         public Chunk(ChunkState state = ChunkState.BIRTH) { this.state = state; }
 
+        // returns a block at the gievn local coordinate
         public Block GetBlock(int x, int y, int z)
         {
             if (IsEmpty) return new Block(BlockType.AIR);
@@ -75,6 +81,7 @@ namespace Minecraft_Clone.World.Chunks
             return new Block(type);
         }
 
+        // sets the block at a given local coordinate
         public void SetBlock(int x, int y, int z, BlockType type)
         {
             if (IsEmpty && type == BlockType.AIR) return;
@@ -87,21 +94,7 @@ namespace Minecraft_Clone.World.Chunks
             blocks[(y * SIZE + z) * SIZE + x] = (byte)type;
         }
 
-        public void FillWithBlock(BlockType blockType)
-        {
-            for (int x = 0; x < SIZE; x++)
-            {
-                for (int y = 0; y < SIZE; y++)
-                {
-                    for (int z = 0; z < SIZE;  z++)
-                    {
-                        SetBlock(x, y, z, blockType);
-                    }
-                }
-            }
-            Console.WriteLine("filled " + blockType.ToString() +" into chunk");
-        }
-
+        // clean up meshes when removing from memory
         public void DisposeMeshes()
         {
             solidMesh?.Dispose();
