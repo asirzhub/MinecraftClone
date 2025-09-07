@@ -4,26 +4,18 @@ namespace Minecraft_Clone.World.SurfaceFeatures
 {
     public class Tree : ISurfaceFeature
     {
-        public Vector3i rootCoordinate { get; set; }
         public SurfaceFeatureType featureType { get; set; }
         public Vector3i scale { get; set; }
         public byte[] blocks { get; set; }
 
         int seed;
-        NoiseKit noise;
         Random RNG;
 
-        public Tree(Vector3i rootCoord, int seed = -1)
+        public Tree(int seed)
         {
-            if (seed == -1)
-            {
-                RNG = new Random();
-                seed = RNG.Next(int.MaxValue);
-            }
-            rootCoordinate = rootCoord;
-            this.featureType = SurfaceFeatureType.TREE;
-            this.seed = seed;
-            noise = new NoiseKit(this.seed);
+            //RNG = new Random(seed);
+            //this.seed = seed;
+            //this.featureType = SurfaceFeatureType.TREE;
         }
 
         public void GrowTree(Vector3i scale)

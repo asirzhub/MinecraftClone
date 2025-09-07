@@ -15,13 +15,15 @@ namespace Minecraft_Clone.World.Chunks
         {
             public Vector3i index;
             public bool isEmpty;
+            public bool hasGrass;
             public byte[] blocks;
 
-            public CompletedChunkBlocks(Vector3i index, byte[] blocks, bool isEmpty)
+            public CompletedChunkBlocks(Vector3i index, byte[] blocks, bool isEmpty, bool hasGrass)
             {
                 this.index = index;
                 this.blocks = blocks;
                 this.isEmpty = isEmpty;
+                this.hasGrass = hasGrass;
             }
 
             public void Dispose()
@@ -63,7 +65,10 @@ namespace Minecraft_Clone.World.Chunks
                 }
             }
 
-            return new CompletedChunkBlocks(chunkIndex, tempChunk.blocks, tempChunk.IsEmpty);
+            //if (tempChunk.hasGrass)
+            //    worldGenerator.GrowTrees(chunkIndex, tempChunk);
+
+            return new CompletedChunkBlocks(chunkIndex, tempChunk.blocks, tempChunk.IsEmpty, tempChunk.hasGrass);
         }
     }
 }

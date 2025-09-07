@@ -1,5 +1,7 @@
-﻿using SixLabors.ImageSharp;
+﻿using OpenTK.Mathematics;
+using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.Collections.Concurrent;
 
 namespace Minecraft_Clone.World
 {
@@ -105,19 +107,20 @@ namespace Minecraft_Clone.World
         // 2D FBM
         public float Fbm2D(float x, float y, int octaves = 4, float lacunarity = 2f, float gain = 0.5f)
         {
+            
             float total = 0f;
             float amplitude = 1f;
             float frequency = 1f;
             float max = 0f;
             for (int i = 0; i < octaves; i++)
             {
-                total += (Noise(x * frequency, y * frequency) * 2f - 1f) * amplitude; // center around 0
+                total += Noise(x * frequency, y * frequency) * amplitude; // center around 0
                 max += amplitude;
                 amplitude *= gain;
                 frequency *= lacunarity;
             }
-            // normalize back to [0,1]
-            return (total / max) * 0.5f + 0.5f;
+
+            return (total / max);
         }
 
 
@@ -130,12 +133,12 @@ namespace Minecraft_Clone.World
             float max = 0f;
             for (int i = 0; i < octaves; i++)
             {
-                total += (Noise(x * frequency, y * frequency, z * frequency) * 2f - 1f) * amplitude;
+                total += Noise(x * frequency, y * frequency, z * frequency) * amplitude;
                 max += amplitude;
                 amplitude *= gain;
                 frequency *= lacunarity;
             }
-            return (total / max) * 0.5f + 0.5f;
+            return (total / max);
         }
     }
 }

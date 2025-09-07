@@ -1,5 +1,6 @@
 ﻿using Minecraft_Clone.World;
 using Minecraft_Clone.World.Chunks;
+using Minecraft_Clone.World.SurfaceFeatures;
 using OpenTK.Mathematics;
 using System;
 using System.Collections.Generic;
@@ -41,6 +42,9 @@ namespace Minecraft_Clone.World
         // Noise
         public readonly NoiseKit noise;
         public int seed = 0;
+
+        // surface feature tracking
+        //private Tree tree = new();
 
         public WorldGenerator(int seed = 0)
         {
@@ -111,7 +115,13 @@ namespace Minecraft_Clone.World
 
         private static float Clamp(float v, float min, float max) => v < min ? min : (v > max ? max : v);
 
-        private static float Lerp(float a, float b, float t) => a + (b - a) * t; // (fixed)
+        private static float Lerp(float a, float b, float t) => a + (b - a) * t;
+
+        public void GrowTrees(Vector3i chunkIdx, Chunk chunk, float threshold)
+        {
+
+        }
+
     }
 
 }

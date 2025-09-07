@@ -30,6 +30,8 @@ namespace Minecraft_Clone.World.Chunks
             get => isEmpty; 
             set => isEmpty = value; }
 
+        public bool hasGrass = false;
+
         // limits unique blocks in the game to 256 which is fine
         public byte[] blocks;
         private bool isEmpty = true;
@@ -91,6 +93,10 @@ namespace Minecraft_Clone.World.Chunks
                 IsEmpty = false;
                 blocks = new byte[SIZE * SIZE * SIZE];
             }
+
+            if (!hasGrass && type == BlockType.GRASS)
+                hasGrass = true;
+
             blocks[(y * SIZE + z) * SIZE + x] = (byte)type;
         }
 
