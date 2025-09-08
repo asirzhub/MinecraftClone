@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static Minecraft_Clone.World.Chunks.ChunkGenerator;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace Minecraft_Clone.World.Chunks
 {
@@ -26,6 +27,14 @@ namespace Minecraft_Clone.World.Chunks
                 this.blocks = blocks;
                 this.isEmpty = isEmpty;
                 this.hasGrass = hasGrass;
+            }
+
+            public CompletedChunkBlocks(Vector3i index, Chunk chunk)
+            {
+                this.index = index;
+                this.blocks = chunk.blocks;
+                this.isEmpty = chunk.IsEmpty;
+                this.hasGrass = chunk.hasGrass;
             }
 
             public void Dispose()
@@ -71,48 +80,47 @@ namespace Minecraft_Clone.World.Chunks
         }
 
         // chunk's feature generation kick-off fxn
-        public Task FeatureAddingTask(CompletedChunkBlocks completedChunkBlocks, CancellationTokenSource cts, WorldGenerator worldGenerator, ConcurrentQueue<CompletedChunkBlocks> queue)
+        public Task FeatureAddingTask(Vector3i index, Chunk chunk, CancellationTokenSource cts, WorldGenerator worldGenerator, ConcurrentQueue<CompletedChunkBlocks> queue)
         {
             // async wrapper for the long part of the operation
             return Task.Run(async () =>
             {
-                var result = await GenerateFeatures(completedChunkBlocks, cts.Token, worldGenerator);
+                var result = await GenerateFeatures(index, chunk, cts.Token, worldGenerator);
+                // WHY DOESNT THIS GET QUEUED???
                 queue.Enqueue(result);
             });
         }
 
+        Tree tree = new Tree(102020);
+
         // generates the blocks for a given chunk and world generator 
-        async Task<CompletedChunkBlocks> GenerateFeatures(CompletedChunkBlocks completedChunkBlocks, CancellationToken token, WorldGenerator worldGenerator)
+        async Task<CompletedChunkBlocks> GenerateFeatures(Vector3i index, Chunk chunk, CancellationToken token, WorldGenerator worldGenerator)
         {
-            return completedChunkBlocks;
-        }
-
-        // surface feature: tree
-        private Tree tree = new(-1);
-
-        public void GrowTrees(Vector3i chunkIdx, Chunk chunk, int count = 1)
-        {
-            Vector3i treeRootLocalCoord = (Chunk.SIZE / 2, Chunk.SIZE / 2, Chunk.SIZE / 2);
-            while (count > 0)
+            if(chunk.GetHeightAtXZ((Chunk.SIZE/2, Chunk.SIZE/2), out var h))
             {
-                count--;
                 Vector3i scale = (5, 6, 5);
-                tree.GrowTree(scale);
-                tree.RNG.Next(chunkIdx.X * chunkIdx.Y + chunkIdx.Z * chunkIdx.Y);
+                // create tree blocks
+                tree.GenerateTreeBlocks((5, 6, 5));
 
-                for (int x = 0; x < scale.X; x++)
+                Vector3i coordinateOffset = new Vector3i(Chunk.SIZE / 2 - tree.scale.X / 2,
+                    h,
+                    Chunk.SIZE / 2 - tree.scale.Z / 2);
+
+                // place the tree into the chunk
+                for (byte x = 0; x < tree.scale.X; x++)
                 {
-                    for (int y = 0; y < scale.Y; y++)
+                    for (byte y = 0; y < tree.scale.Y; y++)
                     {
-                        for (int z = 0; z < scale.Z; z++)
+                        for (byte z = 0; z < tree.scale.Z; z++)
                         {
-                            var block = tree.blocks[(y * scale.Y + z) * scale.Z + x];
-                            // transform from tree coordinates to chunk coordinates
-                            chunk.SetBlock(treeRootLocalCoord, (BlockType)block);
+                            chunk.SetBlock((x, y, z) + coordinateOffset, (BlockType)tree.blocks[(y * scale.Y + z) * scale.Z + x]);
                         }
                     }
                 }
+
             }
+
+            return new CompletedChunkBlocks(index, chunk);
         }
     }
 }

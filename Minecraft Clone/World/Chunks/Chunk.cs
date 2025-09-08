@@ -42,6 +42,24 @@ namespace Minecraft_Clone.World.Chunks
         public MeshData solidMesh;
         public MeshData liquidMesh;
 
+        public bool GetHeightAtXZ(Vector2i coord, out byte height)
+        {
+            height = 0;
+
+            if (isEmpty) return false;
+
+            for(byte y = Chunk.SIZE-1; y >= 0; y--)
+            {
+                if (GetBlock(coord.X, y, coord.Y).isSolid)
+                {
+                    height = y;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         // if a chunk is updated, it must be marked dirty (for a re-mesh)
         public bool TryMarkDirty()
         {

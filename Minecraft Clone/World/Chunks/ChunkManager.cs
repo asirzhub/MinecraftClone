@@ -311,6 +311,7 @@ public class ChunkManager
             Chunk targetChunk = ActiveChunks[resultChunk.index];
             targetChunk.blocks = resultChunk.blocks;
             targetChunk.IsEmpty = resultChunk.isEmpty;
+            targetChunk.hasGrass = resultChunk.hasGrass;
             targetChunk.SetState(ChunkState.GENERATED);
             RunningTasks.TryRemove(resultChunk.index, out _);
         }
@@ -321,6 +322,7 @@ public class ChunkManager
             Chunk targetChunk = ActiveChunks[resultChunk.index];
             targetChunk.blocks = resultChunk.blocks;
             targetChunk.IsEmpty = resultChunk.isEmpty;
+            targetChunk.hasGrass = resultChunk.hasGrass;
             targetChunk.SetState(ChunkState.FEATURED);
             RunningTasks.TryRemove(resultChunk.index, out _);
         }
@@ -371,10 +373,9 @@ public class ChunkManager
                             resultChunk.SetState(ChunkState.FEATURING);
                             if (resultChunk.hasGrass)
                             {
-                                ChunkGenerator.CompletedChunkBlocks tempChunkBlocks = new ChunkGenerator.CompletedChunkBlocks(idx, resultChunk.blocks, resultChunk.IsEmpty, resultChunk.hasGrass);
                                 CancellationTokenSource cts = new CancellationTokenSource();
                                 RunningTasksCTS.TryAdd(idx, cts);
-                                RunningTasks.TryAdd(idx, generator.FeatureAddingTask(tempChunkBlocks, cts, worldGenerator, CompletedFeaturesQueue));
+                                RunningTasks.TryAdd(idx, generator.FeatureAddingTask(idx, resultChunk, cts, worldGenerator, CompletedFeaturesQueue));
                             }
                             else // skip non-grass-containing chunks
                             {

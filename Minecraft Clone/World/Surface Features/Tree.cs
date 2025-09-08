@@ -4,6 +4,7 @@ namespace Minecraft_Clone.World.SurfaceFeatures
 {
     public class Tree : ISurfaceFeature
     {
+        public Vector3i rootCoordinate { get; set; }
         public SurfaceFeatureType featureType { get; set; }
         public Vector3i scale { get; set; }
         public byte[] blocks { get; set; }
@@ -18,7 +19,7 @@ namespace Minecraft_Clone.World.SurfaceFeatures
             featureType = SurfaceFeatureType.TREE;
         }
 
-        public void GrowTree(Vector3i scale)
+        public void GenerateTreeBlocks(Vector3i scale)
         {
             this.scale = scale;
             blocks = new byte[scale.X * scale.Y * scale.Z];
