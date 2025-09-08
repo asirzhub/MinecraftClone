@@ -11,6 +11,8 @@ namespace Minecraft_Clone.World.Chunks
         BIRTH,
         GENERATING,
         GENERATED,
+        FEATURING,
+        FEATURED,
         MESHING,
         MESHED,
         VISIBLE,
@@ -30,6 +32,8 @@ namespace Minecraft_Clone.World.Chunks
             get => isEmpty; 
             set => isEmpty = value; }
 
+        public bool hasGrass = false;
+
         // limits unique blocks in the game to 256 which is fine
         public byte[] blocks;
         private bool isEmpty = true;
@@ -37,6 +41,24 @@ namespace Minecraft_Clone.World.Chunks
         // Chunks store their mesh data
         public MeshData solidMesh;
         public MeshData liquidMesh;
+
+        public bool GetHeightAtXZ(Vector2i coord, out byte height)
+        {
+            height = 0;
+
+            if (isEmpty) return false;
+
+            for(byte y = Chunk.SIZE-1; y > 0; y--)
+            {
+                if (GetBlock(coord.X, y, coord.Y).isSolid)
+                {
+                    height = y;
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         // if a chunk is updated, it must be marked dirty (for a re-mesh)
         public bool TryMarkDirty()
@@ -55,7 +77,9 @@ namespace Minecraft_Clone.World.Chunks
         {
             { ChunkState.GENERATING, new(){ ChunkState.BIRTH } },
             { ChunkState.GENERATED, new() { ChunkState.GENERATING} },
-            { ChunkState.MESHING, new(){ ChunkState.DIRTY, ChunkState.GENERATED, ChunkState.MESHING } },
+            { ChunkState.FEATURING, new() { ChunkState.GENERATED} },
+            { ChunkState.FEATURED, new() { ChunkState.FEATURING } },
+            { ChunkState.MESHING, new(){ ChunkState.DIRTY, ChunkState.FEATURED, ChunkState.MESHING } },
             { ChunkState.MESHED, new() { ChunkState.MESHING} },
             { ChunkState.VISIBLE, new(){ ChunkState.MESHED, ChunkState.INVISIBLE, ChunkState.VISIBLE} },
             { ChunkState.INVISIBLE, new(){ChunkState.MESHED, ChunkState.VISIBLE, ChunkState.INVISIBLE } },
@@ -91,8 +115,30 @@ namespace Minecraft_Clone.World.Chunks
                 IsEmpty = false;
                 blocks = new byte[SIZE * SIZE * SIZE];
             }
+
+            if (!hasGrass && type == BlockType.GRASS)
+                hasGrass = true;
+
             blocks[(y * SIZE + z) * SIZE + x] = (byte)type;
         }
+
+        public void SetBlock(Vector3i coordinate, BlockType type)
+        {
+            if (IsEmpty && type == BlockType.AIR) return;
+
+            if (IsEmpty)
+            {
+                IsEmpty = false;
+                blocks = new byte[SIZE * SIZE * SIZE];
+            }
+
+            if (!hasGrass && type == BlockType.GRASS)
+                hasGrass = true;
+            
+            blocks[(coordinate.Y * SIZE + coordinate.Z) * SIZE + coordinate.X] = (byte)type;
+        }
+
+
 
         // clean up meshes when removing from memory
         public void DisposeMeshes()

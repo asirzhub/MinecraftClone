@@ -1,5 +1,6 @@
 ﻿using Minecraft_Clone.World;
 using Minecraft_Clone.World.Chunks;
+using Minecraft_Clone.World.SurfaceFeatures;
 using OpenTK.Mathematics;
 using System;
 using System.Collections.Generic;
@@ -7,6 +8,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace Minecraft_Clone.World
 {
@@ -14,7 +16,7 @@ namespace Minecraft_Clone.World
     public class WorldGenerator
     {
         // World bounds
-        public int seaLevel = 64;
+        public int seaLevel = 63;
         public int minHeight = -128;
         public int maxHeight = 256;
 
@@ -111,7 +113,7 @@ namespace Minecraft_Clone.World
 
         private static float Clamp(float v, float min, float max) => v < min ? min : (v > max ? max : v);
 
-        private static float Lerp(float a, float b, float t) => a + (b - a) * t; // (fixed)
+        private static float Lerp(float a, float b, float t) => a + (b - a) * t;
     }
 
 }
