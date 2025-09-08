@@ -113,7 +113,13 @@ namespace Minecraft_Clone.World.Chunks
                     {
                         for (byte z = 0; z < tree.scale.Z; z++)
                         {
-                            chunk.SetBlock((x, y, z) + coordinateOffset, (BlockType)tree.blocks[(y * scale.Y + z) * scale.Z + x]);
+                            Vector3i localCoord = (x, y, z) + coordinateOffset;
+                            BlockType treeBlock = (BlockType)tree.blocks[(y * scale.Z + z) * scale.X + x];
+                            if (treeBlock != BlockType.AIR && 
+                                localCoord.X >= 0 && localCoord.X <Chunk.SIZE &&
+                                localCoord.Y >= 0 && localCoord.Y < Chunk.SIZE &&
+                                localCoord.Z >= 0 && localCoord.Z < Chunk.SIZE)
+                                chunk.SetBlock(localCoord, treeBlock);
                         }
                     }
                 }
