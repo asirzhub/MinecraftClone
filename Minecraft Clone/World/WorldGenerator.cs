@@ -16,7 +16,7 @@ namespace Minecraft_Clone.World
     public class WorldGenerator
     {
         // World bounds
-        public int seaLevel = 64;
+        public int seaLevel = 63;
         public int minHeight = -128;
         public int maxHeight = 256;
 

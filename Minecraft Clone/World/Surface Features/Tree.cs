@@ -45,8 +45,6 @@ namespace Minecraft_Clone.World.SurfaceFeatures
                     }
                 }
             }
-
-            Console.WriteLine("A");
         }
     }
 }

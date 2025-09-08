@@ -48,7 +48,7 @@ namespace Minecraft_Clone.World.Chunks
 
             if (isEmpty) return false;
 
-            for(byte y = Chunk.SIZE-1; y >= 0; y--)
+            for(byte y = Chunk.SIZE-1; y > 0; y--)
             {
                 if (GetBlock(coord.X, y, coord.Y).isSolid)
                 {

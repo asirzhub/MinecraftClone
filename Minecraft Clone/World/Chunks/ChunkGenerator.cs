@@ -85,9 +85,7 @@ namespace Minecraft_Clone.World.Chunks
             // async wrapper for the long part of the operation
             return Task.Run(async () =>
             {
-                var result = await GenerateFeatures(index, chunk, cts.Token, worldGenerator);
-                // WHY DOESNT THIS GET QUEUED???
-                queue.Enqueue(result);
+                queue.Enqueue(await GenerateFeatures(index, chunk, cts.Token, worldGenerator));
             });
         }
 
@@ -123,10 +121,12 @@ namespace Minecraft_Clone.World.Chunks
                         }
                     }
                 }
-
+                return new CompletedChunkBlocks(index, chunk);
             }
-
-            return new CompletedChunkBlocks(index, chunk);
+            else
+            {
+                return new CompletedChunkBlocks(index, chunk);
+            }
         }
     }
 }
