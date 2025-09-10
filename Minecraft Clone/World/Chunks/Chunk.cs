@@ -27,6 +27,48 @@ namespace Minecraft_Clone.World.Chunks
         public ChunkState GetState() { return state; } // protect the state from being directly modified
         public bool NeighborReady => !((state == ChunkState.BIRTH) || (state == ChunkState.GENERATING));// can the neighbor query this block for block existence?
 
+        // bit-packed position+type blocks delivered from surfaceFeatureBlocks in the manager
+        public Queue<int> pendingBlocks;
+
+        public void AddPendingBlock(Vector3i localCoord, byte blockTypeByte)
+        {
+            // pack X, Y, Z position is [0,31] into first 5 * 3 bits, blockType is 8-bit -> 23 bits fits into one int
+            int pendingBlockPacked = 0;
+            pendingBlockPacked = (localCoord.X & 0x1F)        |
+                                ((localCoord.Y & 0x1F) <<  5) |
+                                ((localCoord.Z & 0x1F) << 10) |
+                                ((blockTypeByte)       << 15);
+
+            if(pendingBlocks == null) pendingBlocks = new Queue<int>();
+            pendingBlocks.Enqueue(pendingBlockPacked);
+        }
+
+        public Task ProcessPendingBlocks(Action postAction)
+        {
+            if(pendingBlocks != null && pendingBlocks.Count > 0)
+                return Task.Run(() => {
+
+                    while(pendingBlocks.TryDequeue(out int pb))
+                    {
+                        // unpack and do setblock in one go
+                        SetBlock(
+                            ((pb & 0x1F), ((pb >> 5) & 0x1F), ((pb >> 10) & 0x1F)),
+                            (BlockType)((pb >> 15) & 0xFF));
+                    }
+
+                    postAction?.Invoke();
+
+                });
+
+            return Task.CompletedTask;
+        }
+
+        public bool BlockUpdateSafe => (
+            (state == ChunkState.MESHED) ||
+            (state == ChunkState.VISIBLE) ||
+            (state == ChunkState.INVISIBLE) 
+            );
+
         // is the chunk empty?
         public bool IsEmpty { 
             get => isEmpty; 
@@ -106,22 +148,6 @@ namespace Minecraft_Clone.World.Chunks
         }
 
         // sets the block at a given local coordinate
-        public void SetBlock(int x, int y, int z, BlockType type)
-        {
-            if (IsEmpty && type == BlockType.AIR) return;
-
-            if (IsEmpty)
-            {
-                IsEmpty = false;
-                blocks = new byte[SIZE * SIZE * SIZE];
-            }
-
-            if (!hasGrass && type == BlockType.GRASS)
-                hasGrass = true;
-
-            blocks[(y * SIZE + z) * SIZE + x] = (byte)type;
-        }
-
         public void SetBlock(Vector3i coordinate, BlockType type)
         {
             if (IsEmpty && type == BlockType.AIR) return;
@@ -134,10 +160,13 @@ namespace Minecraft_Clone.World.Chunks
 
             if (!hasGrass && type == BlockType.GRASS)
                 hasGrass = true;
-            
+
+            // if the block is different from what was there, needs new mesh -> needs to be marked dirty
+            if (blocks[(coordinate.Y * SIZE + coordinate.Z) * SIZE + coordinate.X] != (byte)type)
+                TryMarkDirty();
+
             blocks[(coordinate.Y * SIZE + coordinate.Z) * SIZE + coordinate.X] = (byte)type;
         }
-
 
 
         // clean up meshes when removing from memory

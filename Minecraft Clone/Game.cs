@@ -76,14 +76,15 @@ namespace Minecraft_Clone
             frameTimeAccumulator += args.Time;
             frameCount++;
 
-            if (frameTimeAccumulator >= 0.5)
+            if (frameTimeAccumulator >= 0.25)
             {
                 Title = $"game - FPS: {frameCount * 2} | " +
                     $"Position: {camera.position} | " +
                     $"Chunk: {chunkManager.currentChunkIndex} | " +
                     $"Chunk Tasks: {chunkManager.taskCount}/{chunkManager.maxChunkTasks} | " +
                     $"Render Calls: {chunkManager.totalRenderCalls} | " + 
-                    $"Render Distance: {chunkManager.radius}";
+                    $"Render Distance: {chunkManager.radius} | " +
+                    $"Spilled Features: {chunkManager.sfbCount}";
                 frameTimeAccumulator = 0.0;
                 frameCount = 0;
             }
@@ -140,6 +141,11 @@ namespace Minecraft_Clone
             if (KeyboardState.IsKeyPressed(Keys.Comma))
             {
                 chunkManager.radius--;
+            }
+
+            if(KeyboardState.IsKeyPressed(Keys.R))
+            {
+                chunkManager.TryMarkAllDirty();
             }
         }
 

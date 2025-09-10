@@ -14,32 +14,49 @@ namespace Minecraft_Clone.World.Chunks
     public class ChunkGenerator
     {
         // chunk block generation delivery class
-        public class CompletedChunkBlocks
+        public struct CompletedChunkBlocks
         {
             public Vector3i index;
             public bool isEmpty;
             public bool hasGrass;
             public byte[] blocks;
+            public SpilledFeatureBlock[] spilledFeatureBlocks;
             
-            public CompletedChunkBlocks(Vector3i index, byte[] blocks, bool isEmpty, bool hasGrass)
+            public CompletedChunkBlocks(Vector3i index, byte[] blocks, bool isEmpty, bool hasGrass, SpilledFeatureBlock[] spilledFeatureBlocks = null)
             {
                 this.index = index;
                 this.blocks = blocks;
                 this.isEmpty = isEmpty;
                 this.hasGrass = hasGrass;
+                this.spilledFeatureBlocks = spilledFeatureBlocks;
             }
 
-            public CompletedChunkBlocks(Vector3i index, Chunk chunk)
+            public CompletedChunkBlocks(Vector3i index, Chunk chunk, SpilledFeatureBlock[] spilledFeatureBlocks = null)
             {
                 this.index = index;
                 this.blocks = chunk.blocks;
                 this.isEmpty = chunk.IsEmpty;
                 this.hasGrass = chunk.hasGrass;
+                this.spilledFeatureBlocks = spilledFeatureBlocks;
             }
 
             public void Dispose()
             {
                 Array.Clear(this.blocks);
+            }
+        }
+
+        // non-air feature blocks that spill into other chunks need to be queued so they can be added in the world
+        // these will be carted into the chunk manager along with the chunk they came from
+        public struct SpilledFeatureBlock
+        {
+            public Vector3i worldIndex;
+            public byte blockType;
+
+            public SpilledFeatureBlock(Vector3i worldIndex, byte blockType)
+            {
+                this.worldIndex = worldIndex;
+                this.blockType = blockType;
             }
         }
 
@@ -71,7 +88,7 @@ namespace Minecraft_Clone.World.Chunks
                         int worldY = chunkIndex.Y * Chunk.SIZE + y;
                         int worldZ = chunkIndex.Z * Chunk.SIZE + z;
 
-                        tempChunk.SetBlock(x, y, z, worldGenerator.GetBlockAtWorldPos((worldX, worldY, worldZ)));
+                        tempChunk.SetBlock((x, y, z), worldGenerator.GetBlockAtWorldPos((worldX, worldY, worldZ)));
                     }
                 }
             }
@@ -94,7 +111,9 @@ namespace Minecraft_Clone.World.Chunks
         // generates the blocks for a given chunk and world generator 
         async Task<CompletedChunkBlocks> GenerateFeatures(Vector3i index, Chunk chunk, CancellationToken token, WorldGenerator worldGenerator)
         {
-            if(chunk.GetHeightAtXZ((Chunk.SIZE/2, Chunk.SIZE/2), out var h))
+            List<SpilledFeatureBlock> spilledFeatureBlocks = new List<SpilledFeatureBlock>();
+
+            if (chunk.GetHeightAtXZ((Chunk.SIZE/2, Chunk.SIZE/2), out var h))
             {
                 Vector3i scale = (5, 6, 5);
                 // create tree blocks
@@ -112,16 +131,21 @@ namespace Minecraft_Clone.World.Chunks
                         for (byte z = 0; z < tree.scale.Z; z++)
                         {
                             Vector3i localCoord = (x, y, z) + coordinateOffset;
-                            BlockType treeBlock = (BlockType)tree.blocks[(y * scale.Z + z) * scale.X + x];
-                            if (treeBlock != BlockType.AIR && 
+                            byte treeBlock = tree.blocks[(y * scale.Z + z) * scale.X + x];
+                            if (treeBlock != (byte)BlockType.AIR && 
                                 localCoord.X >= 0 && localCoord.X <Chunk.SIZE &&
                                 localCoord.Y >= 0 && localCoord.Y < Chunk.SIZE &&
                                 localCoord.Z >= 0 && localCoord.Z < Chunk.SIZE)
-                                chunk.SetBlock(localCoord, treeBlock);
+                                chunk.SetBlock(localCoord, (BlockType)treeBlock);
+                            else 
+                            {
+                                if(treeBlock != (byte)BlockType.AIR)
+                                    spilledFeatureBlocks.Add(new SpilledFeatureBlock(index * Chunk.SIZE + (x, y, z), treeBlock));
+                            }
                         }
                     }
                 }
-                return new CompletedChunkBlocks(index, chunk);
+                return new CompletedChunkBlocks(index, chunk, spilledFeatureBlocks.ToArray());
             }
             else
             {

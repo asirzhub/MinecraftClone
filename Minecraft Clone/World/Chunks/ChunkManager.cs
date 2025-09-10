@@ -36,6 +36,7 @@ public class ChunkManager
     // worker threads deposit results in these
     ConcurrentQueue<ChunkGenerator.CompletedChunkBlocks> CompletedBlocksQueue = new();
     ConcurrentQueue<ChunkGenerator.CompletedChunkBlocks> CompletedFeaturesQueue = new();
+    ConcurrentQueue<ChunkGenerator.SpilledFeatureBlock> SpilledFeaturesQueue = new();
     ConcurrentQueue<CompletedMesh> CompletedMeshQueue = new();
 
     // worker tasks list to control the number of worker threads
@@ -43,6 +44,7 @@ public class ChunkManager
     ConcurrentDictionary<Vector3i, CancellationTokenSource> RunningTasksCTS = new();
 
     public int taskCount => RunningTasks.Count;
+    public int sfbCount => SpilledFeaturesQueue.Count;
 
     public ChunkManager()
     {
@@ -96,15 +98,12 @@ public class ChunkManager
             var result = await BuildMesh(index, ChunkList(), cts.Token);
 
             CompletedMeshQueue.Enqueue(result);
-
-            //RunningTasks.TryRemove(index, out _);
-            //RunningTasksCTS.TryRemove(index, out _);
         });
     }
     Task<CompletedMesh> BuildMesh(Vector3i chunkIndex, List<Chunk> chunks, CancellationToken token)
     {
-        // no remeshing visible chunks
         bool thisChunkExists = TryGetChunkAtIndex(chunkIndex, out var chunk);
+
         return Task.Run(async () =>
         {
             Vector3i localOrigin = chunkIndex * Chunk.SIZE;
@@ -233,7 +232,7 @@ public class ChunkManager
                                     }
                                 }
 
-                                if (occluderCount > 2) lightLevel -= occluderCount;//ambient occlusion can only happen with two or more occluders
+                                if (occluderCount >= 2) lightLevel -= occluderCount;//ambient occlusion can only happen with two or more occluders
 
                                 if (block.isWater)
                                 {
@@ -324,18 +323,42 @@ public class ChunkManager
             targetChunk.IsEmpty = resultChunk.isEmpty;
             targetChunk.hasGrass = resultChunk.hasGrass;
             targetChunk.SetState(ChunkState.FEATURED);
+
+            // also extract the extra feature blocks to be placed into their respective chunks next
+            if(resultChunk.spilledFeatureBlocks != null)
+                foreach(var spilledBlock in resultChunk.spilledFeatureBlocks)
+                    SpilledFeaturesQueue.Enqueue(spilledBlock);
+            
             RunningTasks.TryRemove(resultChunk.index, out _);
+        }
+
+        List<ChunkGenerator.SpilledFeatureBlock> missedSFBs = new List<ChunkGenerator.SpilledFeatureBlock>();
+
+        while (SpilledFeaturesQueue.TryDequeue(out var sfb))
+        {
+            Vector3i targetChunk = WorldPosToChunkIndex(sfb.worldIndex);
+            if(ActiveChunks.TryGetValue(targetChunk, out var resultChunk) && resultChunk.BlockUpdateSafe)
+            {
+                Vector3i blockLocalCoord = WorldPosToLocalBlock(targetChunk, sfb.worldIndex);
+                resultChunk.AddPendingBlock(blockLocalCoord, sfb.blockType);
+            }
+            else
+            {
+                missedSFBs.Add(sfb);
+            }
         }
 
         // for each CompletedMesh, move data from the queue into the respective chunk. MARK STATE
         while (CompletedMeshQueue.TryDequeue(out var resultChunk))
         {
-            Chunk targetChunk = ActiveChunks[resultChunk.index];
+            Chunk targetChunk = ActiveChunks[resultChunk.index]; // force update chunks with new mesh
             targetChunk.solidMesh = resultChunk.solidMesh;
             targetChunk.liquidMesh = resultChunk.liquidMesh;
             targetChunk.SetState(ChunkState.MESHED);
             RunningTasks.TryRemove(resultChunk.index, out _);
         }
+
+        int visibleChunks = 0;
 
         // for every chunk that's still relevant
         foreach (var idx in ActiveChunksIndices)
@@ -401,7 +424,15 @@ public class ChunkManager
                         var rendered = renderer.RenderChunk(resultChunk.solidMesh, camera, idx, time, sunDirection);
                         if (rendered) totalRenderCalls++;
                         break;
-                    default:
+
+                    case ChunkState.DIRTY:
+                        if (AreNeighborsGenerated(idx) && RunningTasks.Count < maxChunkTasks)
+                        {
+                            resultChunk.ProcessPendingBlocks(() => {
+                                RunningTasks.TryAdd(idx, MeshTask(idx));
+                            }
+                            );
+                        }
                         break;
                 }
             }
@@ -439,6 +470,19 @@ public class ChunkManager
 
         if (updateIndices) // every 5 seconds
             LastActivationChunksIndices = new List<Vector3i>(ActiveChunksIndices);
+
+        foreach(var sfb in missedSFBs)
+        {
+            SpilledFeaturesQueue.Enqueue(sfb);
+        }
+    }
+
+    public void TryMarkAllDirty()
+    {
+        foreach(var kvp in ActiveChunks)
+        {
+            kvp.Value.TryMarkDirty();
+        }
     }
 
     // naive frustrum culling using a cone frustrum
@@ -552,9 +596,7 @@ public class ChunkManager
 
         if (exists)
         {
-#pragma warning disable CS8601 // Possible null reference assignment.
             result = chunk;
-#pragma warning restore CS8601 // Possible null reference assignment.
             return true;
         }
         return false;
@@ -567,6 +609,16 @@ public class ChunkManager
         int chunkY = (int)Math.Floor(worldIndex.Y / (double)chunkSize);
         int chunkZ = (int)Math.Floor(worldIndex.Z / (double)chunkSize);
         return new Vector3i(chunkX, chunkY, chunkZ);
+    }
+
+    // go from world pos to chunk local pos
+    public Vector3i WorldPosToLocalBlock(Vector3i chunkIndex, Vector3i worldIndex, int chunkSize = Chunk.SIZE)
+    {
+        return new Vector3i(
+            worldIndex.X - chunkIndex.X * chunkSize,
+            worldIndex.Y - chunkIndex.Y * chunkSize,
+            worldIndex.Z - chunkIndex.Z * chunkSize
+        );
     }
 
     // also self explanatory
@@ -607,4 +659,6 @@ public class ChunkManager
 
         return result;
     }
+
+
 }
