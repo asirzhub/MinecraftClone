@@ -4,10 +4,11 @@ using Minecraft_Clone.World;
 using Minecraft_Clone.World.Chunks;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
-using System.Collections.Concurrent;
+using SixLabors.ImageSharp.PixelFormats;
 using System;
-using static Minecraft_Clone.Graphics.VBO;
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using static Minecraft_Clone.Graphics.VBO;
 
 public class ChunkManager
 {
@@ -137,124 +138,162 @@ public class ChunkManager
 
                         Vector3i blockWorldPos = localOrigin + (x, y, z);
 
-                        // base-layer culling: hide faces hidden by solid blocks
-                        bool[] occlusions = new bool[6];
-
-                        // front
-                        if (TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, 0, +1), out var bF))
-                            occlusions[0] = bF.isSolid || (block.isWater && bF.isWater);
-
-                        // back
-                        if (TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, 0, -1), out var bB))
-                            occlusions[1] = bB.isSolid || (block.isWater && bB.isWater);
-
-                        // left
-                        if (TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(-1, 0, 0), out var bL))
-                            occlusions[2] = bL.isSolid || (block.isWater && bL.isWater);
-
-                        // right
-                        if (TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(+1, 0, 0), out var bR))
-                            occlusions[3] = bR.isSolid || (block.isWater && bR.isWater);
-
-                        // up
-                        if (TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, 1, 0), out var bU))
-                            occlusions[4] = bU.isSolid || (block.isWater && bU.isWater); ;
-
-                        // down
-                        if (TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, -1, 0), out var bD))
-                            occlusions[5] = bD.isSolid || (block.isWater && bD.isWater);
-
                         // for each face
-                        foreach (CubeMesh.Face face in Enum.GetValues(typeof(CubeMesh.Face)))
-                        {
-                            int faceIndex = (int)face;
-                            if (occlusions[faceIndex]) continue;              // skip hidden faces
-                            var faceVerts = CubeMesh.PackedFaceVertices[face];
+                        if (block.Type != BlockType.TALLGRASS) {
+                            // base-layer culling: hide faces hidden by solid blocks
+                            bool[] occlusions = new bool[6];
 
-                            // Append 4 corners
-                            for (int i = 0; i < 4; i++)
+                            // front
+                            if (TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, 0, +1), out var bF))
+                                occlusions[0] = bF.isSolid || (block.isWater && bF.isWater);
+
+                            // back
+                            if (TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, 0, -1), out var bB))
+                                occlusions[1] = bB.isSolid || (block.isWater && bB.isWater);
+
+                            // left
+                            if (TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(-1, 0, 0), out var bL))
+                                occlusions[2] = bL.isSolid || (block.isWater && bL.isWater);
+
+                            // right
+                            if (TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(+1, 0, 0), out var bR))
+                                occlusions[3] = bR.isSolid || (block.isWater && bR.isWater);
+
+                            // up
+                            if (TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, 1, 0), out var bU))
+                                occlusions[4] = bU.isSolid || (block.isWater && bU.isWater); ;
+
+                            // down
+                            if (TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, -1, 0), out var bD))
+                                occlusions[5] = bD.isSolid || (block.isWater && bD.isWater);
+
+                            foreach (CubeMesh.Face face in Enum.GetValues(typeof(CubeMesh.Face)))
                             {
-                                var v = faceVerts[i];
+                                int faceIndex = (int)face;
+                                if (occlusions[faceIndex]) continue;              // skip hidden faces
+                                var faceVerts = CubeMesh.PackedFaceVertices[face];
 
-                                // Local position within chunk (0..16)
-                                var vPos = v.Position();
-                                byte lx = (byte)(x + vPos.X);
-                                byte ly = (byte)(y + vPos.Y);
-                                byte lz = (byte)(z + vPos.Z);
-
-                                // Compute UV
-                                var faceUVs = BlockRegistry.Types[block.Type].FaceUVs;
-                                Vector2 tile = faceUVs[faceIndex];
-                                Vector2 uv = (tile + (v.TexU, v.TexV)) / 8f;
-                                uv.Y = 1f - uv.Y;
-
-                                byte normal = (byte)face;
-
-                                byte lightLevel = 15;
-
-                                if (blockWorldPos.Y < seaLevel && blockWorldPos.Y > seaLevel - 6)
+                                // Append 4 corners
+                                for (int i = 0; i < 4; i++)
                                 {
-                                    lightLevel = (byte)(15 - (seaLevel - blockWorldPos.Y));
-                                }
-                                else if (blockWorldPos.Y <= seaLevel - 6)
-                                {
-                                    lightLevel = (byte)9;
-                                }
+                                    var v = faceVerts[i];
 
-                                // check the edges in the direction of the vertex to do ambient occlusion with
-                                Vector3i[] AOCheckDirection = new Vector3i[4];
-                                AOCheckDirection[0] = ((int)(MathF.Round((vPos.X - 0.5f) * 2f)),
-                                    0,
-                                    (int)(MathF.Round((vPos.Z - 0.5f) * 2f)));
+                                    // Local position within chunk (0..16)
+                                    var vPos = v.Position();
+                                    byte lx = (byte)(x + vPos.X);
+                                    byte ly = (byte)(y + vPos.Y);
+                                    byte lz = (byte)(z + vPos.Z);
 
-                                AOCheckDirection[1] = ((int)(MathF.Round((vPos.X - 0.5f) * 2f)),
-                                    (int)(MathF.Round((vPos.Y - 0.5f) * 2f)),
-                                    0);
+                                    // Compute UV
+                                    var faceUVs = BlockRegistry.Types[block.Type].FaceUVs;
+                                    Vector2 tile = faceUVs[faceIndex];
+                                    Vector2 uv = (tile + (v.TexU, v.TexV)) / 8f;
+                                    uv.Y = 1f - uv.Y;
 
-                                AOCheckDirection[2] = (0,
-                                    (int)(MathF.Round((vPos.Y - 0.5f) * 2f)),
-                                    (int)(MathF.Round((vPos.Z - 0.5f) * 2f)));
+                                    byte normal = (byte)face;
 
-                                AOCheckDirection[3] = ((int)(MathF.Round((vPos.X - 0.5f) * 2f)),
-                                    (int)(MathF.Round((vPos.Y - 0.5f) * 2f)),
-                                    (int)(MathF.Round((vPos.Z - 0.5f) * 2f)));
+                                    byte lightLevel = 15;
 
-                                byte occluderCount = 0;
-                                foreach (var direction in AOCheckDirection)
-                                {
-                                    if (lightLevel > 1)
+                                    if (blockWorldPos.Y < seaLevel && blockWorldPos.Y > seaLevel - 6)
                                     {
-                                        TryGetBlockAtWorldPosition(blockWorldPos + direction, out var b);
-                                        if (b.isSolid)
+                                        lightLevel = (byte)(15 - (seaLevel - blockWorldPos.Y));
+                                    }
+                                    else if (blockWorldPos.Y <= seaLevel - 6)
+                                    {
+                                        lightLevel = (byte)9;
+                                    }
+
+                                    // check the edges in the direction of the vertex to do ambient occlusion with
+                                    Vector3i[] AOCheckDirection = new Vector3i[4];
+                                    AOCheckDirection[0] = ((int)(MathF.Round((vPos.X - 0.5f) * 2f)),
+                                        0,
+                                        (int)(MathF.Round((vPos.Z - 0.5f) * 2f)));
+
+                                    AOCheckDirection[1] = ((int)(MathF.Round((vPos.X - 0.5f) * 2f)),
+                                        (int)(MathF.Round((vPos.Y - 0.5f) * 2f)),
+                                        0);
+
+                                    AOCheckDirection[2] = (0,
+                                        (int)(MathF.Round((vPos.Y - 0.5f) * 2f)),
+                                        (int)(MathF.Round((vPos.Z - 0.5f) * 2f)));
+
+                                    AOCheckDirection[3] = ((int)(MathF.Round((vPos.X - 0.5f) * 2f)),
+                                        (int)(MathF.Round((vPos.Y - 0.5f) * 2f)),
+                                        (int)(MathF.Round((vPos.Z - 0.5f) * 2f)));
+
+                                    byte occluderCount = 0;
+                                    foreach (var direction in AOCheckDirection)
+                                    {
+                                        if (lightLevel > 1)
                                         {
-                                            occluderCount += (byte)1;
+                                            TryGetBlockAtWorldPosition(blockWorldPos + direction, out var b);
+                                            if (b.isSolid)
+                                            {
+                                                occluderCount += (byte)1;
+                                            }
                                         }
                                     }
+
+                                    if (occluderCount > 2) lightLevel -= occluderCount;//ambient occlusion can only happen with two or more occluders
+
+                                    if (block.isWater)
+                                    {
+                                        liquidResult.Vertices.Add(
+                                            new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, lightLevel, true)
+                                        );
+
+                                        // Two triangles (0,1,2) & (2,3,0)
+                                        liquidResult.Indices.Add(liquidVertexOffset + 0);
+                                        liquidResult.Indices.Add(liquidVertexOffset + 1);
+                                        liquidResult.Indices.Add(liquidVertexOffset + 2);
+                                        liquidResult.Indices.Add(liquidVertexOffset + 2);
+                                        liquidResult.Indices.Add(liquidVertexOffset + 3);
+                                        liquidResult.Indices.Add(liquidVertexOffset + 0);
+
+                                        liquidVertexOffset += 4;
+                                    }
+                                    else
+                                    {
+                                        solidResult.Vertices.Add(
+                                            new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, lightLevel)
+                                        );
+
+                                        // Two triangles (0,1,2) & (2,3,0)
+                                        solidResult.Indices.Add(solidVertexOffset + 0);
+                                        solidResult.Indices.Add(solidVertexOffset + 1);
+                                        solidResult.Indices.Add(solidVertexOffset + 2);
+                                        solidResult.Indices.Add(solidVertexOffset + 2);
+                                        solidResult.Indices.Add(solidVertexOffset + 3);
+                                        solidResult.Indices.Add(solidVertexOffset + 0);
+
+                                        solidVertexOffset += 4;
+                                    }
                                 }
+                            }
+                        }
+                        else if (block.Type == BlockType.TALLGRASS)
+                        {
+                            foreach(var face in GrassMesh.packedVertices)
+                            {
+                                var faceUVs = BlockRegistry.Types[block.Type].FaceUVs;
+                                Vector2 tile = faceUVs[0];
 
-                                if (occluderCount > 2) lightLevel -= occluderCount;//ambient occlusion can only happen with two or more occluders
-
-                                if (block.isWater)
+                                foreach (var vertex in face)
                                 {
-                                    liquidResult.Vertices.Add(
-                                        new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, lightLevel, true)
-                                    );
+                                    Vector3i pos = vertex.Position();
+                                    byte lx = (byte)(x + pos.X);
+                                    byte ly = (byte)(y + pos.Y);
+                                    byte lz = (byte)(z + pos.Z);
 
-                                    // Two triangles (0,1,2) & (2,3,0)
-                                    liquidResult.Indices.Add(liquidVertexOffset + 0);
-                                    liquidResult.Indices.Add(liquidVertexOffset + 1);
-                                    liquidResult.Indices.Add(liquidVertexOffset + 2);
-                                    liquidResult.Indices.Add(liquidVertexOffset + 2);
-                                    liquidResult.Indices.Add(liquidVertexOffset + 3);
-                                    liquidResult.Indices.Add(liquidVertexOffset + 0);
+                                    byte lightLevel = 15;
 
-                                    liquidVertexOffset += 4;
-                                }
-                                else
-                                {
+                                    Vector2 uv = (tile + (vertex.TexU, vertex.TexV)) / 8f;
+                                    uv.Y = 1f - uv.Y;
+
+                                    // 4 - normal pointed upward, matching the surface it's on
                                     solidResult.Vertices.Add(
-                                        new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, lightLevel)
-                                    );
+                                            new PackedVertex(lx, ly, lz, uv.X, uv.Y, 4, lightLevel)
+                                        );
 
                                     // Two triangles (0,1,2) & (2,3,0)
                                     solidResult.Indices.Add(solidVertexOffset + 0);
@@ -264,10 +303,12 @@ public class ChunkManager
                                     solidResult.Indices.Add(solidVertexOffset + 3);
                                     solidResult.Indices.Add(solidVertexOffset + 0);
 
-                                    solidVertexOffset += 4;
+                                    //solidVertexOffset += 4;
                                 }
                             }
                         }
+
+                        
                     }
                 }
             }

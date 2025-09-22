@@ -64,6 +64,7 @@ namespace Minecraft_Clone.World
             { BlockType.DIRT, new BlockTypeData(true, false, new Vector2(3,0)) },
             { BlockType.GRASS, new BlockTypeData(true, false, [(4,1), (4, 1) , (4, 1) , (4, 1) , (4, 0), (3, 0)]) },
             { BlockType.LOG, new BlockTypeData(true, false, [(5,1), (5, 1) , (5, 1) , (5, 1) , (5, 0), (5, 0)])},
+            { BlockType.TALLGRASS, new BlockTypeData(false, false, new Vector2(6,1)) },
             { BlockType.LEAVES, new BlockTypeData(true, false, new Vector2(6,0)) },
             { BlockType.SAND, new BlockTypeData(true, false, new Vector2(7,0)) },
             { BlockType.SNOW, new BlockTypeData(true, false, new Vector2(7,1)) },

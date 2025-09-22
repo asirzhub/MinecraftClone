@@ -14,6 +14,6 @@
 
         public bool isAir => Type == BlockType.AIR; 
         public bool isWater => Type == BlockType.WATER;
-        public bool isSolid => !(isAir || isWater);
+        public bool isSolid => BlockRegistry.Types[Type].IsSolid;
     }
 }
