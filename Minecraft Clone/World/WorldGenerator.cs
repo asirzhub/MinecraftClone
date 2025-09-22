@@ -19,7 +19,7 @@ namespace Minecraft_Clone.World
         public int maxHeight = 256;
 
         // Continents (FBM)
-        public float baseScale = 0.0005f;
+        public float baseScale = 0.0003f;
         public int baseOctaves = 4;         
         public float baseLacunarity = 2.5f;
         public float baseGain = 0.7f;
@@ -27,9 +27,9 @@ namespace Minecraft_Clone.World
         public float baseAmplitude = 510f;
 
         // smaller details over terrain
-        public float detailScale = 0.05f;
+        public float detailScale = 0.02f;
         public int detailOctaves = 2;       
-        public float detailAmplitude = 15f;
+        public float detailAmplitude = 20f;
 
         public int seaFloorDepth = 6;
         public float seaFloorBlend = 0.75f;   // sea floor flattening
@@ -86,6 +86,13 @@ namespace Minecraft_Clone.World
             if (y > h)
             {
                 if (y <= seaLevel) return BlockType.WATER;
+                if(y == h + 1 && y > seaLevel + beachHalfWidth)
+                {
+                    var f = noise.Fbm2D(x * detailScale * 6, z * detailScale * 6,
+                                  detailOctaves, 2.0f, 0.5f);
+                    if (f > 0.4 && f < 0.6)
+                        return BlockType.TALLGRASS;
+                }
                 return BlockType.AIR;
             }
 
