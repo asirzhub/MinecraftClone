@@ -1,5 +1,6 @@
 ﻿// Vertex Buffer Object
 
+using Minecraft_Clone.World;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using System.Runtime.InteropServices;
@@ -37,13 +38,13 @@ namespace Minecraft_Clone.Graphics
         public struct PackedVertex
         {
             public uint PositionNormalLighting; // 32 bits packed
-            // 0000 LLLL 00WN NNZZ ZZZZ YYYY YYXX XXXX
+            // 0000 LLLL WWWN NNZZ ZZZZ YYYY YYXX XXXX
             // [light lvl] [nrml]  [ local position ]
-            //        [is water]
+            //        [ZYX wiggle] (for water, foliage)
 
             public float TexU, TexV;
 
-            public PackedVertex(byte posX, byte posY, byte posZ, float texU, float texV, byte normal, byte lightLevel, bool isWater = false)
+            public PackedVertex(byte posX, byte posY, byte posZ, float texU, float texV, byte normal, byte lightLevel, WiggleType wiggleType = WiggleType.NONE)
             {
                 PositionNormalLighting = 0;
 
@@ -51,7 +52,9 @@ namespace Minecraft_Clone.Graphics
                 PositionNormalLighting |= (uint)((posY & 0x3F) << 6);               // bits 6–11
                 PositionNormalLighting |= (uint)((posZ & 0x3F) << 12);              // bits 12–17
                 PositionNormalLighting |= (uint)((normal & 0x7) << 18);             // bits 18–20
-                PositionNormalLighting |= (uint)(((isWater ? 1 : 0) & 0x1) << 21);  // bit 21
+                PositionNormalLighting |= (uint)(((wiggleType == WiggleType.OMNIDIRECTIONAL ? 1 : 0) & 0x1) << 21);
+                PositionNormalLighting |= (uint)(((wiggleType == WiggleType.VERTICAL ? 1 : 0) & 0x1) << 22);  // bit 22 is the vertical wiggle toggle
+                PositionNormalLighting |= (uint)(((wiggleType == WiggleType.OMNIDIRECTIONAL ? 1 : 0) & 0x1) << 23);
                 PositionNormalLighting |= (uint)((lightLevel & 0xF) << 24);
 
                 TexU = texU;

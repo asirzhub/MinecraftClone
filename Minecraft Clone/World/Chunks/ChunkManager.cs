@@ -185,7 +185,8 @@ public class ChunkManager
                                     byte lz = (byte)(z + vPos.Z);
 
                                     // Compute UV
-                                    var faceUVs = BlockRegistry.Types[block.Type].FaceUVs;
+                                    var registryData = BlockRegistry.Types[block.Type];
+                                    var faceUVs = registryData.FaceUVs;
                                     Vector2 tile = faceUVs[faceIndex];
                                     Vector2 uv = (tile + (v.TexU, v.TexV)) / 8f;
                                     uv.Y = 1f - uv.Y;
@@ -234,12 +235,12 @@ public class ChunkManager
                                         }
                                     }
 
-                                    if (occluderCount > 2) lightLevel -= occluderCount;//ambient occlusion can only happen with two or more occluders
+                                    if (occluderCount >= 2) lightLevel -= occluderCount;//ambient occlusion can only happen with two or more occluders
 
                                     if (block.isWater)
                                     {
                                         liquidResult.Vertices.Add(
-                                            new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, lightLevel, true)
+                                            new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, lightLevel, registryData.wiggleType)
                                         );
 
                                         // Two triangles (0,1,2) & (2,3,0)
@@ -255,7 +256,7 @@ public class ChunkManager
                                     else
                                     {
                                         solidResult.Vertices.Add(
-                                            new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, lightLevel)
+                                            new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, lightLevel, registryData.wiggleType)
                                         );
 
                                         // Two triangles (0,1,2) & (2,3,0)
@@ -291,8 +292,10 @@ public class ChunkManager
                                     uv.Y = 1f - uv.Y;
 
                                     // 4 - normal pointed upward, matching the surface it's on
+                                    var wiggleType = BlockRegistry.Types[block.Type].wiggleType;
+                                    if (pos.Y == 0) wiggleType = WiggleType.NONE;
                                     solidResult.Vertices.Add(
-                                            new PackedVertex(lx, ly, lz, uv.X, uv.Y, 4, lightLevel)
+                                            new PackedVertex(lx, ly, lz, uv.X, uv.Y, 4, lightLevel, wiggleType)
                                         );
 
                                     // Two triangles (0,1,2) & (2,3,0)

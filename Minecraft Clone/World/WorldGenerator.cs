@@ -86,7 +86,7 @@ namespace Minecraft_Clone.World
             if (y > h)
             {
                 if (y <= seaLevel) return BlockType.WATER;
-                if(y == h + 1 && y > seaLevel + beachHalfWidth)
+                if(y == h + 1 && y > seaLevel + beachHalfWidth + 1)
                 {
                     var f = noise.Fbm2D(x * detailScale * 6, z * detailScale * 6,
                                   detailOctaves, 2.0f, 0.5f);
