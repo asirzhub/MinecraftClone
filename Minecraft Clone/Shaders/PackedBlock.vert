@@ -18,12 +18,13 @@ out vec2 texCoord;
 out vec3 vNormal;
 out float brightness;
 out int isWater;
+out int isFoliage;
 
 vec3 DecodePos(uint p) {
-    int x = int((p >> 0) & 0x3Fu);
-    float y = int((p >> 6) & 0x3Fu);
-    int z = int((p >> 12) & 0x3Fu);
-    y -= u_waterOffset * int((inPosNorBright >> 21) & 0x1u);
+    float x = ((p >> 0) & 0x3Fu);
+    float y = ((p >> 6) & 0x3Fu);
+    float z = ((p >> 12) & 0x3Fu);
+    y -= u_waterOffset * ((inPosNorBright >> 22) & 0x1u);
 
     return vec3(x, y, z);
 }
@@ -44,15 +45,21 @@ void main()
 
     brightness = uint((inPosNorBright >> 24) & 0xFu);
     vNormal = DecodeNormal(inPosNorBright);
-    isWater = int((inPosNorBright >> 21) & 0x1u);
+    isWater = int((inPosNorBright >> 22) & 0x1u);
+    isFoliage = int(((inPosNorBright >> 21) & 0x1u) + ((inPosNorBright >> 23) & 0x1u));
 
     vec4 position = vec4(DecodePos(inPosNorBright), 1.0);
     vec4 worldPos = position * model;
 
     if(isWater == 1)
     {
-        position.y += u_waveAmplitude * sin(((worldPos.x + worldPos.z) * u_waveScale + u_time * u_waveSpeed)*6.28318);
+        position.y += u_waveAmplitude * sin(((worldPos.x + worldPos.z - 5 * worldPos.y) * u_waveScale + u_time * u_waveSpeed)*6.28318);
     }
+    if(isFoliage >= 1){
+        position.x += u_waveAmplitude * cos(((worldPos.x + worldPos.z - 5 * worldPos.y) * u_waveScale + u_time/2 * u_waveSpeed)*6.28318);
+        position.z += u_waveAmplitude * sin(((worldPos.x + worldPos.z + 5 * worldPos.y) * -u_waveScale/2 + u_time * u_waveSpeed)*6.28318);
+    }
+
 
     gl_Position = (position * model * view * projection);
 }

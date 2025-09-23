@@ -15,7 +15,7 @@ namespace Minecraft_Clone.World.Chunks
         public float waterOffset = 0.15f;
         public float waterWaveAmplitude = 0.05f;
         public float waterWaveScale = 0.1f;
-        public float waterWaveSpeed = 0.3f;
+        public float waterWaveSpeed = 0.5f;
 
         public ChunkRenderer()
         {
