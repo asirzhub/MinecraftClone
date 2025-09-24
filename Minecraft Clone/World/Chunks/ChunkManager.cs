@@ -15,6 +15,7 @@ public class ChunkManager
     // needs no introduction
     public ChunkRenderer renderer = new ChunkRenderer();
     public ChunkGenerator generator = new ChunkGenerator();
+    public ChunkMesher mesher = new ChunkMesher();
     public WorldGenerator worldGenerator = new WorldGenerator(512);
 
     public Vector3i currentChunkIndex = new();
@@ -36,7 +37,7 @@ public class ChunkManager
 
     // worker threads deposit results in these
     ConcurrentQueue<ChunkGenerator.CompletedChunkBlocks> CompletedBlocksQueue = new();
-    ConcurrentQueue<CompletedMesh> CompletedMeshQueue = new();
+    ConcurrentQueue<ChunkMesher.CompletedMesh> CompletedMeshQueue = new();
 
     // worker tasks list to control the number of worker threads
     ConcurrentDictionary<Vector3i, Task> RunningTasks = new();
@@ -50,276 +51,6 @@ public class ChunkManager
         maxChunkTasks = (int)(Environment.ProcessorCount -1);
     }
 
-    //===============================================================================================
-    // Meshing will be moved to a different script soon
-
-    // chunk mesh delivery class
-    public class CompletedMesh
-    {
-        public Vector3i index;
-        public MeshData solidMesh;
-        public MeshData liquidMesh;
-
-        public CompletedMesh(Vector3i index, MeshData solidMesh, MeshData liquidMesh)
-        {
-            this.index = index;
-            this.solidMesh = solidMesh;
-            this.liquidMesh = liquidMesh;
-        }
-
-        public void Dispose()
-        {
-            this.solidMesh.Dispose();
-            this.liquidMesh.Dispose();
-        }
-    };
-    // chunk mesher kick-off fxn
-    public Task MeshTask(Vector3i index)
-    {
-        Chunk thisChunk = ActiveChunks[index];
-        thisChunk.SetState(ChunkState.MESHING);
-
-        // skip meshing if it's empty
-        if (thisChunk.IsEmpty)
-        {
-            CompletedMesh result = new CompletedMesh(index, new MeshData(), new MeshData());
-            CompletedMeshQueue.Enqueue(result);
-            return Task.CompletedTask;
-        }
-
-        CancellationTokenSource cts = new CancellationTokenSource();
-        RunningTasksCTS.TryAdd(index, cts);
-
-        return Task.Run(async () =>
-        {
-
-            var result = await BuildMesh(index, ChunkList(), cts.Token);
-
-            CompletedMeshQueue.Enqueue(result);
-
-            //RunningTasks.TryRemove(index, out _);
-            //RunningTasksCTS.TryRemove(index, out _);
-        });
-    }
-    Task<CompletedMesh> BuildMesh(Vector3i chunkIndex, List<Chunk> chunks, CancellationToken token)
-    {
-        // no remeshing visible chunks
-        bool thisChunkExists = TryGetChunkAtIndex(chunkIndex, out var chunk);
-        return Task.Run(async () =>
-        {
-            Vector3i localOrigin = chunkIndex * Chunk.SIZE;
-            bool forwardChunkExists = TryGetChunkAtIndex(chunkIndex + new Vector3i(0, 0, 1), out Chunk forwardChunk);
-            bool rearChunkExists = TryGetChunkAtIndex(chunkIndex + new Vector3i(0, 0, -1), out Chunk rearChunk);
-            bool leftChunkExists = TryGetChunkAtIndex(chunkIndex + new Vector3i(-1, 0, 0), out Chunk leftChunk);
-            bool rightChunkExists = TryGetChunkAtIndex(chunkIndex + new Vector3i(+1, 0, 0), out Chunk rightChunk);
-            bool topChunkExists = TryGetChunkAtIndex(chunkIndex + new Vector3i(0, +1, 0), out Chunk topChunk);
-            bool belowChunkExists = TryGetChunkAtIndex(chunkIndex + new Vector3i(0, -1, 0), out Chunk belowChunk);
-
-            int seaLevel = worldGenerator.seaLevel;
-
-            MeshData solidResult = new MeshData();
-            uint solidVertexOffset = 0;
-
-            MeshData liquidResult = new MeshData();
-            uint liquidVertexOffset = 0;
-
-            // local chunk coordinate 
-            for (byte x = 0; x < Chunk.SIZE; x++)
-            {
-                for (byte y = 0; y < Chunk.SIZE; y++)
-                {
-                    for (byte z = 0; z < Chunk.SIZE; z++)
-                    {
-                        token.ThrowIfCancellationRequested();
-
-                        Block block = chunk.GetBlock(x, y, z);
-                        if (block.Type == BlockType.AIR) // skip air
-                            continue;
-
-                        Vector3i blockWorldPos = localOrigin + (x, y, z);
-
-                        // for each face
-                        if (block.Type != BlockType.TALLGRASS) {
-                            // base-layer culling: hide faces hidden by solid blocks
-                            bool[] occlusions = new bool[6];
-
-                            // front
-                            if (TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, 0, +1), out var bF))
-                                occlusions[0] = bF.isSolid || (block.isWater && bF.isWater);
-
-                            // back
-                            if (TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, 0, -1), out var bB))
-                                occlusions[1] = bB.isSolid || (block.isWater && bB.isWater);
-
-                            // left
-                            if (TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(-1, 0, 0), out var bL))
-                                occlusions[2] = bL.isSolid || (block.isWater && bL.isWater);
-
-                            // right
-                            if (TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(+1, 0, 0), out var bR))
-                                occlusions[3] = bR.isSolid || (block.isWater && bR.isWater);
-
-                            // up
-                            if (TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, 1, 0), out var bU))
-                                occlusions[4] = bU.isSolid || (block.isWater && bU.isWater); ;
-
-                            // down
-                            if (TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, -1, 0), out var bD))
-                                occlusions[5] = bD.isSolid || (block.isWater && bD.isWater);
-
-                            foreach (CubeMesh.Face face in Enum.GetValues(typeof(CubeMesh.Face)))
-                            {
-                                int faceIndex = (int)face;
-                                if (occlusions[faceIndex]) continue;              // skip hidden faces
-                                var faceVerts = CubeMesh.PackedFaceVertices[face];
-
-                                // Append 4 corners
-                                for (int i = 0; i < 4; i++)
-                                {
-                                    var v = faceVerts[i];
-
-                                    // Local position within chunk (0..16)
-                                    var vPos = v.Position();
-                                    byte lx = (byte)(x + vPos.X);
-                                    byte ly = (byte)(y + vPos.Y);
-                                    byte lz = (byte)(z + vPos.Z);
-
-                                    // Compute UV
-                                    var registryData = BlockRegistry.Types[block.Type];
-                                    var faceUVs = registryData.FaceUVs;
-                                    Vector2 tile = faceUVs[faceIndex];
-                                    Vector2 uv = (tile + (v.TexU, v.TexV)) / 8f;
-                                    uv.Y = 1f - uv.Y;
-
-                                    byte normal = (byte)face;
-
-                                    byte lightLevel = 15;
-
-                                    if (blockWorldPos.Y < seaLevel && blockWorldPos.Y > seaLevel - 6)
-                                    {
-                                        lightLevel = (byte)(15 - (seaLevel - blockWorldPos.Y));
-                                    }
-                                    else if (blockWorldPos.Y <= seaLevel - 6)
-                                    {
-                                        lightLevel = (byte)9;
-                                    }
-
-                                    // check the edges in the direction of the vertex to do ambient occlusion with
-                                    Vector3i[] AOCheckDirection = new Vector3i[4];
-                                    AOCheckDirection[0] = ((int)(MathF.Round((vPos.X - 0.5f) * 2f)),
-                                        0,
-                                        (int)(MathF.Round((vPos.Z - 0.5f) * 2f)));
-
-                                    AOCheckDirection[1] = ((int)(MathF.Round((vPos.X - 0.5f) * 2f)),
-                                        (int)(MathF.Round((vPos.Y - 0.5f) * 2f)),
-                                        0);
-
-                                    AOCheckDirection[2] = (0,
-                                        (int)(MathF.Round((vPos.Y - 0.5f) * 2f)),
-                                        (int)(MathF.Round((vPos.Z - 0.5f) * 2f)));
-
-                                    AOCheckDirection[3] = ((int)(MathF.Round((vPos.X - 0.5f) * 2f)),
-                                        (int)(MathF.Round((vPos.Y - 0.5f) * 2f)),
-                                        (int)(MathF.Round((vPos.Z - 0.5f) * 2f)));
-
-                                    byte occluderCount = 0;
-                                    foreach (var direction in AOCheckDirection)
-                                    {
-                                        if (lightLevel > 1)
-                                        {
-                                            TryGetBlockAtWorldPosition(blockWorldPos + direction, out var b);
-                                            if (b.isSolid)
-                                            {
-                                                occluderCount += (byte)1;
-                                            }
-                                        }
-                                    }
-
-                                    if (occluderCount >= 2) lightLevel -= occluderCount;//ambient occlusion can only happen with two or more occluders
-
-                                    if (block.isWater)
-                                    {
-                                        liquidResult.Vertices.Add(
-                                            new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, lightLevel, registryData.wiggleType)
-                                        );
-
-                                        // Two triangles (0,1,2) & (2,3,0)
-                                        liquidResult.Indices.Add(liquidVertexOffset + 0);
-                                        liquidResult.Indices.Add(liquidVertexOffset + 1);
-                                        liquidResult.Indices.Add(liquidVertexOffset + 2);
-                                        liquidResult.Indices.Add(liquidVertexOffset + 2);
-                                        liquidResult.Indices.Add(liquidVertexOffset + 3);
-                                        liquidResult.Indices.Add(liquidVertexOffset + 0);
-
-                                        liquidVertexOffset += 4;
-                                    }
-                                    else
-                                    {
-                                        solidResult.Vertices.Add(
-                                            new PackedVertex(lx, ly, lz, uv.X, uv.Y, normal, lightLevel, registryData.wiggleType)
-                                        );
-
-                                        // Two triangles (0,1,2) & (2,3,0)
-                                        solidResult.Indices.Add(solidVertexOffset + 0);
-                                        solidResult.Indices.Add(solidVertexOffset + 1);
-                                        solidResult.Indices.Add(solidVertexOffset + 2);
-                                        solidResult.Indices.Add(solidVertexOffset + 2);
-                                        solidResult.Indices.Add(solidVertexOffset + 3);
-                                        solidResult.Indices.Add(solidVertexOffset + 0);
-
-                                        solidVertexOffset += 4;
-                                    }
-                                }
-                            }
-                        }
-                        else if (block.Type == BlockType.TALLGRASS)
-                        {
-                            foreach(var face in GrassMesh.packedVertices)
-                            {
-                                var faceUVs = BlockRegistry.Types[block.Type].FaceUVs;
-                                Vector2 tile = faceUVs[0];
-
-                                foreach (var vertex in face)
-                                {
-                                    Vector3i pos = vertex.Position();
-                                    byte lx = (byte)(x + pos.X);
-                                    byte ly = (byte)(y + pos.Y);
-                                    byte lz = (byte)(z + pos.Z);
-
-                                    byte lightLevel = 15;
-
-                                    Vector2 uv = (tile + (vertex.TexU, vertex.TexV)) / 8f;
-                                    uv.Y = 1f - uv.Y;
-
-                                    // 4 - normal pointed upward, matching the surface it's on
-                                    var wiggleType = BlockRegistry.Types[block.Type].wiggleType;
-                                    if (pos.Y == 0) wiggleType = WiggleType.NONE;
-                                    solidResult.Vertices.Add(
-                                            new PackedVertex(lx, ly, lz, uv.X, uv.Y, 4, lightLevel, wiggleType)
-                                        );
-
-                                    // Two triangles (0,1,2) & (2,3,0)
-                                    solidResult.Indices.Add(solidVertexOffset + 0);
-                                    solidResult.Indices.Add(solidVertexOffset + 1);
-                                    solidResult.Indices.Add(solidVertexOffset + 2);
-                                    solidResult.Indices.Add(solidVertexOffset + 2);
-                                    solidResult.Indices.Add(solidVertexOffset + 3);
-                                    solidResult.Indices.Add(solidVertexOffset + 0);
-
-                                    //solidVertexOffset += 4;
-                                }
-                            }
-                        }
-
-                        
-                    }
-                }
-            }
-            return new CompletedMesh(chunkIndex, solidResult, liquidResult);
-        });
-    }
-
-    //===============================================================================================
 
     // fun stat
     public int totalRenderCalls = 0;
@@ -401,7 +132,12 @@ public class ChunkManager
                     case ChunkState.GENERATED:
                         // if the chunk has blocks neighbors with blocks and theres room for a task, make mesh for it
                         if (AreNeighborsGenerated(idx) && RunningTasks.Count < maxChunkTasks)
-                            RunningTasks.TryAdd(idx, MeshTask(idx));
+                        {
+                            ActiveChunks[idx].SetState(ChunkState.MESHING);
+                            CancellationTokenSource cts = new CancellationTokenSource();
+                            RunningTasksCTS.TryAdd(idx, cts);
+                            RunningTasks.TryAdd(idx, mesher.MeshTask(idx, this, cts, CompletedMeshQueue, ActiveChunks, ChunkList()));
+                        }
                         break;
 
                     case ChunkState.MESHED:
