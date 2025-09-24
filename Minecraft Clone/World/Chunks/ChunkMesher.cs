@@ -39,7 +39,10 @@ namespace Minecraft_Clone.World.Chunks
             }
         };
         // chunk mesher kick-off fxn
-        public Task MeshTask(Vector3i index, ChunkManager manager, CancellationTokenSource cts, ConcurrentQueue<CompletedMesh> queue, ConcurrentDictionary<Vector3i, Chunk> ActiveChunks, List<Chunk> chunkList)
+        public Task MeshTask(Vector3i index, ChunkManager manager, 
+            CancellationTokenSource cts, ConcurrentQueue<CompletedMesh> queue, 
+            ConcurrentDictionary<Vector3i, Chunk> ActiveChunks, List<Chunk> chunkList,
+            byte LOD = 1)
         {
             Chunk thisChunk = ActiveChunks[index];
 
@@ -54,7 +57,7 @@ namespace Minecraft_Clone.World.Chunks
             return Task.Run(async () =>
             {
 
-                var result = await BuildMesh(index, manager, chunkList, cts.Token);
+                var result = await BuildMesh(index, manager, chunkList, cts.Token, LOD);
 
                 queue.Enqueue(result);
 
@@ -63,7 +66,7 @@ namespace Minecraft_Clone.World.Chunks
             });
         }
 
-        Task<CompletedMesh> BuildMesh(Vector3i chunkIndex, ChunkManager manager, List<Chunk> chunks, CancellationToken token)
+        Task<CompletedMesh> BuildMesh(Vector3i chunkIndex, ChunkManager manager, List<Chunk> chunks, CancellationToken token, byte LOD)
         {
             // no remeshing visible chunks
             bool thisChunkExists = manager.TryGetChunkAtIndex(chunkIndex, out var chunk);
@@ -86,11 +89,11 @@ namespace Minecraft_Clone.World.Chunks
                 uint liquidVertexOffset = 0;
 
                 // local chunk coordinate 
-                for (byte x = 0; x < Chunk.SIZE; x++)
+                for (byte x = 0; x < Chunk.SIZE; x+=LOD)
                 {
-                    for (byte y = 0; y < Chunk.SIZE; y++)
+                    for (byte y = 0; y < Chunk.SIZE; y+=LOD)
                     {
-                        for (byte z = 0; z < Chunk.SIZE; z++)
+                        for (byte z = 0; z < Chunk.SIZE; z+=LOD)
                         {
                             token.ThrowIfCancellationRequested();
 
@@ -107,27 +110,27 @@ namespace Minecraft_Clone.World.Chunks
                                 bool[] occlusions = new bool[6];
 
                                 // front
-                                if (manager.TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, 0, +1), out var bF))
+                                if (manager.TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, 0, +LOD), out var bF))
                                     occlusions[0] = bF.isSolid || (block.isWater && bF.isWater);
 
                                 // back
-                                if (manager.TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, 0, -1), out var bB))
+                                if (manager.TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, 0, -LOD), out var bB))
                                     occlusions[1] = bB.isSolid || (block.isWater && bB.isWater);
 
                                 // left
-                                if (manager.TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(-1, 0, 0), out var bL))
+                                if (manager.TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(-LOD, 0, 0), out var bL))
                                     occlusions[2] = bL.isSolid || (block.isWater && bL.isWater);
 
                                 // right
-                                if (manager.TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(+1, 0, 0), out var bR))
+                                if (manager.TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(+LOD, 0, 0), out var bR))
                                     occlusions[3] = bR.isSolid || (block.isWater && bR.isWater);
 
                                 // up
-                                if (manager.TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, 1, 0), out var bU))
+                                if (manager.TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, +LOD, 0), out var bU))
                                     occlusions[4] = bU.isSolid || (block.isWater && bU.isWater); ;
 
                                 // down
-                                if (manager.TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, -1, 0), out var bD))
+                                if (manager.TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, -LOD, 0), out var bD))
                                     occlusions[5] = bD.isSolid || (block.isWater && bD.isWater);
 
                                 foreach (CubeMesh.Face face in Enum.GetValues(typeof(CubeMesh.Face)))
@@ -143,9 +146,9 @@ namespace Minecraft_Clone.World.Chunks
 
                                         // Local position within chunk (0..16)
                                         var vPos = v.Position();
-                                        byte lx = (byte)(x + vPos.X);
-                                        byte ly = (byte)(y + vPos.Y);
-                                        byte lz = (byte)(z + vPos.Z);
+                                        byte lx = (byte)(x + vPos.X * LOD);
+                                        byte ly = (byte)(y + vPos.Y * LOD);
+                                        byte lz = (byte)(z + vPos.Z * LOD);
 
                                         // Compute UV
                                         var registryData = BlockRegistry.Types[block.Type];
@@ -244,10 +247,10 @@ namespace Minecraft_Clone.World.Chunks
 
                                     foreach (var vertex in face)
                                     {
-                                        Vector3i pos = vertex.Position();
-                                        byte lx = (byte)(x + pos.X);
-                                        byte ly = (byte)(y + pos.Y);
-                                        byte lz = (byte)(z + pos.Z);
+                                        Vector3i vPos = vertex.Position();
+                                        byte lx = (byte)(x + vPos.X * LOD);
+                                        byte ly = (byte)(y + vPos.Y * LOD);
+                                        byte lz = (byte)(z + vPos.Z * LOD);
 
                                         byte lightLevel = 15;
 
@@ -256,7 +259,7 @@ namespace Minecraft_Clone.World.Chunks
 
                                         // 4 - normal pointed upward, matching the surface it's on
                                         var wiggleType = BlockRegistry.Types[block.Type].wiggleType;
-                                        if (pos.Y == 0) wiggleType = WiggleType.NONE;
+                                        if (vPos.Y == 0) wiggleType = WiggleType.NONE;
                                         solidResult.Vertices.Add(
                                                 new PackedVertex(lx, ly, lz, uv.X, uv.Y, 4, lightLevel, wiggleType)
                                             );

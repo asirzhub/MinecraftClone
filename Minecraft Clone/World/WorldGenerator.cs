@@ -42,13 +42,13 @@ namespace Minecraft_Clone.World
         public int maxHeight = 256;
 
         // Continents (FBM)
-        public NoiseParams baseNoiseParams = new NoiseParams(scale:0.0003f, octaves:4, lacunarity:2.5f, gain:0.7f);
+        public NoiseParams baseNoiseParams = new NoiseParams(scale:0.0003f, octaves:5, lacunarity:2.5f, gain:0.7f);
         public float baseHeight = -200f;
         public float baseAmplitude = 510f;
 
         // smaller details over terrain
-        public NoiseParams detailNoiseParams = new NoiseParams(scale: 0.02f, octaves: 3, lacunarity: 2.5f, gain: 0.5f);
-        public float detailAmplitude = 20f;
+        public NoiseParams detailNoiseParams = new NoiseParams(scale: 0.02f, octaves: 3, lacunarity: 2.1f, gain: 0.3f);
+        public float detailAmplitude = 40f;
 
         // feature generation
         public NoiseParams tallgrassNoiseParams = new NoiseParams(scale: 0.12f, octaves: 3, lacunarity: 2.5f, gain: 0.5f);

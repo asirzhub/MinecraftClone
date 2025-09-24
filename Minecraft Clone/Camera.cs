@@ -8,6 +8,8 @@ namespace Minecraft_Clone
     {
         // camera properties
         private float speed = 10f;
+        float boostSpeed = 40f;
+        float defaultSpeed = 10f;
         public float screenwidth;
         public float screenheight;
         private float sensitivity = 10f;
@@ -64,7 +66,7 @@ namespace Minecraft_Clone
             if (keyboard.IsKeyDown(Keys.D)) { position += right * speed * (float)e.Time; }
             if (keyboard.IsKeyDown(Keys.Space)) { position.Y += speed * (float)e.Time; }
             if (keyboard.IsKeyDown(Keys.LeftControl)) { position.Y -= speed * (float)e.Time; }
-            if (keyboard.IsKeyDown(Keys.LeftShift)) { speed = 15f; } else { speed = 5f; }
+            if (keyboard.IsKeyDown(Keys.LeftShift)) { speed = boostSpeed; } else { speed = defaultSpeed; }
 
             if (firstMove)
             {
