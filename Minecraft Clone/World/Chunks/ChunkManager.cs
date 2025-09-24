@@ -136,7 +136,7 @@ public class ChunkManager
                             ActiveChunks[idx].SetState(ChunkState.MESHING);
                             CancellationTokenSource cts = new CancellationTokenSource();
                             RunningTasksCTS.TryAdd(idx, cts);
-                            RunningTasks.TryAdd(idx, mesher.MeshTask(idx, this, cts, CompletedMeshQueue, ActiveChunks, ChunkList()));
+                            RunningTasks.TryAdd(idx, mesher.MeshTask(idx, this, cts, CompletedMeshQueue, ActiveChunks, ChunkList(), LOD:1));
                         }
                         break;
 
