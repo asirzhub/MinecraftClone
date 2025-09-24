@@ -13,7 +13,8 @@ namespace Minecraft_Clone.World
 {
     public enum NoiseLayer {
         BASE,
-        DETAIL
+        DETAIL,
+        TALLGRASS,
     }
     
     // bundle noise generation parameters
@@ -49,6 +50,9 @@ namespace Minecraft_Clone.World
         public NoiseParams detailNoiseParams = new NoiseParams(scale: 0.02f, octaves: 3, lacunarity: 2.5f, gain: 0.5f);
         public float detailAmplitude = 20f;
 
+        // feature generation
+        public NoiseParams tallgrassNoiseParams = new NoiseParams(scale: 0.12f, octaves: 3, lacunarity: 2.5f, gain: 0.5f);
+
         public int seaFloorDepth = 6;
         public float seaFloorBlend = 0.75f;   // sea floor flattening
         public int beachHalfWidth = 3;      // band around sea level for sand
@@ -63,6 +67,9 @@ namespace Minecraft_Clone.World
         // noise caches
         ConcurrentDictionary<NoiseLayer, ConcurrentDictionary<Vector2i, float>> noiseCaches;
         Dictionary<NoiseLayer, NoiseParams> noiseParams = new();
+        float noiseCacheTimer = new(); // after a timer goes to zero, delete the cache from memory
+
+        float noiseCacheLifetime = 10; // 10 frames may pass without noise cache access 
 
         public WorldGenerator(int seed = 0)
         {
@@ -70,11 +77,13 @@ namespace Minecraft_Clone.World
             noise = new NoiseKit(seed);
             noiseParams.Add(NoiseLayer.BASE, baseNoiseParams);
             noiseParams.Add(NoiseLayer.DETAIL, detailNoiseParams);
+            noiseParams.Add(NoiseLayer.TALLGRASS, tallgrassNoiseParams);
             noiseCaches = new();
         }
 
         public float GetNoiseAt(NoiseLayer layer, int x, int y)
         {
+            noiseCacheTimer = noiseCacheLifetime; // reset timer
             // if the cache layer exists
             if(noiseCaches.TryGetValue(layer, out var cache))
             {
@@ -117,8 +126,6 @@ namespace Minecraft_Clone.World
             return Clamp(height, minHeight + 1, maxHeight - 1);
         }
 
-        float detailScale = 0.02f;
-
         // This is the function to generate terrain
         public BlockType GetBlockAtWorldPos(Vector3i pos)
         {
@@ -133,8 +140,7 @@ namespace Minecraft_Clone.World
                 if (y <= seaLevel) return BlockType.WATER;
                 if(y == h + 1 && y > seaLevel + beachHalfWidth + 1)
                 {
-                    var f = noise.Fbm2D(x * detailScale * 6, z * detailScale * 6,
-                                  2, 2.0f, 0.5f);
+                    var f = GetNoiseAt(NoiseLayer.TALLGRASS, x, z);
                     if (f > 0.4 && f < 0.6)
                         return BlockType.TALLGRASS;
                 }
@@ -159,6 +165,17 @@ namespace Minecraft_Clone.World
             if (y >= h - subsoilDepth) return BlockType.DIRT;
 
             return BlockType.STONE;
+        }
+
+        public void Update()
+        {
+            if (noiseCacheTimer >= 0)
+                noiseCacheTimer--;
+            if (noiseCacheTimer == 0)
+            {
+                Console.WriteLine("Cleared noise cache");
+                noiseCaches.Clear();
+            }
         }
 
         private static float Clamp(float v, float min, float max) => v < min ? min : (v > max ? max : v);
