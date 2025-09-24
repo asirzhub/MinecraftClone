@@ -454,6 +454,8 @@ public class ChunkManager
 
         if (updateIndices) // every 5 seconds
             LastActivationChunksIndices = new List<Vector3i>(ActiveChunksIndices);
+
+        worldGenerator.Update();
     }
 
     // naive frustrum culling using a cone frustrum

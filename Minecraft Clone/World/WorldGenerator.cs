@@ -2,6 +2,7 @@
 using Minecraft_Clone.World.Chunks;
 using OpenTK.Mathematics;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -10,6 +11,28 @@ using System.Threading.Tasks;
 
 namespace Minecraft_Clone.World
 {
+    public enum NoiseLayer {
+        BASE,
+        DETAIL,
+        TALLGRASS,
+    }
+    
+    // bundle noise generation parameters
+    public struct NoiseParams {
+        public float scale;
+        public int octaves;
+        public float lacunarity;
+        public float gain;
+        
+        public NoiseParams(float scale, int octaves, float lacunarity, float gain)
+        {
+            this.scale = scale;
+            this.octaves = octaves; 
+            this.lacunarity = lacunarity;
+            this.gain = gain;
+        }
+    }
+
     // manages world generation...
     public class WorldGenerator
     {
@@ -19,17 +42,16 @@ namespace Minecraft_Clone.World
         public int maxHeight = 256;
 
         // Continents (FBM)
-        public float baseScale = 0.0003f;
-        public int baseOctaves = 4;         
-        public float baseLacunarity = 2.5f;
-        public float baseGain = 0.7f;
+        public NoiseParams baseNoiseParams = new NoiseParams(scale:0.0003f, octaves:4, lacunarity:2.5f, gain:0.7f);
         public float baseHeight = -200f;
         public float baseAmplitude = 510f;
 
         // smaller details over terrain
-        public float detailScale = 0.02f;
-        public int detailOctaves = 2;       
+        public NoiseParams detailNoiseParams = new NoiseParams(scale: 0.02f, octaves: 3, lacunarity: 2.5f, gain: 0.5f);
         public float detailAmplitude = 20f;
+
+        // feature generation
+        public NoiseParams tallgrassNoiseParams = new NoiseParams(scale: 0.12f, octaves: 3, lacunarity: 2.5f, gain: 0.5f);
 
         public int seaFloorDepth = 6;
         public float seaFloorBlend = 0.75f;   // sea floor flattening
@@ -42,23 +64,53 @@ namespace Minecraft_Clone.World
         public readonly NoiseKit noise;
         public int seed = 0;
 
+        // noise caches
+        ConcurrentDictionary<NoiseLayer, ConcurrentDictionary<Vector2i, float>> noiseCaches;
+        Dictionary<NoiseLayer, NoiseParams> noiseParams = new();
+        float noiseCacheTimer = new(); // after a timer goes to zero, delete the cache from memory
+
+        float noiseCacheLifetime = 10; // 10 frames may pass without noise cache access 
+
         public WorldGenerator(int seed = 0)
         {
             this.seed = seed;
             noise = new NoiseKit(seed);
+            noiseParams.Add(NoiseLayer.BASE, baseNoiseParams);
+            noiseParams.Add(NoiseLayer.DETAIL, detailNoiseParams);
+            noiseParams.Add(NoiseLayer.TALLGRASS, tallgrassNoiseParams);
+            noiseCaches = new();
+        }
+
+        public float GetNoiseAt(NoiseLayer layer, int x, int y)
+        {
+            noiseCacheTimer = noiseCacheLifetime; // reset timer
+            // if the cache layer exists
+            if(noiseCaches.TryGetValue(layer, out var cache))
+            {
+                if(cache.TryGetValue((x,y), out var value))
+                    return value;
+            }
+            else // otherwise add the cache layer
+                noiseCaches.TryAdd(layer, new());
+
+            // grab parameters for this layer, calculate the noise once
+            noiseParams.TryGetValue(layer, out var p);
+            float result = noise.Fbm2D(x * p.scale, y * p.scale, p.octaves, p.lacunarity, p.gain);
+
+            noiseCaches.TryGetValue(layer, out var layerCache); // store the newly calculated val
+            layerCache.TryAdd((x, y), result);
+            return result;
         }
 
         // function for calculating terrain height for a given block
         float GetTerrainHeightAt(int worldX, int worldZ)
         {
             // continental/island
-            float baseNoise = noise.Fbm2D(worldX * baseScale, worldZ * baseScale,
-                                          baseOctaves, baseLacunarity, baseGain);
+            float baseNoise = GetNoiseAt(NoiseLayer.BASE, worldX, worldZ);
             float height = baseHeight + baseNoise * baseAmplitude;
 
             // small details
-            float d = noise.Fbm2D(worldX * detailScale, worldZ * detailScale,
-                                  detailOctaves, 2.0f, 0.5f);
+            float d = GetNoiseAt(NoiseLayer.DETAIL, worldX, worldZ);
             height += d * detailAmplitude;
 
             // flattening ocean floor (reduce noise)
@@ -88,8 +140,7 @@ namespace Minecraft_Clone.World
                 if (y <= seaLevel) return BlockType.WATER;
                 if(y == h + 1 && y > seaLevel + beachHalfWidth + 1)
                 {
-                    var f = noise.Fbm2D(x * detailScale * 6, z * detailScale * 6,
-                                  detailOctaves, 2.0f, 0.5f);
+                    var f = GetNoiseAt(NoiseLayer.TALLGRASS, x, z);
                     if (f > 0.4 && f < 0.6)
                         return BlockType.TALLGRASS;
                 }
@@ -114,6 +165,17 @@ namespace Minecraft_Clone.World
             if (y >= h - subsoilDepth) return BlockType.DIRT;
 
             return BlockType.STONE;
+        }
+
+        public void Update()
+        {
+            if (noiseCacheTimer >= 0)
+                noiseCacheTimer--;
+            if (noiseCacheTimer == 0)
+            {
+                Console.WriteLine("Cleared noise cache");
+                noiseCaches.Clear();
+            }
         }
 
         private static float Clamp(float v, float min, float max) => v < min ? min : (v > max ? max : v);
