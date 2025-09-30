@@ -107,6 +107,8 @@ namespace Minecraft_Clone.World
                 (m+50, m-10),
                 (m+100, m+90),
                 (maxHeight, maxHeight) }; // needs to be in order along x
+
+            treeLocations = new();
         }
 
         // piecewise function to flatten/exaggerate cliffs and stuff idk
@@ -260,9 +262,9 @@ namespace Minecraft_Clone.World
                 {
                     for(byte z = 0; z < Chunk.SIZE; z++)
                     {
-                        if(treeLocations != null && treeLocations.Contains(worldOffsetFlat+(x, z)))
+                        if(treeLocations.Contains(worldOffsetFlat+(x, z)))
                         {
-                            blocks.SetBlock(worldOffset + (x, y, z), BlockType.LOG);
+                            blocks.SetBlock((x, y, z), BlockType.LOG);
                         }
                     }
                 }
@@ -282,11 +284,9 @@ namespace Minecraft_Clone.World
 
         public void MarkTreePos(Vector2i position)
         {
-            if (treeLocations == null)
-                treeLocations = new();
             if (!treeLocations.Contains(position))
             {
-                Console.WriteLine($"[WorldGenerator] Added a tree at x-z {position}");
+                //Console.WriteLine($"[WorldGenerator] Added a tree at x-z {position}");
                 treeLocations.Add(position);
             }
         }
