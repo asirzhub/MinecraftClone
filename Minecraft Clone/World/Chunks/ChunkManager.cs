@@ -19,6 +19,7 @@ public class ChunkManager
     public WorldGenerator worldGenerator = new WorldGenerator(512);
 
     public Vector3i currentChunkIndex = new();
+    public Vector3i lastChunkIndex = new();
     public int radius = 9;
     public int maxChunkTasks;
     public bool chunkTasksHalved = false;
@@ -69,7 +70,7 @@ public class ChunkManager
             }
         }
 
-        bool updateIndices = (time % 5f < 0.01f); // relevant chunk indices refreshed every 5 seconds
+        bool updateIndices = currentChunkIndex != lastChunkIndex; // relevant chunk indices refreshed every 2 seconds
 
         if (updateIndices)
             ActiveChunksIndices = ListActiveChunksIndices(camera.position, radius, radius / 2);
@@ -193,8 +194,11 @@ public class ChunkManager
                 ExpiredChunkLifetimes[kvp.Key] = kvp.Value + frameTime;
         }
 
-        if (updateIndices) // every 5 seconds
+        if (updateIndices)
+        {
             LastActivationChunksIndices = new List<Vector3i>(ActiveChunksIndices);
+            lastChunkIndex = currentChunkIndex;
+        }
 
         worldGenerator.Update();
     }
