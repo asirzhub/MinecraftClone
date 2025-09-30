@@ -16,6 +16,7 @@ uniform float u_waveSpeed;
 
 out vec2 texCoord;
 out vec3 vNormal;
+out vec4 worldPos;
 out float brightness;
 out int isWater;
 out int isFoliage;
@@ -49,17 +50,16 @@ void main()
     isFoliage = int(((inPosNorBright >> 21) & 0x1u) + ((inPosNorBright >> 23) & 0x1u));
 
     vec4 position = vec4(DecodePos(inPosNorBright), 1.0);
-    vec4 worldPos = position * model;
+    worldPos = position * model;
 
     if(isWater == 1)
     {
         position.y += u_waveAmplitude * sin(((worldPos.x + worldPos.z - 5 * worldPos.y) * u_waveScale + u_time * u_waveSpeed)*6.28318);
     }
     if(isFoliage >= 1){
-        position.x += u_waveAmplitude * cos(((worldPos.x + worldPos.z - 5 * worldPos.y) * u_waveScale + u_time/2 * u_waveSpeed)*6.28318);
+        position.x += sin(((worldPos.x + worldPos.z ) + u_time * u_waveSpeed)*6.28318) * u_waveAmplitude * cos(((worldPos.x + worldPos.z - 5 * worldPos.y) * u_waveScale + u_time/2 * u_waveSpeed)*6.28318);
         position.z += u_waveAmplitude * sin(((worldPos.x + worldPos.z + 5 * worldPos.y) * -u_waveScale/2 + u_time * u_waveSpeed)*6.28318);
     }
-
 
     gl_Position = (position * model * view * projection);
 }

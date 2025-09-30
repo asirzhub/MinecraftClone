@@ -1,49 +1,49 @@
 #version 330 core
-uniform float fovY, aspectRatio;
-uniform vec3 sunDir;                // assumed normalized
-uniform vec3 cameraForward, cameraRight, cameraUp;
+
+// camera / projection
+uniform float fovY;                 // degrees
+uniform float aspectRatio;
+uniform vec3  cameraForward;
+uniform vec3  cameraRight;
+uniform vec3  cameraUp;
+
+// sun (disc + glow)
+uniform vec3  sunDir;               // normalized
+uniform vec3  sunColor;             // also tints the disc
+uniform float sunAngularRadiusDeg;  // e.g., 0.27
+uniform float sunEdgeSoftness;      // e.g., 0.0005 (cos-space)
+uniform float sunGlowStrength;      // e.g., 1.0
+uniform float sunGlowSharpness;     // e.g., 300.0
+
+// sky colors (already blended on CPU: day/night + sunset)
+uniform vec3  horizonColor;
+uniform vec3  zenithColor;
 
 in vec2 screenUV;
 out vec4 FragColor;
 
-void main() {
-    // --- generate ray direction ---
+void main()
+{
+    // view ray
     float s = tan(radians(fovY) * 0.5);
-    vec2 ndc = screenUV * 2.0 - 1.0;
-    vec3 rd = normalize(ndc.x * s * aspectRatio * cameraRight
-                      + ndc.y * s * cameraUp
-                      + cameraForward);
+    vec2  ndc = screenUV * 2.0 - 1.0;
+    vec3  rd  = normalize(ndc.x * s * aspectRatio * cameraRight
+                        + ndc.y * s *               cameraUp
+                        +        1.0 *              cameraForward);
 
-    // --- sun parameters ---
-    float h = clamp(sunDir.y, -1.0, 1.0);
-    float c = max(dot(rd, sunDir), 0.0);
-    const float SUN_SIZE = 0.004;
-    float cosR = cos(SUN_SIZE);
-    float sunDisc = smoothstep(cosR, cosR + 0.0005, c) * h;
-    vec3 sunGlow = vec3(1,0.8,0.6) * pow(c, 300.0);
-
-    // --- height-based blends ---
+    // vertical blend for gradient (fixed curve)
     float up = clamp(rd.y, 0.0, 1.0);
-    float bz = pow(up, 0.7);           // zenith boost (day & night)
+    float bz = pow(up, 0.7);
 
-    // --- day sky ---
-    vec3 dayH = vec3(0.8,0.9,1.0),
-         dayZ = vec3(0.4,0.6,1.0);
-    vec3 sky = mix(dayH, dayZ, bz);
+    vec3 sky = mix(horizonColor, zenithColor, bz);
 
-    // --- sunset glow ---
-    vec3 glowCol = mix(vec3(1,0.4,0.1), vec3(1,0.1,0.6), 0.5 + 0.5*h);
-    float glowB  = smoothstep(0.2, -0.1, h) * (1.0 - up);
-    sky = mix(sky, glowCol, glowB);
+    // sun disc + glow
+    float c = max(dot(rd, sunDir), 0.0);
+    float h = clamp(sunDir.y, -1.0, 1.0);                 // sun height proxy
+    float cosR    = cos(radians(sunAngularRadiusDeg));
+    float sunDisc = smoothstep(cosR, cosR + sunEdgeSoftness, c) * max(h, 0.0);
+    vec3  sunGlow = sunColor * pow(c, sunGlowSharpness) * sunGlowStrength;
 
-    // --- night sky ---
-    vec3 nightH = vec3(0.05,0.1,0.2),
-         nightZ = vec3(0.02,0.05,0.1);
-    vec3 night = mix(nightH, nightZ, bz);
-    float nb = smoothstep(-0.05, -0.3, h);
-    sky = mix(sky, night, nb);
-
-    // --- composite ---
-    vec3 col = sky + sunGlow + sunDisc * vec3(1.5,1.2,1.0);
+    vec3 col = sky + sunGlow + sunDisc * sunColor;
     FragColor = vec4(col, 1.0);
 }

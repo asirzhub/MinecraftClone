@@ -23,6 +23,8 @@ namespace Minecraft_Clone
         private int frameCount = 0;
         public float timeElapsed = 0;
 
+        float timeMult = 0.03f;
+
         // Game Constructor not much to say
         public Game(int width, int height, string title) : base(GameWindowSettings.Default, new NativeWindowSettings()
         {
@@ -33,7 +35,7 @@ namespace Minecraft_Clone
             DepthBits = 24,
         })
         {
-            camera = new Camera(width, height, -1f * Vector3.UnitX + 64 * Vector3.UnitY);
+            camera = new Camera(width, height, -200f * Vector3.UnitX + 200 * Vector3.UnitY + 250 * Vector3.UnitZ);
             this.width = width;
             this.height = height;
             skyRender = new SkyRender((0.4f, 1f, -1f));
@@ -65,10 +67,10 @@ namespace Minecraft_Clone
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
             // Render sky first
-            skyRender.SetSunDirection(Vector3.Transform(skyRender.sunDirection, new Quaternion((float)args.Time / 30f, 0f, 0f)));
+            skyRender.SetSunDirection(Vector3.Transform(skyRender.sunDirection, new Quaternion((float)args.Time * timeMult, 0f, 0f)));
             skyRender.RenderSky(camera);
 
-            chunkManager.Update(camera, (float)args.Time, timeElapsed, skyRender.sunDirection.Normalized());
+            chunkManager.Update(camera, (float)args.Time, timeElapsed, skyRender.sunDirection.Normalized(), skyRender);
 
             SwapBuffers();
 

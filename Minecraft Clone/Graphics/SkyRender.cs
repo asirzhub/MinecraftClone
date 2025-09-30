@@ -11,6 +11,18 @@ namespace Minecraft_Clone.Graphics
 
         public Vector3 sunDirection;
 
+        // Inputs you set somewhere:
+        Vector3 dayHorizon = new(0.70f, 0.80f, 1.00f);
+        Vector3 dayZenith = new(0.40f, 0.60f, 1.00f);
+        Vector3 nightHorizon = new(0.05f, 0.10f, 0.20f);
+        Vector3 nightZenith = new(0.02f, 0.05f, 0.10f);
+
+        float transitionRange = 0.35f;                  // [0..1]
+        float sunsetStrength = 1.0f;                   // overall scale
+
+        public Vector3 finalH = new();
+        public Vector3 finalZ = new();
+
         // <summary>
         /// A Triangle is rendered over the entire screen, coloured to look like the Sky. Stores its own vao/vbo.
         /// </summary>
@@ -19,6 +31,7 @@ namespace Minecraft_Clone.Graphics
             skyVAO = GL.GenVertexArray();
             skyVBO = GL.GenBuffer();
             skyShader = new Shader("sky.vert", "sky.frag");
+
 
             this.sunDirection = sunDirection.Normalized();
         }
@@ -50,12 +63,40 @@ namespace Minecraft_Clone.Graphics
             skyShader.Bind();
             GL.Disable(EnableCap.DepthTest);
 
+            float dayness = MathF.Cos(Vector3.CalculateAngle(Vector3.UnitY, sunDirection));
+
+            float t = 1;
+
+            if (dayness > 0f) t = 1 - MathF.Pow(dayness, 0.5f);
+
+                float sunset = 0f;
+            if(t > 0.5f)
+                sunset = 2 - 2 * t;
+            else if (t <= 0.5f)
+                sunset = 2 * t;
+
+            finalH = Vector3.Lerp(dayHorizon, nightHorizon, t);
+            finalZ = Vector3.Lerp(dayZenith, nightZenith, t);
+
+            finalH += sunset * new Vector3(0.3f, 0.0f, 0.0f);
+            finalZ += sunset * new Vector3(0.1f, 0.0f, 0.0f);
+
+            // Send to GPU
+            skyShader.SetVector3("horizonColor", finalH);
+            skyShader.SetVector3("zenithColor", finalZ);
+
             skyShader.SetVector3("cameraRight", camera.right);
             skyShader.SetVector3("cameraUp", camera.up);
             skyShader.SetVector3("cameraForward", camera.front);
             skyShader.SetVector3("sunDir", sunDirection);
             skyShader.SetFloat("fovY", camera.fovY);
             skyShader.SetFloat("aspectRatio", camera.screenwidth / camera.screenheight);
+
+            skyShader.SetVector3("sunColor", new Vector3(1.0f, 0.9f, 0.7f));
+            skyShader.SetFloat("sunAngularRadiusDeg", 0.27f);
+            skyShader.SetFloat("sunEdgeSoftness", 0.0005f);
+            skyShader.SetFloat("sunGlowStrength", 1.1f);
+            skyShader.SetFloat("sunGlowSharpness", 1000.0f);
 
             // Draw fullscreen triangle
             GL.BindVertexArray(skyVAO);
