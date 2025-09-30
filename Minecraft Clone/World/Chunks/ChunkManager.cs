@@ -25,13 +25,13 @@ public class ChunkManager
     public float chunkTaskHalftime = 20f;// after 20 seconds, half the chunk tasks (prioritize speed at first, then smoothness)
     public float expiryTime = 2f; // how long a chunk can be "inactive" before disposed from ram?
 
-    // store every chunk instance in Chunks:
-    ConcurrentDictionary<Vector3i, Chunk> ActiveChunks = new ConcurrentDictionary<Vector3i, Chunk>();
-    
     // independant lists to keep track of chunks that actually matter
     List<Vector3i> ActiveChunksIndices = new List<Vector3i>();
     List<Vector3i> LastActivationChunksIndices = new List<Vector3i>();
 
+    // store every chunk instance in Chunks:
+    ConcurrentDictionary<Vector3i, Chunk> ActiveChunks = new ConcurrentDictionary<Vector3i, Chunk>();
+    
     // also store a list for chunks that are about to be deleted from memory (hysterisis/thrashing management)
     ConcurrentDictionary<Vector3i, float> ExpiredChunkLifetimes = new ConcurrentDictionary<Vector3i, float>();
 
@@ -54,7 +54,7 @@ public class ChunkManager
 
     // fun stat
     public int totalRenderCalls = 0;
-    public void Update(Camera camera, float frameTime, float time, Vector3 sunDirection)
+    public void Update(Camera camera, float frameTime, float time, Vector3 sunDirection, SkyRender sky)
     {
         totalRenderCalls = 0;
 
@@ -98,6 +98,8 @@ public class ChunkManager
             targetChunk.SetState(ChunkState.MESHED);
             RunningTasks.TryRemove(resultChunk.index, out _);
         }
+
+        renderer.Bind(); // by binding only once (rather than every call), gain 10% FPS!
 
         // for every chunk that's still relevant
         foreach (var idx in ActiveChunksIndices)
@@ -149,8 +151,8 @@ public class ChunkManager
 
                     case ChunkState.VISIBLE:
                         // render visible chunks, count how many
-                        var rendered = renderer.RenderChunk(resultChunk.solidMesh, camera, idx, time, sunDirection);
-                        if (rendered) totalRenderCalls++;
+                        var rendered = renderer.RenderChunk(resultChunk.solidMesh, camera, idx, time, sunDirection, sky);
+                        if (rendered) totalRenderCalls+=1;
                         break;
                     default:
                         break;
@@ -164,7 +166,10 @@ public class ChunkManager
         GL.DepthMask(false);
         foreach (var ChunkKVP in ActiveChunks)
             if (ChunkKVP.Value.GetState() == ChunkState.VISIBLE)
-                renderer.RenderChunk(ChunkKVP.Value.liquidMesh, camera, ChunkKVP.Key, time, sunDirection);
+            {
+                var rendered = renderer.RenderChunk(ChunkKVP.Value.liquidMesh, camera, ChunkKVP.Key, time, sunDirection, sky);
+                if(rendered) totalRenderCalls += 1;
+            }
 
         GL.DepthMask(true);
 
@@ -284,8 +289,7 @@ public class ChunkManager
                 Vector3i delta = next - centerIndex;
 
                 // Bound check
-                if (Math.Abs(delta.X) <= horizontalRadius &&
-                    Math.Abs(delta.Z) <= horizontalRadius &&
+                if (Math.Sqrt(delta.X * delta.X + delta.Y * delta.Y + delta.Z * delta.Z) < horizontalRadius &&
                     Math.Abs(delta.Y) <= verticalRadius &&
                     visited.Add(next)) // only enqueue if not seen
                 {

@@ -23,13 +23,17 @@ namespace Minecraft_Clone.World.Chunks
             blockTexture = new Texture("textures.png");
         }
 
-        public bool RenderChunk(MeshData mesh, Camera camera, Vector3i index, float time, Vector3 sunDirection)
+        public void Bind()
+        {
+            blockShader.Bind();
+            blockTexture.Bind();
+        }
+
+        public bool RenderChunk(MeshData mesh, Camera camera, Vector3i index, float time, Vector3 sunDirection, SkyRender sky)
         {
             // exit if there's no mesh data
             if (mesh == null || mesh.Vertices.Count == 0) return false;
 
-            blockShader.Bind();
-            blockTexture.Bind();
 
             mesh.Upload();
 
@@ -41,15 +45,18 @@ namespace Minecraft_Clone.World.Chunks
             blockShader.SetMatrix4("model", model);
             blockShader.SetMatrix4("view", view);
             blockShader.SetMatrix4("projection", projection);
-
+            blockShader.SetVector3("cameraPos", camera.position);
             blockShader.SetFloat("u_waterOffset", waterOffset);
             blockShader.SetFloat("u_waveAmplitude", waterWaveAmplitude);
             blockShader.SetFloat("u_waveScale", waterWaveScale);
             blockShader.SetFloat("u_time", time);
             blockShader.SetFloat("u_waveSpeed", waterWaveSpeed);
             blockShader.SetVector3("sunDirection", sunDirection);
-            blockShader.SetVector3("ambientColor", new(1.1f, 1.2f, 1.3f));
-            blockShader.SetVector3("sunsetColor", new(0.5f, 0.2f, 0.1f));
+            blockShader.SetVector3("ambientColor", new(1.0f, 1.1f, 1.3f)); 
+            blockShader.SetVector3("sunsetColor", new(0.5f, 0.2f, 0.1f)); 
+            float upness = MathF.Abs(Vector3.Dot(Vector3.NormalizeFast(sunDirection + Vector3.UnitY * 0.5f), Vector3.UnitY));
+
+            blockShader.SetVector3("fogColor", sky.finalH);
 
             mesh.vao.Bind();
             mesh.vbo.Bind();
