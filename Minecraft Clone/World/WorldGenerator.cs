@@ -1,13 +1,6 @@
-﻿using Minecraft_Clone.World;
-using Minecraft_Clone.World.Chunks;
+﻿using Minecraft_Clone.World.Chunks;
 using OpenTK.Mathematics;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Minecraft_Clone.World
 {
@@ -50,14 +43,15 @@ namespace Minecraft_Clone.World
         public float baseHeight = -200f;
         public float baseAmplitude = 1024f;
 
-        // smaller details over terrain
-        public NoiseParams detailNoiseParams = new NoiseParams(scale: 0.02f, octaves: 3, lacunarity: 2.1f, gain: 0.3f);
-        public float detailAmplitude = 40f;
-
+        
         // feature generation
         public NoiseParams tallgrassNoiseParams = new NoiseParams(scale: 0.12f, octaves: 3, lacunarity: 2.5f, gain: 0.5f);
+        float tallgrassThreshold = 0.05f;// grass half-band around 0.5f
 
-        public NoiseParams treeNoiseParams = new NoiseParams(scale: 1.0f, octaves: 2, lacunarity: 2.6f, gain: 0.7f);
+
+        public NoiseParams treeNoiseParams = new NoiseParams(scale: 1.5f, octaves: 2, lacunarity: 2.5f, gain: 0.8f);
+        float treeThreshold = 0.75f; // tree noise greater than this value means a tree is placed
+        List<Vector2i> treeLocations;
 
         public int seaFloorDepth = 32;
         public float seaFloorBlend = 0.2f;   // sea floor flattening
@@ -94,7 +88,6 @@ namespace Minecraft_Clone.World
             noise = new NoiseKit(seed);
             noiseParams.Add(NoiseLayer.BASE, baseNoiseParams);
             noiseParams.Add(NoiseLayer.MOUNTAINBLEND, mountainBlendNoise);
-            noiseParams.Add(NoiseLayer.DETAIL, detailNoiseParams);
             noiseParams.Add(NoiseLayer.TALLGRASS, tallgrassNoiseParams);
             noiseParams.Add(NoiseLayer.TREE, treeNoiseParams);
             noiseCaches = new();
@@ -177,7 +170,7 @@ namespace Minecraft_Clone.World
             return result;
         }
 
-        // This is the function to generate terrain
+        // This is the function to generate terrain, as well as mark locations to place trees
         public BlockType GetBlockAtWorldPos(Vector3i pos)
         {
             int x = pos.X, y = pos.Y, z = pos.Z;
@@ -200,13 +193,17 @@ namespace Minecraft_Clone.World
                 if (y <= seaLevel) return BlockType.WATER;
                 if (y == h + 1 && y > seaLevel + beachHalfWidth + 1)
                 {
-                    var t = GetNoiseAt(NoiseLayer.TREE, x, z);
-                    if (t > 0.64f)
-                        return BlockType.LOG;
+                    float t = GetNoiseAt(NoiseLayer.TREE, x, z);
+                    if (t > treeThreshold && slope < 2f)
+                    {
+                        MarkTreePos((x, z));
+                        //return BlockType.LOG;
+                    }
 
-                    var f = GetNoiseAt(NoiseLayer.TALLGRASS, x, z);
-                    if (y < mountainHeightStart && f > 0.5 && f < 0.55)
-                        return BlockType.TALLGRASS;
+                    float f = GetNoiseAt(NoiseLayer.TALLGRASS, x, z);
+                    if (y < mountainHeightStart &&
+                        f > 0.5f - tallgrassThreshold && f < 0.5f + tallgrassThreshold)
+                            return BlockType.TALLGRASS;
                 }
                 return BlockType.AIR;
             }
@@ -247,6 +244,51 @@ namespace Minecraft_Clone.World
             if (y >= h - subsoilDepth && y < mountainHeightStart) return BlockType.DIRT;
 
             return BlockType.STONE;
+        }
+
+        public ChunkGenerator.CompletedChunkBlocks GrowFlora(ChunkGenerator.CompletedChunkBlocks blocks)
+        {
+            var worldOffset = blocks.index * Chunk.SIZE;
+            Vector2i worldOffsetFlat = (worldOffset.X, worldOffset.Z);
+            // have: chunk index
+            // need: each block's world position
+            //       -> given by the chunk's index * size + local coord
+
+            for(byte x = 0; x < Chunk.SIZE; x++)
+            {
+                for(byte y = 0; y <  Chunk.SIZE; y++)
+                {
+                    for(byte z = 0; z < Chunk.SIZE; z++)
+                    {
+                        if(treeLocations != null && treeLocations.Contains(worldOffsetFlat+(x, z)))
+                        {
+                            blocks.SetBlock(worldOffset + (x, y, z), BlockType.LOG);
+                        }
+                    }
+                }
+            }
+
+            return blocks;
+        }
+
+        public Vector3i WorldPosToChunkIndex(Vector3i worldIndex, int chunkSize = Chunk.SIZE)
+        {
+            int chunkX = (int)Math.Floor(worldIndex.X / (double)chunkSize);
+            int chunkY = (int)Math.Floor(worldIndex.Y / (double)chunkSize);
+            int chunkZ = (int)Math.Floor(worldIndex.Z / (double)chunkSize);
+
+            return (chunkX, chunkY, chunkZ);
+        }
+
+        public void MarkTreePos(Vector2i position)
+        {
+            if (treeLocations == null)
+                treeLocations = new();
+            if (!treeLocations.Contains(position))
+            {
+                Console.WriteLine($"[WorldGenerator] Added a tree at x-z {position}");
+                treeLocations.Add(position);
+            }
         }
 
         public void Update()

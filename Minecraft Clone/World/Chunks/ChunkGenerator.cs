@@ -15,6 +15,7 @@ namespace Minecraft_Clone.World.Chunks
         {
             public Vector3i index;
             public bool isEmpty;
+            public bool featured;
             public byte[] blocks;
 
             public CompletedChunkBlocks(Vector3i index, byte[] blocks, bool isEmpty)
@@ -22,6 +23,24 @@ namespace Minecraft_Clone.World.Chunks
                 this.index = index;
                 this.blocks = blocks;
                 this.isEmpty = isEmpty;
+                featured = false;
+            }
+
+            public CompletedChunkBlocks(Vector3i index, Chunk c)
+            {
+                this.index = index;
+                this.blocks = c.blocks;
+                this.isEmpty = c.IsEmpty;
+                this.featured = false;
+            }
+
+            public bool SetBlock(Vector3i localPos, BlockType type)
+            {
+                if (localPos.X >= Chunk.SIZE || localPos.Y >= Chunk.SIZE || localPos.Z >= Chunk.SIZE ||
+                    localPos.X < 0 || localPos.Y < 0|| localPos.Z < 0) return false;
+
+                blocks[(localPos.Y * Chunk.SIZE + localPos.Z) * Chunk.SIZE + localPos.X] = (byte)type;
+                return true;
             }
 
             public void Dispose()
@@ -65,5 +84,34 @@ namespace Minecraft_Clone.World.Chunks
 
             return new CompletedChunkBlocks(chunkIndex, tempChunk.blocks, tempChunk.IsEmpty);
         }
+
+        // chunk's block generation kick-off fxn
+        public Task FeatureTask(CompletedChunkBlocks chunkBlocks, CancellationTokenSource cts, WorldGenerator worldGenerator, ConcurrentQueue<CompletedChunkBlocks> queue)
+        {
+            // async wrapper for the long part of the operation
+            return Task.Run(async () =>
+            {
+                var result = await FeatureBlocks(chunkBlocks, cts.Token, worldGenerator);
+                queue.Enqueue(result);
+            });
+        }
+
+        // generates the blocks for a given chunk and world generator 
+        async Task<CompletedChunkBlocks> FeatureBlocks(CompletedChunkBlocks chunkBlocks, CancellationToken token, WorldGenerator worldGenerator)
+        {
+            if (chunkBlocks.isEmpty)
+            {
+                chunkBlocks.featured = true;
+                return chunkBlocks;
+            }
+
+            var result = worldGenerator.GrowFlora(chunkBlocks);
+
+            result.featured = true;
+
+            return result;
+        }
+
+
     }
 }

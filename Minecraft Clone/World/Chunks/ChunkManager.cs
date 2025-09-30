@@ -81,13 +81,23 @@ public class ChunkManager
                                 (int)MathF.Floor(camera.position.Z))); ; // first index in the list is always the center index  
 
         // for each CompletedChunkBlocks, move data from the queue into the respective chunk. MARK STATE
-        while (CompletedBlocksQueue.TryDequeue(out var resultChunk))
+        while (CompletedBlocksQueue.TryDequeue(out var completedBlocks))
         {
-            Chunk targetChunk = ActiveChunks[resultChunk.index];
-            targetChunk.blocks = resultChunk.blocks;
-            targetChunk.IsEmpty = resultChunk.isEmpty;
-            targetChunk.SetState(ChunkState.GENERATED);
-            RunningTasks.TryRemove(resultChunk.index, out _);
+            Chunk targetChunk = ActiveChunks[completedBlocks.index];
+            targetChunk.blocks = completedBlocks.blocks;
+            targetChunk.IsEmpty = completedBlocks.isEmpty;
+            RunningTasks.TryRemove(completedBlocks.index, out _);
+
+            // if the chunk's block data both generated AND featured, mark it so
+            if (completedBlocks.featured)
+            {
+                targetChunk.SetState(ChunkState.FEATURED);
+            }
+            else // otherwise this queue item is only generated and not featured. need to mark it for a feature task
+            {
+                targetChunk.SetState(ChunkState.GENERATED);
+            }
+
         }
 
         // for each CompletedMesh, move data from the queue into the respective chunk. MARK STATE
@@ -125,7 +135,7 @@ public class ChunkManager
                         // if theres room to add a generation job for a new chunk, do it
                         if (RunningTasks.Count < maxChunkTasks)
                         {
-                            ActiveChunks[idx].SetState(ChunkState.GENERATING);
+                            resultChunk.SetState(ChunkState.GENERATING);
                             CancellationTokenSource cts = new CancellationTokenSource();
                             RunningTasksCTS.TryAdd(idx, cts);
                             RunningTasks.TryAdd(idx, generator.GenerationTask(idx, cts, worldGenerator, CompletedBlocksQueue));
@@ -136,13 +146,22 @@ public class ChunkManager
                         // if the chunk has blocks neighbors with blocks and theres room for a task, make mesh for it
                         if (AreNeighborsGenerated(idx) && RunningTasks.Count < maxChunkTasks)
                         {
-                            ActiveChunks[idx].SetState(ChunkState.MESHING);
+                            resultChunk.SetState(ChunkState.FEATURING);
                             CancellationTokenSource cts = new CancellationTokenSource();
                             RunningTasksCTS.TryAdd(idx, cts);
-                            RunningTasks.TryAdd(idx, mesher.MeshTask(idx, this, cts, CompletedMeshQueue, ActiveChunks, ChunkList(), LOD:1));
+                            RunningTasks.TryAdd(idx, generator.FeatureTask(new ChunkGenerator.CompletedChunkBlocks(idx, resultChunk), cts, worldGenerator, CompletedBlocksQueue));
                         }
                         break;
-
+                    case ChunkState.FEATURED:
+                        // if the chunk has blocks neighbors with blocks and theres room for a task, make mesh for it
+                        if (AreNeighborsGenerated(idx) && RunningTasks.Count < maxChunkTasks)
+                        {
+                            resultChunk.SetState(ChunkState.MESHING);
+                            CancellationTokenSource cts = new CancellationTokenSource();
+                            RunningTasksCTS.TryAdd(idx, cts);
+                            RunningTasks.TryAdd(idx, mesher.MeshTask(idx, this, cts, CompletedMeshQueue, ActiveChunks, ChunkList(), LOD: 1));
+                        }
+                        break;
                     case ChunkState.MESHED:
                         // mark chunks with no mesh (all air) as invisible
                         resultChunk.SetState(ChunkState.VISIBLE);
@@ -295,9 +314,11 @@ public class ChunkManager
                 // Bound check
                 if (Math.Sqrt(delta.X * delta.X + delta.Y * delta.Y + delta.Z * delta.Z) < horizontalRadius &&
                     Math.Abs(delta.Y) <= verticalRadius &&
+                    //ActiveChunks.TryGetValue(next, out var c)  &&
                     visited.Add(next)) // only enqueue if not seen
                 {
-                    queue.Enqueue(next);
+                    //if(!c.IsEmpty)
+                        queue.Enqueue(next);
                 }
             }
         }
@@ -328,6 +349,19 @@ public class ChunkManager
         int chunkY = (int)Math.Floor(worldIndex.Y / (double)chunkSize);
         int chunkZ = (int)Math.Floor(worldIndex.Z / (double)chunkSize);
         return new Vector3i(chunkX, chunkY, chunkZ);
+    }
+
+    public Vector3i WorldPosToChunkLocal(Vector3i worldIndex, int chunkSize = Chunk.SIZE)
+    {
+        Vector3i chunkIndex = WorldPosToChunkIndex(worldIndex, chunkSize);
+
+        Vector3i localBlockPos = new Vector3i(
+            worldIndex.X - chunkIndex.X * chunkSize,
+            worldIndex.Y - chunkIndex.Y * chunkSize,
+            worldIndex.Z - chunkIndex.Z * chunkSize
+        );
+
+        return localBlockPos;
     }
 
     // also self explanatory
