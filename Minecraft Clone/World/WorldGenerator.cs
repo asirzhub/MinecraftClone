@@ -46,7 +46,7 @@ namespace Minecraft_Clone.World
         public int maxHeight = 256;
 
         // Continents (FBM)
-        public NoiseParams baseNoiseParams = new NoiseParams(scale: 0.0001f, octaves: 10, lacunarity: 2.4f, gain: 0.5f);
+        public NoiseParams baseNoiseParams = new NoiseParams(scale: 0.0005f, octaves: 8, lacunarity: 2.3f, gain: 0.5f);
         public float baseHeight = -200f;
         public float baseAmplitude = 1024f;
 
@@ -57,19 +57,19 @@ namespace Minecraft_Clone.World
         // feature generation
         public NoiseParams tallgrassNoiseParams = new NoiseParams(scale: 0.12f, octaves: 3, lacunarity: 2.5f, gain: 0.5f);
 
-        public NoiseParams treeNoiseParams = new NoiseParams(scale: 0.01f, octaves: 2, lacunarity: 1.6f, gain: 0.7f);
+        public NoiseParams treeNoiseParams = new NoiseParams(scale: 1.0f, octaves: 2, lacunarity: 2.6f, gain: 0.7f);
 
-        public int seaFloorDepth = 16;
+        public int seaFloorDepth = 32;
         public float seaFloorBlend = 0.2f;   // sea floor flattening
         public int beachHalfWidth = 3;      // band around sea level for sand
 
         public int topsoilDepth = 1;
         public int subsoilDepth = 3;
 
-        public NoiseParams mountainBlendNoise = new NoiseParams(scale: 0.02f, octaves: 3, lacunarity: 2.1f, gain: 0.8f);
+        public NoiseParams mountainBlendNoise = new NoiseParams(scale: 0.002f, octaves: 3, lacunarity: 2.4f, gain: 0.8f);
         public int mountainHeightStart = 128;
-        public int snowLineStart = 160;
-        public float mountainBoost = 1.1f;
+        public int snowLineOffset = 32;
+        public float mountainBoost = 10.0f;
 
         // Noise
         public readonly NoiseKit noise;
@@ -86,6 +86,8 @@ namespace Minecraft_Clone.World
 
         float noiseCacheLifetime = 30; // 30 frames may pass without noise cache access 
 
+        readonly Vector2[] controlPoints;
+
         public WorldGenerator(int seed = 0)
         {
             this.seed = seed;
@@ -96,7 +98,44 @@ namespace Minecraft_Clone.World
             noiseParams.Add(NoiseLayer.TALLGRASS, tallgrassNoiseParams);
             noiseParams.Add(NoiseLayer.TREE, treeNoiseParams);
             noiseCaches = new();
+
+            float s = seaLevel;
+            float m = mountainHeightStart;
+
+            controlPoints = new Vector2[]{ 
+                (minHeight, minHeight), 
+                (s-150, s-180),
+                (s-100, s-60),
+                (s-40, s-50),
+                (s-15, s-5),
+                (s, s),
+                (s+25, s+10),
+                (s+50, s+25),
+                (m+50, m-10),
+                (m+100, m+90),
+                (maxHeight, maxHeight) }; // needs to be in order along x
         }
+
+        // piecewise function to flatten/exaggerate cliffs and stuff idk
+        public float heightRemapper(float h, Vector2[] controlPoints)
+        {
+            float result = h;
+
+            for(int i = 0; i < controlPoints.Length-1; i++)
+            {
+                var point = controlPoints[i];
+                var nextPoint = controlPoints[i+1];
+
+                // find the zone it falls under
+                if(h >= point.X && h < nextPoint.X)
+                {
+                    result = Lerp(point.Y, nextPoint.Y, (h - point.X)/(nextPoint.X - point.X));
+                }
+            }
+
+            return result;
+        }
+
 
         public float GetNoiseAt(NoiseLayer layer, int x, int y)
         {
@@ -129,24 +168,10 @@ namespace Minecraft_Clone.World
             float baseNoise = GetNoiseAt(NoiseLayer.BASE, worldX, worldZ);
             float height = baseHeight + baseNoise * baseNoise * baseAmplitude;
 
-            // flattening ocean floor (reduce noise)
-            if (height < seaLevel)
-            {
-                float targetFloor = seaLevel - seaFloorDepth;
-                float depth = seaLevel - height;
-                float maxBlendDepth = seaFloorDepth * 6f + 1f;
-                float t = Clamp(depth / maxBlendDepth, 0f, 1f) * seaFloorBlend;
-                height = Lerp(height, targetFloor, t);
-            }
+            height += GetNoiseAt(NoiseLayer.MOUNTAINBLEND, worldX, worldZ) * mountainBoost;
 
-            float f = GetNoiseAt(NoiseLayer.MOUNTAINBLEND, worldX, worldZ);
-
-            // spikier mountains
-            if (height >= mountainHeightStart)
-            {
-                height *= 1 + (height - mountainHeightStart) / 100 * f * mountainBoost ; 
-            }
-
+            height = heightRemapper(height, controlPoints);
+            
             float result = Clamp(height, minHeight + 1, maxHeight - 1);
             heightCache.TryAdd((worldX, worldZ), result);
             return result;
@@ -176,8 +201,9 @@ namespace Minecraft_Clone.World
                 if (y == h + 1 && y > seaLevel + beachHalfWidth + 1)
                 {
                     var t = GetNoiseAt(NoiseLayer.TREE, x, z);
-                    if (t > 0.9f)
+                    if (t > 0.64f)
                         return BlockType.LOG;
+
                     var f = GetNoiseAt(NoiseLayer.TALLGRASS, x, z);
                     if (y < mountainHeightStart && f > 0.5 && f < 0.55)
                         return BlockType.TALLGRASS;
@@ -201,11 +227,11 @@ namespace Minecraft_Clone.World
                 // mountain
                 if (h >= mountainHeightStart)
                 {
-                    if (h > seaLevel + 1 && y >= snowLineStart) return BlockType.SNOW;
+                    if (h > seaLevel + 1 && y >= mountainHeightStart + snowLineOffset) return BlockType.SNOW;
+
                     float m = GetNoiseAt(NoiseLayer.MOUNTAINBLEND, x, z);
                     if (m > 1.0f)
                     {
-                        if (slope > 1f) return BlockType.SNOW;
                         return BlockType.STONE;
                     }
                 }
