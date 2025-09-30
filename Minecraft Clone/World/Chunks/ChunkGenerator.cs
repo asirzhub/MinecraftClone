@@ -34,6 +34,12 @@ namespace Minecraft_Clone.World.Chunks
                 this.featured = false;
             }
 
+            public Block GetBlock(int x, int y, int z)
+            {
+                if (isEmpty) return new Block(BlockType.AIR);
+                var type = (BlockType)blocks[(y * Chunk.SIZE + z) * Chunk.SIZE + x];
+                return new Block(type);
+            }
             public bool SetBlock(Vector3i localPos, BlockType type)
             {
                 if (localPos.X >= Chunk.SIZE || localPos.Y >= Chunk.SIZE || localPos.Z >= Chunk.SIZE ||
@@ -99,19 +105,11 @@ namespace Minecraft_Clone.World.Chunks
         // generates the blocks for a given chunk and world generator 
         async Task<CompletedChunkBlocks> FeatureBlocks(CompletedChunkBlocks chunkBlocks, CancellationToken token, WorldGenerator worldGenerator)
         {
-            if (chunkBlocks.isEmpty)
-            {
-                chunkBlocks.featured = true;
-                return chunkBlocks;
-            }
-
             var result = worldGenerator.GrowFlora(chunkBlocks);
 
             result.featured = true;
 
             return result;
         }
-
-
     }
 }

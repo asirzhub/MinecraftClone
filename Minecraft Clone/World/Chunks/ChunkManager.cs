@@ -46,10 +46,17 @@ public class ChunkManager
 
     public int taskCount => RunningTasks.Count;
 
-    public ChunkManager()
+    public ChunkManager(Camera camera)
     {
         // idk if this is the best way might change later
         maxChunkTasks = (int)(Environment.ProcessorCount -1);
+
+        currentChunkIndex = WorldPosToChunkIndex((
+                                (int)MathF.Floor(camera.position.X),
+                                (int)MathF.Floor(camera.position.Y),
+                                (int)MathF.Floor(camera.position.Z))); ; // first index in the list is always the center index  
+
+        worldGenerator.PreComputeTreeLocations(currentChunkIndex, radius);
     }
 
 

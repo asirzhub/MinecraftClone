@@ -43,11 +43,10 @@ namespace Minecraft_Clone.World
         public float baseHeight = -200f;
         public float baseAmplitude = 1024f;
 
-        
+
         // feature generation
         public NoiseParams tallgrassNoiseParams = new NoiseParams(scale: 0.12f, octaves: 3, lacunarity: 2.5f, gain: 0.5f);
         float tallgrassThreshold = 0.05f;// grass half-band around 0.5f
-
 
         public NoiseParams treeNoiseParams = new NoiseParams(scale: 1.5f, octaves: 2, lacunarity: 2.5f, gain: 0.8f);
         float treeThreshold = 0.75f; // tree noise greater than this value means a tree is placed
@@ -82,6 +81,31 @@ namespace Minecraft_Clone.World
 
         readonly Vector2[] controlPoints;
 
+        // define a tree based on vertical slices
+        private BlockType[] treeBlocks = {
+            BlockType.AIR, BlockType.AIR, BlockType.AIR,
+            BlockType.AIR, BlockType.LOG, BlockType.AIR,
+            BlockType.AIR, BlockType.AIR, BlockType.AIR,
+
+            BlockType.AIR, BlockType.AIR, BlockType.AIR,
+            BlockType.AIR, BlockType.LOG, BlockType.AIR,
+            BlockType.AIR, BlockType.AIR, BlockType.AIR,
+
+            BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES,
+            BlockType.LEAVES, BlockType.LOG, BlockType.LEAVES,
+            BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES,
+
+            BlockType.AIR, BlockType.LEAVES, BlockType.AIR,
+            BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES,
+            BlockType.AIR, BlockType.LEAVES, BlockType.AIR,
+
+            BlockType.AIR, BlockType.AIR, BlockType.AIR,
+            BlockType.AIR, BlockType.LEAVES, BlockType.AIR,
+            BlockType.AIR, BlockType.AIR, BlockType.AIR,
+        };
+
+        private byte[] treeBlocksArray;
+
         public WorldGenerator(int seed = 0)
         {
             this.seed = seed;
@@ -95,8 +119,8 @@ namespace Minecraft_Clone.World
             float s = seaLevel;
             float m = mountainHeightStart;
 
-            controlPoints = new Vector2[]{ 
-                (minHeight, minHeight), 
+            controlPoints = new Vector2[]{
+                (minHeight, minHeight),
                 (s-150, s-180),
                 (s-100, s-60),
                 (s-40, s-50),
@@ -116,19 +140,30 @@ namespace Minecraft_Clone.World
         {
             float result = h;
 
-            for(int i = 0; i < controlPoints.Length-1; i++)
+            for (int i = 0; i < controlPoints.Length - 1; i++)
             {
                 var point = controlPoints[i];
-                var nextPoint = controlPoints[i+1];
+                var nextPoint = controlPoints[i + 1];
 
                 // find the zone it falls under
-                if(h >= point.X && h < nextPoint.X)
+                if (h >= point.X && h < nextPoint.X)
                 {
-                    result = Lerp(point.Y, nextPoint.Y, (h - point.X)/(nextPoint.X - point.X));
+                    result = Lerp(point.Y, nextPoint.Y, (h - point.X) / (nextPoint.X - point.X));
                 }
             }
 
             return result;
+        }
+
+        public void PreComputeTreeLocations(Vector3i center, int radius)
+        {
+            for (int x = -radius; x < radius; x++)
+            {
+                for(int z = -radius; z < radius; z++)
+                {
+                    GetNoiseAt(NoiseLayer.TREE, x, z);
+                }
+            }
         }
 
 
@@ -166,7 +201,7 @@ namespace Minecraft_Clone.World
             height += GetNoiseAt(NoiseLayer.MOUNTAINBLEND, worldX, worldZ) * mountainBoost;
 
             height = heightRemapper(height, controlPoints);
-            
+
             float result = Clamp(height, minHeight + 1, maxHeight - 1);
             heightCache.TryAdd((worldX, worldZ), result);
             return result;
@@ -205,7 +240,7 @@ namespace Minecraft_Clone.World
                     float f = GetNoiseAt(NoiseLayer.TALLGRASS, x, z);
                     if (y < mountainHeightStart &&
                         f > 0.5f - tallgrassThreshold && f < 0.5f + tallgrassThreshold)
-                            return BlockType.TALLGRASS;
+                        return BlockType.TALLGRASS;
                 }
                 return BlockType.AIR;
             }
@@ -217,7 +252,7 @@ namespace Minecraft_Clone.World
                 if (y >= h - subsoilDepth) return BlockType.SAND;
             }
 
-            if(slope > 0.9)
+            if (slope > 0.9)
                 return BlockType.STONE;
 
             // normal surface
@@ -256,15 +291,31 @@ namespace Minecraft_Clone.World
             // need: each block's world position
             //       -> given by the chunk's index * size + local coord
 
-            for(byte x = 0; x < Chunk.SIZE; x++)
+            for (byte x = 0; x < Chunk.SIZE; x++)
             {
-                for(byte y = 0; y <  Chunk.SIZE; y++)
+                for (byte y = 1; y < Chunk.SIZE; y++)
                 {
-                    for(byte z = 0; z < Chunk.SIZE; z++)
+                    for (byte z = 0; z < Chunk.SIZE; z++)
                     {
-                        if(treeLocations.Contains(worldOffsetFlat+(x, z)))
+                        if (blocks.GetBlock(x, y-1, z).Type == BlockType.GRASS 
+                            && treeLocations.Contains(worldOffsetFlat + (x, z)))
                         {
-                            blocks.SetBlock((x, y, z), BlockType.LOG);
+                            //Console.WriteLine("Encountered a tree stump loc");
+                            // this is a tree stump location. grow a tree from here
+                            for (int tx = 0; tx < 3; tx++)
+                            {
+                                for(int ty = 0; ty < 4; ty++)
+                                {
+                                    for(int tz = 0; tz < 3; tz++)
+                                    {
+                                        int blockidx = (ty * 3 + tz) * 3 + tx;
+                                        var blockType = treeBlocks[blockidx];
+                                        //Console.WriteLine($"tree block coord:{tx} {ty} {tz} index: {blockidx}");
+                                        if(blockType != BlockType.AIR) blocks.SetBlock((x+tx-1, y+ty, z+tz-1), blockType);
+                                    }
+                                }
+                            }
+                            //Console.WriteLine("grew a tree");
                         }
                     }
                 }
@@ -306,6 +357,7 @@ namespace Minecraft_Clone.World
         private static float Clamp(float v, float min, float max) => v < min ? min : (v > max ? max : v);
 
         private static float Lerp(float a, float b, float t) => a + (b - a) * t; // (fixed)
-    }
 
+
+    }
 }

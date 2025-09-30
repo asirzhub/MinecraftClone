@@ -55,7 +55,7 @@ namespace Minecraft_Clone
             GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
             GL.Enable(EnableCap.Multisample);
 
-            chunkManager = new ChunkManager();
+            chunkManager = new ChunkManager(camera);
 
             skyRender.InitializeSky();
         }
