@@ -18,6 +18,8 @@ namespace Minecraft_Clone.World.Chunks
             public bool featured;
             public byte[] blocks;
 
+            public ConcurrentDictionary<Vector3i, BlockType> pendingBlocks;
+
             public CompletedChunkBlocks(Vector3i index, byte[] blocks, bool isEmpty)
             {
                 this.index = index;
@@ -40,10 +42,19 @@ namespace Minecraft_Clone.World.Chunks
                 var type = (BlockType)blocks[(y * Chunk.SIZE + z) * Chunk.SIZE + x];
                 return new Block(type);
             }
+
+            // returns true if successfully placed in the chunk, false if it spilled over into a neighbor
             public bool SetBlock(Vector3i localPos, BlockType type)
             {
+                // if it's out of chunk bounds, store it for later
                 if (localPos.X >= Chunk.SIZE || localPos.Y >= Chunk.SIZE || localPos.Z >= Chunk.SIZE ||
-                    localPos.X < 0 || localPos.Y < 0|| localPos.Z < 0) return false;
+                    localPos.X < 0 || localPos.Y < 0 || localPos.Z < 0)
+                {
+                    if (pendingBlocks == null)
+                        pendingBlocks = new();
+                    pendingBlocks.TryAdd(index * Chunk.SIZE + localPos, type);
+                    return false;
+                }
 
                 blocks[(localPos.Y * Chunk.SIZE + localPos.Z) * Chunk.SIZE + localPos.X] = (byte)type;
                 return true;

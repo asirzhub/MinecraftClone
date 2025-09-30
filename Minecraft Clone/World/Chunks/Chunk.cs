@@ -1,5 +1,6 @@
 ﻿using Minecraft_Clone.Graphics;
 using OpenTK.Mathematics;
+using System.Collections.Concurrent;
 using static Minecraft_Clone.Graphics.CubeMesh;
 using static Minecraft_Clone.Graphics.VBO;
 
@@ -27,6 +28,8 @@ namespace Minecraft_Clone.World.Chunks
         public ChunkState GetState() { return state; } // protect the state from being directly modified
         public bool NeighborReady => !((state == ChunkState.BIRTH) || (state == ChunkState.GENERATING));// can the neighbor query this block for block existence?
 
+        public ConcurrentDictionary<Vector3i, BlockType> pendingBlocks;
+
         // is the chunk empty?
         public bool IsEmpty { 
             get => isEmpty; 
@@ -40,6 +43,8 @@ namespace Minecraft_Clone.World.Chunks
         public MeshData solidMesh;
         public MeshData liquidMesh;
 
+        public bool hasMeshes => solidMesh != null && liquidMesh != null;
+
         // if a chunk is updated, it must be marked dirty (for a re-mesh)
         public bool TryMarkDirty()
         {
@@ -49,6 +54,36 @@ namespace Minecraft_Clone.World.Chunks
                 return true;
             }
             return false;
+        }
+
+        public void AddPendingBlock(Vector3i pos, BlockType newType)
+        {
+            if (pendingBlocks == null)
+                pendingBlocks = new();
+
+            if (pendingBlocks.TryGetValue(pos, out var oldType))
+            {
+                if (oldType.Equals(newType))
+                    return;
+            }
+
+            else
+                pendingBlocks.TryAdd(pos, newType);
+        }
+
+        public void ProcessBlocks()
+        {
+            if (pendingBlocks == null || pendingBlocks.Count == 0)
+                return;
+
+            // otherwise, there's blocks to deal with
+            var oldPendingBlocks = pendingBlocks;
+            foreach(var kvp in oldPendingBlocks)
+            {
+                SetBlock(kvp.Key, kvp.Value);
+                pendingBlocks.TryRemove(kvp);
+            }
+            oldPendingBlocks.Clear();
         }
 
         // practice chunk safety: enforce state transitions
@@ -96,6 +131,23 @@ namespace Minecraft_Clone.World.Chunks
                 blocks = new byte[SIZE * SIZE * SIZE];
             }
             blocks[(y * SIZE + z) * SIZE + x] = (byte)type;
+
+            TryMarkDirty();
+        }
+
+        public void SetBlock(Vector3i pos, BlockType type)
+        {
+            if (IsEmpty && type == BlockType.AIR) return;
+
+            if (IsEmpty)
+            {
+                IsEmpty = false;
+                blocks = new byte[SIZE * SIZE * SIZE];
+            }
+
+            blocks[(pos.Y * SIZE + pos.Z) * SIZE + pos.X] = (byte)type;
+
+            TryMarkDirty();
         }
 
         // clean up meshes when removing from memory

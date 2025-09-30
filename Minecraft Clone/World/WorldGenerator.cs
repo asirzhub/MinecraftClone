@@ -43,7 +43,6 @@ namespace Minecraft_Clone.World
         public float baseHeight = -200f;
         public float baseAmplitude = 1024f;
 
-
         // feature generation
         public NoiseParams tallgrassNoiseParams = new NoiseParams(scale: 0.12f, octaves: 3, lacunarity: 2.5f, gain: 0.5f);
         float tallgrassThreshold = 0.05f;// grass half-band around 0.5f
@@ -83,25 +82,41 @@ namespace Minecraft_Clone.World
 
         // define a tree based on vertical slices
         private BlockType[] treeBlocks = {
-            BlockType.AIR, BlockType.AIR, BlockType.AIR,
-            BlockType.AIR, BlockType.LOG, BlockType.AIR,
-            BlockType.AIR, BlockType.AIR, BlockType.AIR,
+            BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
+            BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
+            BlockType.AIR, BlockType.AIR, BlockType.LOG, BlockType.AIR, BlockType.AIR,
+            BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
+            BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
 
-            BlockType.AIR, BlockType.AIR, BlockType.AIR,
-            BlockType.AIR, BlockType.LOG, BlockType.AIR,
-            BlockType.AIR, BlockType.AIR, BlockType.AIR,
+            BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
+            BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
+            BlockType.AIR, BlockType.AIR, BlockType.LOG, BlockType.AIR, BlockType.AIR,
+            BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
+            BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
 
-            BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES,
-            BlockType.LEAVES, BlockType.LOG, BlockType.LEAVES,
-            BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES,
+            BlockType.AIR, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.AIR,
+            BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES,
+            BlockType.LEAVES, BlockType.LEAVES, BlockType.LOG,    BlockType.LEAVES, BlockType.LEAVES,
+            BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES,
+            BlockType.AIR, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.AIR,
 
-            BlockType.AIR, BlockType.LEAVES, BlockType.AIR,
-            BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES,
-            BlockType.AIR, BlockType.LEAVES, BlockType.AIR,
+            BlockType.AIR, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.AIR,
+            BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES,
+            BlockType.LEAVES, BlockType.LEAVES, BlockType.LOG,    BlockType.LEAVES, BlockType.LEAVES,
+            BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES,
+            BlockType.AIR, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.AIR,
 
-            BlockType.AIR, BlockType.AIR, BlockType.AIR,
-            BlockType.AIR, BlockType.LEAVES, BlockType.AIR,
-            BlockType.AIR, BlockType.AIR, BlockType.AIR,
+            BlockType.AIR, BlockType.AIR, BlockType.LEAVES, BlockType.AIR, BlockType.AIR,
+            BlockType.AIR, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.AIR,
+            BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES,    BlockType.LEAVES, BlockType.LEAVES,
+            BlockType.AIR, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.AIR,
+            BlockType.AIR, BlockType.AIR, BlockType.LEAVES, BlockType.AIR, BlockType.AIR,
+
+            BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
+            BlockType.AIR, BlockType.AIR, BlockType.LEAVES, BlockType.AIR, BlockType.AIR,
+            BlockType.AIR, BlockType.LEAVES, BlockType.LEAVES,    BlockType.LEAVES, BlockType.AIR,
+            BlockType.AIR, BlockType.AIR, BlockType.LEAVES, BlockType.AIR, BlockType.AIR,
+            BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
         };
 
         private byte[] treeBlocksArray;
@@ -302,19 +317,20 @@ namespace Minecraft_Clone.World
                         {
                             //Console.WriteLine("Encountered a tree stump loc");
                             // this is a tree stump location. grow a tree from here
-                            for (int tx = 0; tx < 3; tx++)
+                            for (int tx = 0; tx < 5; tx++)
                             {
-                                for(int ty = 0; ty < 4; ty++)
+                                for(int ty = 0; ty < 6; ty++)
                                 {
-                                    for(int tz = 0; tz < 3; tz++)
+                                    for(int tz = 0; tz < 5; tz++)
                                     {
-                                        int blockidx = (ty * 3 + tz) * 3 + tx;
+                                        int blockidx = (ty * 5 + tz) * 5 + tx;
                                         var blockType = treeBlocks[blockidx];
                                         //Console.WriteLine($"tree block coord:{tx} {ty} {tz} index: {blockidx}");
-                                        if(blockType != BlockType.AIR) blocks.SetBlock((x+tx-1, y+ty, z+tz-1), blockType);
+                                        if(blockType != BlockType.AIR) blocks.SetBlock((x+tx-2, y+ty, z+tz-2), blockType);
                                     }
                                 }
                             }
+                            blocks.SetBlock((x, y - 1, z), BlockType.DIRT);
                             //Console.WriteLine("grew a tree");
                         }
                     }

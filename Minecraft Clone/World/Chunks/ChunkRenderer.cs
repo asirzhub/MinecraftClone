@@ -34,7 +34,6 @@ namespace Minecraft_Clone.World.Chunks
             // exit if there's no mesh data
             if (mesh == null || mesh.Vertices.Count == 0) return false;
 
-
             mesh.Upload();
 
             //with everything prepped, we can now render
