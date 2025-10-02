@@ -10,10 +10,14 @@ Literally just making a clone of Minecraft. Using C# and OpenTK (A wrapper for O
 7. ~~Separate solid blocks vs water/transparent render passes~~
 8. ~~Vertex-based baked lighting (ambient occlusion)~~
 9. ~~Frustrum culling~~
-10. Surface features (trees, grass, flowers)
-11. Occlusion culling?? Is this possible?
-12. Shadow mapping
-13. Post processing (tonemapping, bloom, SSR)
+10. ~~Surface features (trees, grass, flowers)~~
+16. Shadow mapping
+13. Intelligent chunk loading
+14. Caching generated chunks to disk
+11. Block placement and destruction
+12. Player collision with blocks
+15. Occlusion culling?? Is this possible?
+17. Post processing (tonemapping, bloom, SSR)
 
 ## Lessons I've learned
 ### Separate data, logic, and rendering into unique scripts
