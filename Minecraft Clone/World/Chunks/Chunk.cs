@@ -48,6 +48,7 @@ namespace Minecraft_Clone.World.Chunks
         // if a chunk is updated, it must be marked dirty (for a re-mesh)
         public bool TryMarkDirty()
         {
+            if(state == ChunkState.DIRTY) return true;
             if (LegalTransitions[ChunkState.DIRTY].Contains(state))
             {
                 SetState(ChunkState.DIRTY);
@@ -71,19 +72,19 @@ namespace Minecraft_Clone.World.Chunks
                 pendingBlocks.TryAdd(pos, newType);
         }
 
-        public void ProcessBlocks()
+        public async Task ProcessBlocks()
         {
             if (pendingBlocks == null || pendingBlocks.Count == 0)
                 return;
 
-            // otherwise, there's blocks to deal with
-            var oldPendingBlocks = pendingBlocks;
-            foreach(var kvp in oldPendingBlocks)
+            await Task.Run(async () =>
             {
-                SetBlock(kvp.Key, kvp.Value);
-                pendingBlocks.TryRemove(kvp);
-            }
-            oldPendingBlocks.Clear();
+                foreach (var kvp in pendingBlocks.ToArray())
+                {
+                    await SetBlockAsync(kvp.Key, kvp.Value);
+                    pendingBlocks.TryRemove(kvp.Key, out _);
+                }
+            });
         }
 
         // practice chunk safety: enforce state transitions
@@ -120,7 +121,7 @@ namespace Minecraft_Clone.World.Chunks
             return new Block(type);
         }
 
-        // sets the block at a given local coordinate
+        // sets the block at a given local coordinate. this should only be used on creation, everything else on async method
         public void SetBlock(int x, int y, int z, BlockType type)
         {
             if (IsEmpty && type == BlockType.AIR) return;
@@ -148,6 +149,36 @@ namespace Minecraft_Clone.World.Chunks
             blocks[(pos.Y * SIZE + pos.Z) * SIZE + pos.X] = (byte)type;
 
             TryMarkDirty();
+        }
+
+        public Task<Vector3i[]> SetBlockAsync(Vector3i pos, BlockType type)
+        {
+            if (IsEmpty && type == BlockType.AIR) return Task.FromResult(new Vector3i[0]);
+
+            if (IsEmpty)
+            {
+                IsEmpty = false;
+                blocks = new byte[SIZE * SIZE * SIZE];
+            }
+
+            blocks[(pos.Y * SIZE + pos.Z) * SIZE + pos.X] = (byte)type;
+
+            TryMarkDirty();
+            return Task.FromResult(NeighborDirtyAlert(pos));
+        }
+
+        public Vector3i[] NeighborDirtyAlert(Vector3i localCoord)
+        {
+            List<Vector3i> result = new();
+
+            if (localCoord.X == 0) result.Add(new Vector3i(-1, 0, 0));
+            if (localCoord.Y == 0) result.Add(new Vector3i(0, -1, 0));
+            if (localCoord.Z == 0) result.Add(new Vector3i(0, 0, -1));
+            if (localCoord.X == 31) result.Add(new Vector3i(1, 0, 0));
+            if (localCoord.Y == 31) result.Add(new Vector3i(0, 1, 0));
+            if (localCoord.Z == 31) result.Add(new Vector3i(0, 0, 1));
+
+            return result.ToArray();
         }
 
         // clean up meshes when removing from memory

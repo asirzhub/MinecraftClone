@@ -88,7 +88,7 @@ public class ChunkManager
             if (ActiveChunks.TryGetValue(WorldPosToChunkIndex(worldPos, out var localCoord), out var chunk))
             {
                 var state = chunk.GetState();
-                if (state == ChunkState.VISIBLE || state == ChunkState.INVISIBLE)
+                if (state == ChunkState.VISIBLE || state == ChunkState.INVISIBLE || state == ChunkState.MESHED) // be cautious but not overly about updating the pending chunk blocks
                 {
                     chunk.AddPendingBlock(localCoord, kvp.Value);
                     PendingBlocks.TryRemove(kvp.Key, out _);
@@ -216,8 +216,12 @@ public class ChunkManager
 
                     case ChunkState.VISIBLE:
                         // render visible chunks, count how many
+                        // only update the block if it's visible (lazily)
+                        resultChunk.ProcessBlocks();
+
                         var rendered = renderer.RenderChunk(resultChunk.solidMesh, camera, idx, time, sunDirection, sky);
                         if (rendered) totalRenderCalls+=1;
+
                         break;
 
                     case ChunkState.DIRTY:
@@ -236,8 +240,6 @@ public class ChunkManager
                     default:
                         break;
                 }
-
-                resultChunk.ProcessBlocks();
             }
             else
                 ActiveChunks.TryAdd(idx, new Chunk()); // adding a brand new chunk to the system
