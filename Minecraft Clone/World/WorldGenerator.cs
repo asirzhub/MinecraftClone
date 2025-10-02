@@ -49,7 +49,7 @@ namespace Minecraft_Clone.World
 
         public NoiseParams treeNoiseParams = new NoiseParams(scale: 1.5f, octaves: 2, lacunarity: 2.5f, gain: 0.8f);
         float treeThreshold = 0.75f; // tree noise greater than this value means a tree is placed
-        List<Vector2i> treeLocations;
+        List<Vector3i> treeLocations;
 
         public int seaFloorDepth = 32;
         public float seaFloorBlend = 0.2f;   // sea floor flattening
@@ -171,18 +171,6 @@ namespace Minecraft_Clone.World
             return result;
         }
 
-        public void PreComputeTreeLocations(Vector3i center, int radius)
-        {
-            for (int x = -radius; x < radius; x++)
-            {
-                for(int z = -radius; z < radius; z++)
-                {
-                    GetNoiseAt(NoiseLayer.TREE, x, z);
-                }
-            }
-        }
-
-
         public float GetNoiseAt(NoiseLayer layer, int x, int y)
         {
             noiseCacheTimer = noiseCacheLifetime; // reset timer
@@ -244,12 +232,13 @@ namespace Minecraft_Clone.World
             if (y > h)
             {
                 if (y <= seaLevel) return BlockType.WATER;
-                if (y == h + 1 && y > seaLevel + beachHalfWidth + 1 && GetBlockAtWorldPos(pos + (0, -1, 0)) == BlockType.GRASS)
+                if (y == h + 1 && y > seaLevel + beachHalfWidth + 1)
                 {
                     float t = GetNoiseAt(NoiseLayer.TREE, x, z);
                     if (t > treeThreshold && slope < 2f)
                     {
-                        MarkTreePos((x, z));
+                        Console.WriteLine($"Added a tree at coords: {(x, y, z)}");
+                        MarkTreePos((x, y, z));
                     }
                 }
                 return BlockType.AIR;
@@ -291,9 +280,6 @@ namespace Minecraft_Clone.World
         public ChunkGenerator.CompletedChunkBlocks GrowFlora(ChunkGenerator.CompletedChunkBlocks blocks)
         {
             var worldOffset = blocks.index * Chunk.SIZE;
-            Vector2i worldOffsetFlat = (worldOffset.X, worldOffset.Z);
-
-            List<Vector2i> treeLocationsSnapshot = treeLocations;
 
             for (byte x = 0; x < Chunk.SIZE; x++)
             {
@@ -301,15 +287,24 @@ namespace Minecraft_Clone.World
                 {
                     for (byte z = 0; z < Chunk.SIZE; z++)
                     {
-                        if (blocks.GetBlock(x, y-1, z).Type == BlockType.GRASS) // stuff can only grow on grass or something
+                        var treePos = worldOffset + (x, y, z);
+
+                        bool growableSurface = blocks.GetBlock(x, y - 1, z).Type == BlockType.GRASS;
+
+                        //// determine if there's tallgrass here
+                        if (growableSurface)
                         {
-                            // determine if there's tallgrass here
                             float f = GetNoiseAt(NoiseLayer.TALLGRASS, worldOffset.X + x, worldOffset.Z + z);
                             if (f > 0.5f - tallgrassThreshold && f < 0.5f + tallgrassThreshold)
                                 blocks.SetBlock((x, y, z), BlockType.TALLGRASS);
+                        }
 
-                            // determine if this is a tree stump location, if so then grow a tree from here
-                            if (treeLocationsSnapshot.Contains(worldOffsetFlat + (x, z)))
+                        if (treeLocations.Contains(treePos))
+                        {
+                            Console.WriteLine($"found a tree at {(treePos)}");
+                            treeLocations.Remove(treePos);
+
+                            if (growableSurface)
                             {
                                 for (int tx = 0; tx < 5; tx++)
                                 {
@@ -319,22 +314,22 @@ namespace Minecraft_Clone.World
                                         {
                                             int blockidx = (ty * 5 + tz) * 5 + tx;
                                             var blockType = treeBlocks[blockidx];
-                                            //Console.WriteLine($"tree block coord:{tx} {ty} {tz} index: {blockidx}");
                                             if (blockType != BlockType.AIR) blocks.SetBlock((x + tx - 2, y + ty, z + tz - 2), blockType);
                                         }
                                     }
                                 }
                                 blocks.SetBlock((x, y - 1, z), BlockType.DIRT);
-                                // remove the tree location from memory since it's been planted
-                                treeLocations.Remove(worldOffsetFlat + (x, z));
                             }
                         }
+
                     }
                 }
             }
 
             return blocks;
         }
+
+        
 
         public Vector3i WorldPosToChunkIndex(Vector3i worldIndex, int chunkSize = Chunk.SIZE)
         {
@@ -345,7 +340,7 @@ namespace Minecraft_Clone.World
             return (chunkX, chunkY, chunkZ);
         }
 
-        public void MarkTreePos(Vector2i position)
+        public void MarkTreePos(Vector3i position)
         {
             if (!treeLocations.Contains(position))
             {
