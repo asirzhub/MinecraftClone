@@ -244,7 +244,7 @@ namespace Minecraft_Clone.World
             if (y > h)
             {
                 if (y <= seaLevel) return BlockType.WATER;
-                if (y == h + 1 && y > seaLevel + beachHalfWidth + 1)
+                if (y == h + 1 && y > seaLevel + beachHalfWidth + 1 && GetBlockAtWorldPos(pos + (0, -1, 0)) == BlockType.GRASS)
                 {
                     float t = GetNoiseAt(NoiseLayer.TREE, x, z);
                     if (t > treeThreshold && slope < 2f)

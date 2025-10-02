@@ -121,7 +121,12 @@ namespace Minecraft_Clone.World.Chunks
         public Block GetBlock(int x, int y, int z)
         {
             if (IsEmpty) return new Block(BlockType.AIR);
-            var type = (BlockType)blocks[(y * SIZE + z) * SIZE + x];
+
+            BlockType type = BlockType.AIR;
+
+            if(blocks!=null) // added this check since there's a random error here sometimes that blocks[] is null... but the debugger clearly shows blocks exists. idfk.
+                type = (BlockType)blocks[(y * SIZE + z) * SIZE + x];
+
             return new Block(type);
         }
 
