@@ -1,13 +1,7 @@
 ﻿using Minecraft_Clone.Graphics;
 using OpenTK.Mathematics;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using static Minecraft_Clone.Graphics.VBO;
-using static Minecraft_Clone.World.Chunks.ChunkGenerator;
 
 namespace Minecraft_Clone.World.Chunks
 {
@@ -41,7 +35,7 @@ namespace Minecraft_Clone.World.Chunks
         // chunk mesher kick-off fxn
         public Task MeshTask(Vector3i index, ChunkManager manager, 
             CancellationTokenSource cts, ConcurrentQueue<CompletedMesh> queue, 
-            ConcurrentDictionary<Vector3i, Chunk> ActiveChunks, List<Chunk> chunkList,
+            ConcurrentDictionary<Vector3i, Chunk> ActiveChunks,
             byte LOD = 1)
         {
             Chunk thisChunk = ActiveChunks[index];
@@ -57,7 +51,7 @@ namespace Minecraft_Clone.World.Chunks
             return Task.Run(async () =>
             {
 
-                var result = await BuildMesh(index, manager, chunkList, cts.Token, LOD);
+                var result = await BuildMesh(index, manager, cts.Token, LOD);
 
                 queue.Enqueue(result);
 
@@ -66,19 +60,13 @@ namespace Minecraft_Clone.World.Chunks
             });
         }
 
-        Task<CompletedMesh> BuildMesh(Vector3i chunkIndex, ChunkManager manager, List<Chunk> chunks, CancellationToken token, byte LOD)
+        // naive meshing
+        Task<CompletedMesh> BuildMesh(Vector3i chunkIndex, ChunkManager manager, CancellationToken token, byte LOD)
         {
-            // no remeshing visible chunks
-            bool thisChunkExists = manager.TryGetChunkAtIndex(chunkIndex, out var chunk);
+            manager.TryGetChunkAtIndex(chunkIndex, out var chunk);
             return Task.Run(async () =>
             {
                 Vector3i localOrigin = chunkIndex * Chunk.SIZE;
-                bool forwardChunkExists = manager.TryGetChunkAtIndex(chunkIndex + new Vector3i(0, 0, 1), out Chunk forwardChunk);
-                bool rearChunkExists = manager.TryGetChunkAtIndex(chunkIndex + new Vector3i(0, 0, -1), out Chunk rearChunk);
-                bool leftChunkExists = manager.TryGetChunkAtIndex(chunkIndex + new Vector3i(-1, 0, 0), out Chunk leftChunk);
-                bool rightChunkExists = manager.TryGetChunkAtIndex(chunkIndex + new Vector3i(+1, 0, 0), out Chunk rightChunk);
-                bool topChunkExists = manager.TryGetChunkAtIndex(chunkIndex + new Vector3i(0, +1, 0), out Chunk topChunk);
-                bool belowChunkExists = manager.TryGetChunkAtIndex(chunkIndex + new Vector3i(0, -1, 0), out Chunk belowChunk);
 
                 int seaLevel = manager.worldGenerator.seaLevel;
 
@@ -91,11 +79,12 @@ namespace Minecraft_Clone.World.Chunks
                 // local chunk coordinate 
                 for (byte x = 0; x < Chunk.SIZE; x+=LOD)
                 {
+                    if (token.IsCancellationRequested) break; // early exit
+
                     for (byte y = 0; y < Chunk.SIZE; y+=LOD)
                     {
                         for (byte z = 0; z < Chunk.SIZE; z+=LOD)
                         {
-                            token.ThrowIfCancellationRequested();
 
                             Block block = chunk.GetBlock(x, y, z);
                             if (block.Type == BlockType.AIR) // skip air
@@ -284,7 +273,5 @@ namespace Minecraft_Clone.World.Chunks
                 return new CompletedMesh(chunkIndex, solidResult, liquidResult);
             });
         }
-
-        //===============================================================================================
     }
 }

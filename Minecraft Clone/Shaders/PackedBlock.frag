@@ -43,7 +43,7 @@ void main()
 
     vec4 skyLighting = vec4(faceBrightness * vec3(sunsetColor) + daytime * ambientColor, 1);
 
-    float dist = 1.0 - exp(min((-distance(cameraPos, worldPos.xyz)+50)/100 - worldPos.y/512.0, 0)) ;
+    float dist = 1.0 - exp(min((-distance(cameraPos, worldPos.xyz)+100)/150 - worldPos.y/512.0, 0)) ;
 
     vec3 finalFogColor = fogColor + vec3(0.0, 0.0, 1/dist) ;
 

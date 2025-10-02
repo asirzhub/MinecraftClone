@@ -81,6 +81,7 @@ namespace Minecraft_Clone.World
         readonly Vector2[] controlPoints;
 
         // define a tree based on vertical slices
+        // I need to find a better way to do things
         private BlockType[] treeBlocks = {
             BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
             BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
@@ -249,13 +250,7 @@ namespace Minecraft_Clone.World
                     if (t > treeThreshold && slope < 2f)
                     {
                         MarkTreePos((x, z));
-                        //return BlockType.LOG;
                     }
-
-                    float f = GetNoiseAt(NoiseLayer.TALLGRASS, x, z);
-                    if (y < mountainHeightStart &&
-                        f > 0.5f - tallgrassThreshold && f < 0.5f + tallgrassThreshold)
-                        return BlockType.TALLGRASS;
                 }
                 return BlockType.AIR;
             }
@@ -267,9 +262,6 @@ namespace Minecraft_Clone.World
                 if (y >= h - subsoilDepth) return BlockType.SAND;
             }
 
-            if (slope > 0.9)
-                return BlockType.STONE;
-
             // normal surface
             if (y == h)
             {
@@ -277,14 +269,10 @@ namespace Minecraft_Clone.World
                 if (h >= mountainHeightStart)
                 {
                     if (h > seaLevel + 1 && y >= mountainHeightStart + snowLineOffset) return BlockType.SNOW;
-
-                    float m = GetNoiseAt(NoiseLayer.MOUNTAINBLEND, x, z);
-                    if (m > 1.0f)
-                    {
-                        return BlockType.STONE;
-                    }
+                    return BlockType.STONE;
                 }
 
+                // normal grass surface
                 if (h > seaLevel + 1) return BlockType.GRASS;
 
                 // underwater
@@ -292,19 +280,20 @@ namespace Minecraft_Clone.World
                 else if (slope < 0.6) return BlockType.DIRT;
                 return BlockType.STONE;
             }
+
             // subsoil
             if (y >= h - subsoilDepth && y < mountainHeightStart) return BlockType.DIRT;
 
             return BlockType.STONE;
         }
 
+        // grows trees
         public ChunkGenerator.CompletedChunkBlocks GrowFlora(ChunkGenerator.CompletedChunkBlocks blocks)
         {
             var worldOffset = blocks.index * Chunk.SIZE;
             Vector2i worldOffsetFlat = (worldOffset.X, worldOffset.Z);
-            // have: chunk index
-            // need: each block's world position
-            //       -> given by the chunk's index * size + local coord
+
+            List<Vector2i> treeLocationsSnapshot = treeLocations;
 
             for (byte x = 0; x < Chunk.SIZE; x++)
             {
@@ -312,26 +301,33 @@ namespace Minecraft_Clone.World
                 {
                     for (byte z = 0; z < Chunk.SIZE; z++)
                     {
-                        if (blocks.GetBlock(x, y-1, z).Type == BlockType.GRASS 
-                            && treeLocations.Contains(worldOffsetFlat + (x, z)))
+                        if (blocks.GetBlock(x, y-1, z).Type == BlockType.GRASS) // stuff can only grow on grass or something
                         {
-                            //Console.WriteLine("Encountered a tree stump loc");
-                            // this is a tree stump location. grow a tree from here
-                            for (int tx = 0; tx < 5; tx++)
+                            // determine if there's tallgrass here
+                            float f = GetNoiseAt(NoiseLayer.TALLGRASS, worldOffset.X + x, worldOffset.Z + z);
+                            if (f > 0.5f - tallgrassThreshold && f < 0.5f + tallgrassThreshold)
+                                blocks.SetBlock((x, y, z), BlockType.TALLGRASS);
+
+                            // determine if this is a tree stump location, if so then grow a tree from here
+                            if (treeLocations.Contains(worldOffsetFlat + (x, z)))
                             {
-                                for(int ty = 0; ty < 6; ty++)
+                                for (int tx = 0; tx < 5; tx++)
                                 {
-                                    for(int tz = 0; tz < 5; tz++)
+                                    for (int ty = 0; ty < 6; ty++)
                                     {
-                                        int blockidx = (ty * 5 + tz) * 5 + tx;
-                                        var blockType = treeBlocks[blockidx];
-                                        //Console.WriteLine($"tree block coord:{tx} {ty} {tz} index: {blockidx}");
-                                        if(blockType != BlockType.AIR) blocks.SetBlock((x+tx-2, y+ty, z+tz-2), blockType);
+                                        for (int tz = 0; tz < 5; tz++)
+                                        {
+                                            int blockidx = (ty * 5 + tz) * 5 + tx;
+                                            var blockType = treeBlocks[blockidx];
+                                            //Console.WriteLine($"tree block coord:{tx} {ty} {tz} index: {blockidx}");
+                                            if (blockType != BlockType.AIR) blocks.SetBlock((x + tx - 2, y + ty, z + tz - 2), blockType);
+                                        }
                                     }
                                 }
+                                blocks.SetBlock((x, y - 1, z), BlockType.DIRT);
+                                // remove the tree location from memory since it's been planted
+                                treeLocations.Remove(worldOffsetFlat);
                             }
-                            blocks.SetBlock((x, y - 1, z), BlockType.DIRT);
-                            //Console.WriteLine("grew a tree");
                         }
                     }
                 }

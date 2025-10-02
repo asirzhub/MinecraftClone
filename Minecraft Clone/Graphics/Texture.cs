@@ -8,7 +8,10 @@ namespace Minecraft_Clone.Graphics
         public int ID;
         string pathPrefix = "../../../Textures/";
 
-        public void Bind() => GL.BindTexture(TextureTarget.Texture2D, ID);
+        public void Bind() {
+            GL.BindTexture(TextureTarget.Texture2D, ID);
+            GL.GenerateMipmap(GenerateMipmapTarget.Texture2D); 
+        }
         public void UnBind() => GL.BindTexture(TextureTarget.Texture2D, 0);
         public void Delete() => GL.DeleteTexture(ID);
 

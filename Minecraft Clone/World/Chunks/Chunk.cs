@@ -1,8 +1,6 @@
 ﻿using Minecraft_Clone.Graphics;
 using OpenTK.Mathematics;
 using System.Collections.Concurrent;
-using static Minecraft_Clone.Graphics.CubeMesh;
-using static Minecraft_Clone.Graphics.VBO;
 
 namespace Minecraft_Clone.World.Chunks
 {
@@ -25,10 +23,12 @@ namespace Minecraft_Clone.World.Chunks
     {
         public const int SIZE = 32; // same size in all coordinates
         private ChunkState state;
+
         public ChunkState GetState() { return state; } // protect the state from being directly modified
+        
         public bool NeighborReady => !((state == ChunkState.BIRTH) || (state == ChunkState.GENERATING));// can the neighbor query this block for block existence?
 
-        public ConcurrentDictionary<Vector3i, BlockType> pendingBlocks;
+        public ConcurrentDictionary<Vector3i, BlockType> pendingBlocks; // blocks that the chunk needs to update with
 
         // is the chunk empty?
         public bool IsEmpty { 
@@ -42,8 +42,6 @@ namespace Minecraft_Clone.World.Chunks
         // Chunks store their mesh data
         public MeshData solidMesh;
         public MeshData liquidMesh;
-
-        public bool hasMeshes => solidMesh != null && liquidMesh != null;
 
         // if a chunk is updated, it must be marked dirty (for a re-mesh)
         public bool TryMarkDirty()
@@ -72,7 +70,8 @@ namespace Minecraft_Clone.World.Chunks
                 pendingBlocks.TryAdd(pos, newType);
         }
 
-        public async Task<List<Vector3i>?> ProcessBlocks()
+        // really need a better function name
+        public async Task<List<Vector3i>?> ProcessPendingBlocksAndGetDirtyNeighbors()
         {
             if (pendingBlocks == null || pendingBlocks.Count == 0)
                 return null;
@@ -82,7 +81,7 @@ namespace Minecraft_Clone.World.Chunks
                 List<Vector3i> dirtyNeighbors = new();
                 foreach (var kvp in pendingBlocks.ToArray())
                 {
-                    var neighbors = await SetBlockAsync(kvp.Key, kvp.Value);
+                    var neighbors = await SetBlockAsyncAndGetDirtyNeighbors(kvp.Key, kvp.Value);
                     foreach(var neighbor in neighbors) if (!dirtyNeighbors.Contains(neighbor)) dirtyNeighbors.Add(neighbor);
                     pendingBlocks.TryRemove(kvp.Key, out _);
                 }
@@ -115,7 +114,7 @@ namespace Minecraft_Clone.World.Chunks
                 state = NewState;
         }
 
-        // default new chunk state is generating state... maybe later add "READING" to read from disk cache
+        // default new chunk state is birth state... maybe later add "READING" to read from disk cache
         public Chunk(ChunkState state = ChunkState.BIRTH) { this.state = state; }
 
         // returns a block at the gievn local coordinate
@@ -141,22 +140,7 @@ namespace Minecraft_Clone.World.Chunks
             TryMarkDirty();
         }
 
-        public void SetBlock(Vector3i pos, BlockType type)
-        {
-            if (IsEmpty && type == BlockType.AIR) return;
-
-            if (IsEmpty)
-            {
-                IsEmpty = false;
-                blocks = new byte[SIZE * SIZE * SIZE];
-            }
-
-            blocks[(pos.Y * SIZE + pos.Z) * SIZE + pos.X] = (byte)type;
-
-            TryMarkDirty();
-        }
-
-        public Task<List<Vector3i>> SetBlockAsync(Vector3i pos, BlockType type)
+        public Task<List<Vector3i>> SetBlockAsyncAndGetDirtyNeighbors(Vector3i pos, BlockType type)
         {
             if (IsEmpty && type == BlockType.AIR) return Task.FromResult(new List<Vector3i>());
 
@@ -172,6 +156,7 @@ namespace Minecraft_Clone.World.Chunks
             return Task.FromResult(NeighborDirtyAlert(pos));
         }
 
+        // helper function to determine if neighbors must be marked dirty also (border block updates)
         public List<Vector3i> NeighborDirtyAlert(Vector3i localCoord)
         {
             List<Vector3i> result = new();

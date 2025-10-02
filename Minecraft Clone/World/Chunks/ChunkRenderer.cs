@@ -1,8 +1,6 @@
 ﻿using Minecraft_Clone.Graphics;
-using System.Runtime.InteropServices;
 using OpenTK.Mathematics;
 using OpenTK.Graphics.OpenGL4;
-using OpenTK.Windowing.Common;
 
 namespace Minecraft_Clone.World.Chunks
 {
@@ -12,10 +10,11 @@ namespace Minecraft_Clone.World.Chunks
         public Texture blockTexture;
         public Shader blockShader;
 
-        public float waterOffset = 0.15f;
-        public float waterWaveAmplitude = 0.05f;
-        public float waterWaveScale = 0.1f;
-        public float waterWaveSpeed = 0.5f;
+        // some parameters
+        public float waterOffset = 0.15f; // water surface offset from top edge of blocks
+        public float waterWaveAmplitude = 0.1f; // how much water (and foliage...) deviates from origin
+        public float waterWaveScale = 0.1f; // world-size scale of sine waves
+        public float waterWaveSpeed = 0.5f; // speed at which oscillations travel
 
         public ChunkRenderer()
         {
@@ -52,9 +51,7 @@ namespace Minecraft_Clone.World.Chunks
             blockShader.SetFloat("u_waveSpeed", waterWaveSpeed);
             blockShader.SetVector3("sunDirection", sunDirection);
             blockShader.SetVector3("ambientColor", new(1.0f, 1.1f, 1.3f)); 
-            blockShader.SetVector3("sunsetColor", new(0.5f, 0.2f, 0.1f)); 
-            float upness = MathF.Abs(Vector3.Dot(Vector3.NormalizeFast(sunDirection + Vector3.UnitY * 0.5f), Vector3.UnitY));
-
+            blockShader.SetVector3("sunsetColor", new(0.1f, 0.0f, 0.0f)); 
             blockShader.SetVector3("fogColor", sky.finalH);
 
             mesh.vao.Bind();

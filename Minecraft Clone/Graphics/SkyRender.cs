@@ -11,7 +11,6 @@ namespace Minecraft_Clone.Graphics
 
         public Vector3 sunDirection;
 
-        // Inputs you set somewhere:
         Vector3 dayHorizon = new(0.50f, 0.70f, 1.00f);
         Vector3 dayZenith = new(0.30f, 0.50f, 1.00f);
         Vector3 nightHorizon = new(0.05f, 0.10f, 0.20f);

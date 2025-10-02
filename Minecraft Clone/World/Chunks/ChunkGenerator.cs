@@ -1,16 +1,11 @@
 ﻿using OpenTK.Mathematics;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Minecraft_Clone.World.Chunks
 {
     public class ChunkGenerator
     {
-        // chunk block generation delivery class
+        // chunk block generation delivery class. Very similar to Chunk class but includes featured flag and the chunk index which the data should go into
         public class CompletedChunkBlocks
         {
             public Vector3i index;
@@ -46,6 +41,9 @@ namespace Minecraft_Clone.World.Chunks
             // returns true if successfully placed in the chunk, false if it spilled over into a neighbor
             public bool SetBlock(Vector3i localPos, BlockType type)
             {
+                if (blocks == null)
+                    blocks = new byte[Chunk.SIZE * Chunk.SIZE * Chunk.SIZE];
+
                 // if it's out of chunk bounds, store it for later
                 if (localPos.X >= Chunk.SIZE || localPos.Y >= Chunk.SIZE || localPos.Z >= Chunk.SIZE ||
                     localPos.X < 0 || localPos.Y < 0 || localPos.Z < 0)
@@ -102,7 +100,7 @@ namespace Minecraft_Clone.World.Chunks
             return new CompletedChunkBlocks(chunkIndex, tempChunk.blocks, tempChunk.IsEmpty);
         }
 
-        // chunk's block generation kick-off fxn
+        // chunk's block featuring (grass, trees, etc) kick-off fxn
         public Task FeatureTask(CompletedChunkBlocks chunkBlocks, CancellationTokenSource cts, WorldGenerator worldGenerator, ConcurrentQueue<CompletedChunkBlocks> queue)
         {
             // async wrapper for the long part of the operation
@@ -113,7 +111,7 @@ namespace Minecraft_Clone.World.Chunks
             });
         }
 
-        // generates the blocks for a given chunk and world generator 
+        // places the features for a given chunk and world generator. world generation should house the functions for generating features
         async Task<CompletedChunkBlocks> FeatureBlocks(CompletedChunkBlocks chunkBlocks, CancellationToken token, WorldGenerator worldGenerator)
         {
             var result = worldGenerator.GrowFlora(chunkBlocks);

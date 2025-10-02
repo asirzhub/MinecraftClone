@@ -4,17 +4,10 @@ using Minecraft_Clone.World;
 using Minecraft_Clone.World.Chunks;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
-using SixLabors.ImageSharp.PixelFormats;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Diagnostics.Contracts;
-using static Minecraft_Clone.Graphics.VBO;
 
 public class ChunkManager
 {
-    // needs no introduction
     public ChunkRenderer renderer = new ChunkRenderer();
     public ChunkGenerator generator = new ChunkGenerator();
     public ChunkMesher mesher = new ChunkMesher();
@@ -26,26 +19,27 @@ public class ChunkManager
     public int maxChunkTasks;
     public bool chunkTasksHalved = false;
     public float chunkTaskHalftime = 20f;// after 20 seconds, half the chunk tasks (prioritize speed at first, then smoothness)
-    public float expiryTime = 2f; // how long a chunk can be "inactive" before disposed from ram?
+    public float expiryTime = 2f; // how long a chunk can be "inactive" (seconds) before disposed from ram?
 
     // independant lists to keep track of chunks that actually matter
     List<Vector3i> ActiveChunksIndices = new List<Vector3i>();
     List<Vector3i> LastActivationChunksIndices = new List<Vector3i>();
 
-    // store every chunk instance in Chunks:
+    // link every chunk to its index
     ConcurrentDictionary<Vector3i, Chunk> ActiveChunks = new ConcurrentDictionary<Vector3i, Chunk>();
     
-    // also store a list for chunks that are about to be deleted from memory (hysterisis/thrashing management)
+    // also store a list for the indexes of chunks that are about to be deleted from memory due to being too far (hysterisis/thrashing management)
     ConcurrentDictionary<Vector3i, float> ExpiredChunkLifetimes = new ConcurrentDictionary<Vector3i, float>();
 
     // worker threads deposit results in these
-    ConcurrentQueue<ChunkGenerator.CompletedChunkBlocks> CompletedBlocksQueue = new();
-    ConcurrentQueue<ChunkMesher.CompletedMesh> CompletedMeshQueue = new();
+    ConcurrentQueue<ChunkGenerator.CompletedChunkBlocks> CompletedBlocksQueue = new(); // terrain generated and featured chunk data
+    ConcurrentQueue<ChunkMesher.CompletedMesh> CompletedMeshQueue = new(); // mesh data from block data
 
     // worker tasks list to control the number of worker threads
     ConcurrentDictionary<Vector3i, Task> RunningTasks = new();
     ConcurrentDictionary<Vector3i, CancellationTokenSource> RunningTasksCTS = new();
 
+    // global block queue that delivers pending blocks to their chunks eventually
     ConcurrentDictionary<Vector3i, BlockType> PendingBlocks = new();
 
     public int taskCount => RunningTasks.Count;
@@ -59,12 +53,11 @@ public class ChunkManager
                                 (int)MathF.Floor(camera.position.X),
                                 (int)MathF.Floor(camera.position.Y),
                                 (int)MathF.Floor(camera.position.Z)), out _); ; // first index in the list is always the center index  
-
-        worldGenerator.PreComputeTreeLocations(currentChunkIndex, radius);
     }
 
     // fun stat
     public int totalRenderCalls = 0;
+
     public void Update(Camera camera, float frameTime, float time, Vector3 sunDirection, SkyRender sky)
     {
         totalRenderCalls = 0;
@@ -96,7 +89,7 @@ public class ChunkManager
             }
         }
 
-        bool updateIndices = currentChunkIndex != lastChunkIndex; // relevant chunk indices refreshed every 2 seconds
+        bool updateIndices = currentChunkIndex != lastChunkIndex; // refresh active chunks list when the camera moves between two chunks
 
         if (updateIndices)
             ActiveChunksIndices = ListActiveChunksIndices(camera.position, radius, radius / 2);
@@ -104,7 +97,7 @@ public class ChunkManager
         currentChunkIndex = WorldPosToChunkIndex((
                                 (int)MathF.Floor(camera.position.X),
                                 (int)MathF.Floor(camera.position.Y),
-                                (int)MathF.Floor(camera.position.Z)), out _); ; // first index in the list is always the center index  
+                                (int)MathF.Floor(camera.position.Z)), out _); ;
 
         // for each CompletedChunkBlocks, move data from the queue into the respective chunk. MARK STATE
         while (CompletedBlocksQueue.TryDequeue(out var completedBlocks))
@@ -176,8 +169,8 @@ public class ChunkManager
 
                         break;
                     case ChunkState.GENERATED:
-                        // if the chunk has blocks neighbors with blocks and theres room for a task, make mesh for it
-                        if (AreNeighborsGenerated(idx) && RunningTasks.Count < maxChunkTasks)
+                        // if the chunk has terrain blocks and theres room for a task, start feature task for it
+                        if (RunningTasks.Count < maxChunkTasks)
                         {
                             resultChunk.SetState(ChunkState.FEATURING);
                             CancellationTokenSource cts = new CancellationTokenSource();
@@ -186,38 +179,40 @@ public class ChunkManager
                         }
                         break;
                     case ChunkState.FEATURED:
-                        // if the chunk has blocks neighbors with blocks and theres room for a task, make mesh for it
+                        // if the chunk has terrain + feature blocks, neighbors have blocks, and theres room for a task, make mesh for it
                         if (AreNeighborsGenerated(idx) && RunningTasks.Count < maxChunkTasks)
                         {
                             resultChunk.SetState(ChunkState.MESHING);
                             CancellationTokenSource cts = new CancellationTokenSource();
                             RunningTasksCTS.TryAdd(idx, cts);
-                            RunningTasks.TryAdd(idx, mesher.MeshTask(idx, this, cts, CompletedMeshQueue, ActiveChunks, ChunkList(), LOD: 1));
+                            RunningTasks.TryAdd(idx, mesher.MeshTask(idx, this, cts, CompletedMeshQueue, ActiveChunks, LOD: 1));
                         }
                         break;
                     case ChunkState.MESHING:
-
+                        // avoid flashing chunks by rendering their old mesh while a new one is made
                         var meshingRendered = renderer.RenderChunk(resultChunk.solidMesh, camera, idx, time, sunDirection, sky);
                         if (meshingRendered) totalRenderCalls += 1;
 
                         break;
                     case ChunkState.MESHED:
-                        // mark chunks with no mesh (all air) as invisible
-
                         resultChunk.SetState(ChunkState.VISIBLE);
+
+                        // mark chunks with no mesh (all air) as invisible
                         if (resultChunk.IsEmpty)
                             resultChunk.SetState(ChunkState.INVISIBLE);
 
-                        var oldRendered = renderer.RenderChunk(resultChunk.solidMesh, camera, idx, time, sunDirection, sky);
-                        if (oldRendered) totalRenderCalls += 1;
+                        var meshedRender = renderer.RenderChunk(resultChunk.solidMesh, camera, idx, time, sunDirection, sky);
+                        if (meshedRender) totalRenderCalls += 1;
                         
                         break;
 
                     case ChunkState.VISIBLE:
                         // render visible chunks, count how many
-                        // only update the block if it's visible (lazily)
+                        // only update the blocks if it's visible (lazy chunk update)
                         // also mark neighboring chunks dirty if the processed blocks do anything at the boundaries
-                        var dirtyNeighbors = resultChunk.ProcessBlocks();
+
+                        var dirtyNeighbors = resultChunk.ProcessPendingBlocksAndGetDirtyNeighbors(); 
+
                         if(dirtyNeighbors.Result !=null && dirtyNeighbors.Result.Count > 0)
                             foreach(var direction in dirtyNeighbors.Result)
                                 if (ActiveChunks.TryGetValue(idx + direction, out var chunk))
@@ -233,12 +228,13 @@ public class ChunkManager
                         var dirtyRendered = renderer.RenderChunk(resultChunk.solidMesh, camera, idx, time, sunDirection, sky);
                         if (dirtyRendered) totalRenderCalls += 1;
 
+                        // dirty chunks need to get re-meshed
                         if (AreNeighborsGenerated(idx) && RunningTasks.Count < maxChunkTasks)
                         {
                             resultChunk.SetState(ChunkState.MESHING);
                             CancellationTokenSource cts = new CancellationTokenSource();
                             RunningTasksCTS.TryAdd(idx, cts);
-                            RunningTasks.TryAdd(idx, mesher.MeshTask(idx, this, cts, CompletedMeshQueue, ActiveChunks, ChunkList(), LOD: 1));
+                            RunningTasks.TryAdd(idx, mesher.MeshTask(idx, this, cts, CompletedMeshQueue, ActiveChunks, LOD: 1));
                         }
                         break;
                     default:
@@ -260,7 +256,7 @@ public class ChunkManager
 
         GL.DepthMask(true);
 
-        // assign expired chunks to expiry list
+        // assign expired chunks to expiry list if they're not in the current list
         foreach (var idx in LastActivationChunksIndices)
         {
             if (!ActiveChunksIndices.Contains(idx))
@@ -330,7 +326,7 @@ public class ChunkManager
         return true;
     }
 
-    // chunk disposal involves deleting all the chunk information from ram
+    // chunk disposal involves deleting all the chunk information from ram (blocks, meshes, tasks)
     public void DisposeChunk(Vector3i index)
     {
         if (ActiveChunks.TryRemove(index, out var chunk))
@@ -402,9 +398,7 @@ public class ChunkManager
 
         if (exists)
         {
-#pragma warning disable CS8601 // Possible null reference assignment.
             result = chunk;
-#pragma warning restore CS8601 // Possible null reference assignment.
             return true;
         }
         return false;
@@ -447,15 +441,5 @@ public class ChunkManager
             return true;
         }
         return false;
-    }
-
-    // translates the existing chunk dictionary intp just chunks list
-    List<Chunk> ChunkList()
-    {
-        var result = new List<Chunk>();
-        foreach (var chunk in ActiveChunks.Values)
-            result.Add(chunk);
-
-        return result;
     }
 }

@@ -48,7 +48,7 @@ namespace Minecraft_Clone
 
             CursorState = CursorState.Grabbed;
 
-            VSync = VSyncMode.On;
+            //VSync = VSyncMode.On; // only needed when i dont want my laptop to turn into a jet engine at the library
             GL.Enable(EnableCap.DepthTest);
             //GL.Enable(EnableCap.CullFace);
             GL.Enable(EnableCap.Blend);
