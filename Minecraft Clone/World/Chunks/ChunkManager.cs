@@ -95,7 +95,6 @@ public class ChunkManager
                 }
             }
         }
-        oldPendingBlocks.Clear();
 
         bool updateIndices = currentChunkIndex != lastChunkIndex; // relevant chunk indices refreshed every 2 seconds
 
