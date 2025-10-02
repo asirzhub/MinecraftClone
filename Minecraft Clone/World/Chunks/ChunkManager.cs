@@ -170,7 +170,7 @@ public class ChunkManager
                         break;
                     case ChunkState.GENERATED:
                         // if the chunk has terrain blocks and theres room for a task, start feature task for it
-                        if (RunningTasks.Count < maxChunkTasks)
+                        if (AreNeighborsGenerated(idx) && RunningTasks.Count < maxChunkTasks)
                         {
                             resultChunk.SetState(ChunkState.FEATURING);
                             CancellationTokenSource cts = new CancellationTokenSource();

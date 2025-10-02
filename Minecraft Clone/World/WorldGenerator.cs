@@ -309,7 +309,7 @@ namespace Minecraft_Clone.World
                                 blocks.SetBlock((x, y, z), BlockType.TALLGRASS);
 
                             // determine if this is a tree stump location, if so then grow a tree from here
-                            if (treeLocations.Contains(worldOffsetFlat + (x, z)))
+                            if (treeLocationsSnapshot.Contains(worldOffsetFlat + (x, z)))
                             {
                                 for (int tx = 0; tx < 5; tx++)
                                 {
@@ -326,7 +326,7 @@ namespace Minecraft_Clone.World
                                 }
                                 blocks.SetBlock((x, y - 1, z), BlockType.DIRT);
                                 // remove the tree location from memory since it's been planted
-                                treeLocations.Remove(worldOffsetFlat);
+                                treeLocations.Remove(worldOffsetFlat + (x, z));
                             }
                         }
                     }
@@ -364,6 +364,8 @@ namespace Minecraft_Clone.World
                 noiseCaches.Clear();
                 heightCache.Clear();
             }
+
+            Console.WriteLine($"trees stored in memory: {treeLocations.Count}");
         }
 
         private static float Clamp(float v, float min, float max) => v < min ? min : (v > max ? max : v);
