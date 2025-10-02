@@ -216,7 +216,12 @@ public class ChunkManager
                     case ChunkState.VISIBLE:
                         // render visible chunks, count how many
                         // only update the block if it's visible (lazily)
-                        resultChunk.ProcessBlocks();
+                        // also mark neighboring chunks dirty if the processed blocks do anything at the boundaries
+                        var dirtyNeighbors = resultChunk.ProcessBlocks();
+                        if(dirtyNeighbors.Result !=null && dirtyNeighbors.Result.Count > 0)
+                            foreach(var direction in dirtyNeighbors.Result)
+                                if (ActiveChunks.TryGetValue(idx + direction, out var chunk))
+                                    chunk.TryMarkDirty();                            
 
                         var rendered = renderer.RenderChunk(resultChunk.solidMesh, camera, idx, time, sunDirection, sky);
                         if (rendered) totalRenderCalls+=1;

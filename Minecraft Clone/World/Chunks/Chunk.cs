@@ -72,19 +72,24 @@ namespace Minecraft_Clone.World.Chunks
                 pendingBlocks.TryAdd(pos, newType);
         }
 
-        public async Task ProcessBlocks()
+        public async Task<List<Vector3i>?> ProcessBlocks()
         {
             if (pendingBlocks == null || pendingBlocks.Count == 0)
-                return;
+                return null;
 
-            await Task.Run(async () =>
+            var result = await Task.Run(async () =>
             {
+                List<Vector3i> dirtyNeighbors = new();
                 foreach (var kvp in pendingBlocks.ToArray())
                 {
-                    await SetBlockAsync(kvp.Key, kvp.Value);
+                    var neighbors = await SetBlockAsync(kvp.Key, kvp.Value);
+                    foreach(var neighbor in neighbors) if (!dirtyNeighbors.Contains(neighbor)) dirtyNeighbors.Add(neighbor);
                     pendingBlocks.TryRemove(kvp.Key, out _);
                 }
+                return dirtyNeighbors;
             });
+
+            return result;
         }
 
         // practice chunk safety: enforce state transitions
@@ -151,9 +156,9 @@ namespace Minecraft_Clone.World.Chunks
             TryMarkDirty();
         }
 
-        public Task<Vector3i[]> SetBlockAsync(Vector3i pos, BlockType type)
+        public Task<List<Vector3i>> SetBlockAsync(Vector3i pos, BlockType type)
         {
-            if (IsEmpty && type == BlockType.AIR) return Task.FromResult(new Vector3i[0]);
+            if (IsEmpty && type == BlockType.AIR) return Task.FromResult(new List<Vector3i>());
 
             if (IsEmpty)
             {
@@ -167,7 +172,7 @@ namespace Minecraft_Clone.World.Chunks
             return Task.FromResult(NeighborDirtyAlert(pos));
         }
 
-        public Vector3i[] NeighborDirtyAlert(Vector3i localCoord)
+        public List<Vector3i> NeighborDirtyAlert(Vector3i localCoord)
         {
             List<Vector3i> result = new();
 
@@ -178,7 +183,7 @@ namespace Minecraft_Clone.World.Chunks
             if (localCoord.Y == 31) result.Add(new Vector3i(0, 1, 0));
             if (localCoord.Z == 31) result.Add(new Vector3i(0, 0, 1));
 
-            return result.ToArray();
+            return result;
         }
 
         // clean up meshes when removing from memory
