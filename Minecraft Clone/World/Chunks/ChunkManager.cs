@@ -91,8 +91,8 @@ public class ChunkManager
                 if (state == ChunkState.VISIBLE || state == ChunkState.INVISIBLE)
                 {
                     chunk.AddPendingBlock(localCoord, kvp.Value);
+                    PendingBlocks.TryRemove(kvp.Key, out _);
                 }
-                PendingBlocks.TryRemove(kvp.Key, out _);
             }
         }
         oldPendingBlocks.Clear();
