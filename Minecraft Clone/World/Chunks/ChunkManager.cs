@@ -7,7 +7,9 @@ using OpenTK.Mathematics;
 using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Contracts;
 using static Minecraft_Clone.Graphics.VBO;
 
 public class ChunkManager
@@ -44,14 +46,22 @@ public class ChunkManager
     ConcurrentDictionary<Vector3i, Task> RunningTasks = new();
     ConcurrentDictionary<Vector3i, CancellationTokenSource> RunningTasksCTS = new();
 
+    ConcurrentDictionary<Vector3i, BlockType> PendingBlocks = new();
+
     public int taskCount => RunningTasks.Count;
 
-    public ChunkManager()
+    public ChunkManager(Camera camera)
     {
         // idk if this is the best way might change later
         maxChunkTasks = (int)(Environment.ProcessorCount -1);
-    }
 
+        currentChunkIndex = WorldPosToChunkIndex((
+                                (int)MathF.Floor(camera.position.X),
+                                (int)MathF.Floor(camera.position.Y),
+                                (int)MathF.Floor(camera.position.Z)), out _); ; // first index in the list is always the center index  
+
+        worldGenerator.PreComputeTreeLocations(currentChunkIndex, radius);
+    }
 
     // fun stat
     public int totalRenderCalls = 0;
@@ -70,6 +80,22 @@ public class ChunkManager
             }
         }
 
+        // deliver pending blocks to their chunks if possible
+        var oldPendingBlocks = PendingBlocks;
+        foreach (var kvp in oldPendingBlocks)
+        {
+            Vector3i worldPos = kvp.Key;
+            if (ActiveChunks.TryGetValue(WorldPosToChunkIndex(worldPos, out var localCoord), out var chunk))
+            {
+                var state = chunk.GetState();
+                if (state == ChunkState.VISIBLE || state == ChunkState.INVISIBLE || state == ChunkState.MESHED) // be cautious but not overly about updating the pending chunk blocks
+                {
+                    chunk.AddPendingBlock(localCoord, kvp.Value);
+                    PendingBlocks.TryRemove(kvp.Key, out _);
+                }
+            }
+        }
+
         bool updateIndices = currentChunkIndex != lastChunkIndex; // relevant chunk indices refreshed every 2 seconds
 
         if (updateIndices)
@@ -78,16 +104,33 @@ public class ChunkManager
         currentChunkIndex = WorldPosToChunkIndex((
                                 (int)MathF.Floor(camera.position.X),
                                 (int)MathF.Floor(camera.position.Y),
-                                (int)MathF.Floor(camera.position.Z))); ; // first index in the list is always the center index  
+                                (int)MathF.Floor(camera.position.Z)), out _); ; // first index in the list is always the center index  
 
         // for each CompletedChunkBlocks, move data from the queue into the respective chunk. MARK STATE
-        while (CompletedBlocksQueue.TryDequeue(out var resultChunk))
+        while (CompletedBlocksQueue.TryDequeue(out var completedBlocks))
         {
-            Chunk targetChunk = ActiveChunks[resultChunk.index];
-            targetChunk.blocks = resultChunk.blocks;
-            targetChunk.IsEmpty = resultChunk.isEmpty;
-            targetChunk.SetState(ChunkState.GENERATED);
-            RunningTasks.TryRemove(resultChunk.index, out _);
+            Chunk targetChunk = ActiveChunks[completedBlocks.index];
+            targetChunk.blocks = completedBlocks.blocks;
+            targetChunk.IsEmpty = completedBlocks.isEmpty;
+            RunningTasks.TryRemove(completedBlocks.index, out _);
+
+            // also store the spilled blocks from features
+            if(completedBlocks.pendingBlocks != null)
+                foreach(var kvp in completedBlocks.pendingBlocks)
+                {
+                    PendingBlocks.TryAdd(kvp.Key, kvp.Value);
+                }
+
+            // if the chunk's block data both generated AND featured, mark it so
+            if (completedBlocks.featured)
+            {
+                targetChunk.SetState(ChunkState.FEATURED);
+            }
+            else // otherwise this queue item is only generated and not featured. need to mark it for a feature task
+            {
+                targetChunk.SetState(ChunkState.GENERATED);
+            }
+
         }
 
         // for each CompletedMesh, move data from the queue into the respective chunk. MARK STATE
@@ -125,7 +168,7 @@ public class ChunkManager
                         // if theres room to add a generation job for a new chunk, do it
                         if (RunningTasks.Count < maxChunkTasks)
                         {
-                            ActiveChunks[idx].SetState(ChunkState.GENERATING);
+                            resultChunk.SetState(ChunkState.GENERATING);
                             CancellationTokenSource cts = new CancellationTokenSource();
                             RunningTasksCTS.TryAdd(idx, cts);
                             RunningTasks.TryAdd(idx, generator.GenerationTask(idx, cts, worldGenerator, CompletedBlocksQueue));
@@ -136,24 +179,62 @@ public class ChunkManager
                         // if the chunk has blocks neighbors with blocks and theres room for a task, make mesh for it
                         if (AreNeighborsGenerated(idx) && RunningTasks.Count < maxChunkTasks)
                         {
-                            ActiveChunks[idx].SetState(ChunkState.MESHING);
+                            resultChunk.SetState(ChunkState.FEATURING);
                             CancellationTokenSource cts = new CancellationTokenSource();
                             RunningTasksCTS.TryAdd(idx, cts);
-                            RunningTasks.TryAdd(idx, mesher.MeshTask(idx, this, cts, CompletedMeshQueue, ActiveChunks, ChunkList(), LOD:1));
+                            RunningTasks.TryAdd(idx, generator.FeatureTask(new ChunkGenerator.CompletedChunkBlocks(idx, resultChunk), cts, worldGenerator, CompletedBlocksQueue));
                         }
                         break;
+                    case ChunkState.FEATURED:
+                        // if the chunk has blocks neighbors with blocks and theres room for a task, make mesh for it
+                        if (AreNeighborsGenerated(idx) && RunningTasks.Count < maxChunkTasks)
+                        {
+                            resultChunk.SetState(ChunkState.MESHING);
+                            CancellationTokenSource cts = new CancellationTokenSource();
+                            RunningTasksCTS.TryAdd(idx, cts);
+                            RunningTasks.TryAdd(idx, mesher.MeshTask(idx, this, cts, CompletedMeshQueue, ActiveChunks, ChunkList(), LOD: 1));
+                        }
+                        break;
+                    case ChunkState.MESHING:
 
+                        var meshingRendered = renderer.RenderChunk(resultChunk.solidMesh, camera, idx, time, sunDirection, sky);
+                        if (meshingRendered) totalRenderCalls += 1;
+
+                        break;
                     case ChunkState.MESHED:
                         // mark chunks with no mesh (all air) as invisible
+
                         resultChunk.SetState(ChunkState.VISIBLE);
                         if (resultChunk.IsEmpty)
                             resultChunk.SetState(ChunkState.INVISIBLE);
+
+                        var oldRendered = renderer.RenderChunk(resultChunk.solidMesh, camera, idx, time, sunDirection, sky);
+                        if (oldRendered) totalRenderCalls += 1;
+                        
                         break;
 
                     case ChunkState.VISIBLE:
                         // render visible chunks, count how many
+                        // only update the block if it's visible (lazily)
+                        resultChunk.ProcessBlocks();
+
                         var rendered = renderer.RenderChunk(resultChunk.solidMesh, camera, idx, time, sunDirection, sky);
                         if (rendered) totalRenderCalls+=1;
+
+                        break;
+
+                    case ChunkState.DIRTY:
+
+                        var dirtyRendered = renderer.RenderChunk(resultChunk.solidMesh, camera, idx, time, sunDirection, sky);
+                        if (dirtyRendered) totalRenderCalls += 1;
+
+                        if (AreNeighborsGenerated(idx) && RunningTasks.Count < maxChunkTasks)
+                        {
+                            resultChunk.SetState(ChunkState.MESHING);
+                            CancellationTokenSource cts = new CancellationTokenSource();
+                            RunningTasksCTS.TryAdd(idx, cts);
+                            RunningTasks.TryAdd(idx, mesher.MeshTask(idx, this, cts, CompletedMeshQueue, ActiveChunks, ChunkList(), LOD: 1));
+                        }
                         break;
                     default:
                         break;
@@ -194,6 +275,7 @@ public class ChunkManager
                 ExpiredChunkLifetimes[kvp.Key] = kvp.Value + frameTime;
         }
 
+        // important to update the old and current lists of indexes
         if (updateIndices)
         {
             LastActivationChunksIndices = new List<Vector3i>(ActiveChunksIndices);
@@ -295,9 +377,11 @@ public class ChunkManager
                 // Bound check
                 if (Math.Sqrt(delta.X * delta.X + delta.Y * delta.Y + delta.Z * delta.Z) < horizontalRadius &&
                     Math.Abs(delta.Y) <= verticalRadius &&
+                    //ActiveChunks.TryGetValue(next, out var c)  &&
                     visited.Add(next)) // only enqueue if not seen
                 {
-                    queue.Enqueue(next);
+                    //if(!c.IsEmpty)
+                        queue.Enqueue(next);
                 }
             }
         }
@@ -322,11 +406,18 @@ public class ChunkManager
     }
 
     // self explanatory
-    public Vector3i WorldPosToChunkIndex(Vector3i worldIndex, int chunkSize = Chunk.SIZE)
+    public Vector3i WorldPosToChunkIndex(Vector3i worldIndex, out Vector3i localBlockPos, int chunkSize = Chunk.SIZE)
     {
         int chunkX = (int)Math.Floor(worldIndex.X / (double)chunkSize);
         int chunkY = (int)Math.Floor(worldIndex.Y / (double)chunkSize);
         int chunkZ = (int)Math.Floor(worldIndex.Z / (double)chunkSize);
+
+        localBlockPos = new Vector3i(
+            worldIndex.X - chunkX * chunkSize,
+            worldIndex.Y - chunkY * chunkSize,
+            worldIndex.Z - chunkZ * chunkSize
+        );
+
         return new Vector3i(chunkX, chunkY, chunkZ);
     }
 
@@ -335,13 +426,7 @@ public class ChunkManager
     {
         result = default;
 
-        Vector3i chunkIndex = WorldPosToChunkIndex(worldIndex, chunkSize);
-
-        Vector3i localBlockPos = new Vector3i(
-            worldIndex.X - chunkIndex.X * chunkSize,
-            worldIndex.Y - chunkIndex.Y * chunkSize,
-            worldIndex.Z - chunkIndex.Z * chunkSize
-        );
+        Vector3i chunkIndex = WorldPosToChunkIndex(worldIndex, out Vector3i localBlockPos, chunkSize);
 
         // sanity check (should not be necessary if floor division is correct)
         if (localBlockPos.X < 0 || localBlockPos.X >= chunkSize ||
