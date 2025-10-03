@@ -101,20 +101,20 @@ namespace Minecraft_Clone.World.Chunks
         }
 
         // chunk's block featuring (grass, trees, etc) kick-off fxn
-        public Task FeatureTask(CompletedChunkBlocks chunkBlocks, CancellationTokenSource cts, WorldGenerator worldGenerator, ConcurrentQueue<CompletedChunkBlocks> queue)
+        public Task FeatureTask(CompletedChunkBlocks chunkBlocks, CancellationTokenSource cts, WorldGenerator worldGenerator, ConcurrentQueue<CompletedChunkBlocks> queue, ChunkManager manager)
         {
             // async wrapper for the long part of the operation
             return Task.Run(async () =>
             {
-                var result = await FeatureBlocks(chunkBlocks, cts.Token, worldGenerator);
+                var result = await FeatureBlocks(chunkBlocks, cts.Token, worldGenerator, manager);
                 queue.Enqueue(result);
             });
         }
 
         // places the features for a given chunk and world generator. world generation should house the functions for generating features
-        async Task<CompletedChunkBlocks> FeatureBlocks(CompletedChunkBlocks chunkBlocks, CancellationToken token, WorldGenerator worldGenerator)
+        async Task<CompletedChunkBlocks> FeatureBlocks(CompletedChunkBlocks chunkBlocks, CancellationToken token, WorldGenerator worldGenerator, ChunkManager manager)
         {
-            var result = worldGenerator.GrowFlora(chunkBlocks);
+            var result = worldGenerator.GrowFlora(chunkBlocks, manager);
 
             result.featured = true;
 

@@ -49,7 +49,6 @@ namespace Minecraft_Clone.World
 
         public NoiseParams treeNoiseParams = new NoiseParams(scale: 1.5f, octaves: 2, lacunarity: 2.5f, gain: 0.8f);
         float treeThreshold = 0.75f; // tree noise greater than this value means a tree is placed
-        List<Vector3i> treeLocations;
 
         public int seaFloorDepth = 32;
         public float seaFloorBlend = 0.2f;   // sea floor flattening
@@ -147,8 +146,6 @@ namespace Minecraft_Clone.World
                 (m+50, m-10),
                 (m+100, m+90),
                 (maxHeight, maxHeight) }; // needs to be in order along x
-
-            treeLocations = new();
         }
 
         // piecewise function to flatten/exaggerate cliffs and stuff idk
@@ -234,12 +231,7 @@ namespace Minecraft_Clone.World
                 if (y <= seaLevel) return BlockType.WATER;
                 if (y == h + 1 && y > seaLevel + beachHalfWidth + 1)
                 {
-                    float t = GetNoiseAt(NoiseLayer.TREE, x, z);
-                    if (t > treeThreshold && slope < 2f)
-                    {
-                        Console.WriteLine($"Added a tree at coords: {(x, y, z)}");
-                        MarkTreePos((x, y, z));
-                    }
+                    
                 }
                 return BlockType.AIR;
             }
@@ -277,19 +269,19 @@ namespace Minecraft_Clone.World
         }
 
         // grows trees
-        public ChunkGenerator.CompletedChunkBlocks GrowFlora(ChunkGenerator.CompletedChunkBlocks blocks)
+        public ChunkGenerator.CompletedChunkBlocks GrowFlora(ChunkGenerator.CompletedChunkBlocks blocks, ChunkManager manager)
         {
             var worldOffset = blocks.index * Chunk.SIZE;
 
             for (byte x = 0; x < Chunk.SIZE; x++)
             {
-                for (byte y = 1; y < Chunk.SIZE; y++)
+                for (byte y = 0; y < Chunk.SIZE; y++)
                 {
                     for (byte z = 0; z < Chunk.SIZE; z++)
                     {
                         var treePos = worldOffset + (x, y, z);
 
-                        bool growableSurface = blocks.GetBlock(x, y - 1, z).Type == BlockType.GRASS;
+                        bool growableSurface = manager.TryGetBlockAtWorldPosition(worldOffset + (x, y - 1, z), out var result) && result.Type == BlockType.GRASS;
 
                         //// determine if there's tallgrass here
                         if (growableSurface)
@@ -299,10 +291,11 @@ namespace Minecraft_Clone.World
                                 blocks.SetBlock((x, y, z), BlockType.TALLGRASS);
                         }
 
-                        if (treeLocations.Contains(treePos))
+                        float t = GetNoiseAt(NoiseLayer.TREE, x, z);
+                        
+                        if (t > treeThreshold)
                         {
                             Console.WriteLine($"found a tree at {(treePos)}");
-                            treeLocations.Remove(treePos);
 
                             if (growableSurface)
                             {
@@ -340,15 +333,6 @@ namespace Minecraft_Clone.World
             return (chunkX, chunkY, chunkZ);
         }
 
-        public void MarkTreePos(Vector3i position)
-        {
-            if (!treeLocations.Contains(position))
-            {
-                //Console.WriteLine($"[WorldGenerator] Added a tree at x-z {position}");
-                treeLocations.Add(position);
-            }
-        }
-
         public void Update()
         {
             if (noiseCacheTimer >= 0)
@@ -359,8 +343,6 @@ namespace Minecraft_Clone.World
                 noiseCaches.Clear();
                 heightCache.Clear();
             }
-
-            Console.WriteLine($"trees stored in memory: {treeLocations.Count}");
         }
 
         private static float Clamp(float v, float min, float max) => v < min ? min : (v > max ? max : v);

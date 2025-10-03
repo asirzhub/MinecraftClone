@@ -175,7 +175,7 @@ public class ChunkManager
                             resultChunk.SetState(ChunkState.FEATURING);
                             CancellationTokenSource cts = new CancellationTokenSource();
                             RunningTasksCTS.TryAdd(idx, cts);
-                            RunningTasks.TryAdd(idx, generator.FeatureTask(new ChunkGenerator.CompletedChunkBlocks(idx, resultChunk), cts, worldGenerator, CompletedBlocksQueue));
+                            RunningTasks.TryAdd(idx, generator.FeatureTask(new ChunkGenerator.CompletedChunkBlocks(idx, resultChunk), cts, worldGenerator, CompletedBlocksQueue, this));
                         }
                         break;
                     case ChunkState.FEATURED:
