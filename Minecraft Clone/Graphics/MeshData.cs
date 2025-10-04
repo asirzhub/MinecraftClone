@@ -13,6 +13,8 @@ namespace Minecraft_Clone.Graphics
         public VBO vbo;
         public IBO ibo;
 
+        public int stride = -1;
+
         public MeshData()
         {
         }
@@ -23,7 +25,7 @@ namespace Minecraft_Clone.Graphics
             if (vbo == null) { vbo = new VBO(FlattenPackedVertices(Vertices)); }
             if (ibo == null) { ibo = new IBO(Indices); }
 
-            int stride = Marshal.SizeOf(typeof(PackedVertex));
+            if(stride == -1) stride = Marshal.SizeOf(typeof(PackedVertex));
 
             vao.Bind();
             vbo.Bind();
