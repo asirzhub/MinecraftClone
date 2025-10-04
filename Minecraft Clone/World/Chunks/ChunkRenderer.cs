@@ -1,6 +1,7 @@
 ﻿using Minecraft_Clone.Graphics;
 using OpenTK.Mathematics;
 using OpenTK.Graphics.OpenGL4;
+using System.Collections.Concurrent;
 
 namespace Minecraft_Clone.World.Chunks
 {
@@ -16,6 +17,9 @@ namespace Minecraft_Clone.World.Chunks
         public float waterWaveScale = 0.1f; // world-size scale of sine waves
         public float waterWaveSpeed = 0.5f; // speed at which oscillations travel
 
+        List<ChunkState> lightingPassVisibleStates = new List<ChunkState>() { ChunkState.VISIBLE, ChunkState.MESHING, ChunkState.MESHED, ChunkState.DIRTY };
+        List<ChunkState> shadowMapPassVisibleStates = new List<ChunkState>() { ChunkState.INVISIBLE, ChunkState.VISIBLE, ChunkState.MESHING, ChunkState.MESHED, ChunkState.DIRTY };
+
         public ChunkRenderer()
         {
             blockShader = new Shader("PackedBlock.vert", "PackedBlock.frag");
@@ -28,12 +32,39 @@ namespace Minecraft_Clone.World.Chunks
             blockTexture.Bind();
         }
 
-        public bool RenderChunk(MeshData mesh, Camera camera, Vector3i index, float time, Vector3 sunDirection, SkyRender sky)
+        public void RenderLightingPass(Camera camera, float time, ConcurrentDictionary<Vector3i, Chunk> chunks, SkyRender skyRender)
+        {
+            List<Vector3i> visibleIndexes = new List<Vector3i>();
+
+            // render all chunks non-transparent mesh
+            foreach(var kvp in chunks)
+            {
+                var chunk = kvp.Value;
+                var idx = kvp.Key;
+                if(lightingPassVisibleStates.Contains(chunk.GetState()))
+                {
+                    RenderChunkLighting(chunk.solidMesh, camera, idx, time, skyRender);
+                    visibleIndexes.Add(idx);
+                }
+            }
+
+            // render water with no depth mask, after all solids were rendered
+            GL.DepthMask(false);
+            foreach (var idx in visibleIndexes)
+            {
+                RenderChunkLighting(chunks[idx].liquidMesh, camera, idx, time, skyRender);
+            }
+            GL.DepthMask(true);
+        }
+
+        public bool RenderChunkLighting(MeshData mesh, Camera camera, Vector3i index, float time, SkyRender sky)
         {
             // exit if there's no mesh data
             if (mesh == null || mesh.Vertices.Count == 0) return false;
 
             mesh.Upload();
+
+            var sunDirection = sky.sunDirection;
 
             //with everything prepped, we can now render
             Matrix4 model = Matrix4.CreateTranslation(index*(Chunk.SIZE));

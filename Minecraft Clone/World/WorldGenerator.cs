@@ -283,20 +283,21 @@ namespace Minecraft_Clone.World
 
                         bool growableSurface = manager.TryGetBlockAtWorldPosition(worldOffset + (x, y - 1, z), out var result) && result.Type == BlockType.GRASS;
 
-                        //// determine if there's tallgrass here
+                        // determine if there's tallgrass here
                         if (growableSurface)
                         {
                             float f = GetNoiseAt(NoiseLayer.TALLGRASS, worldOffset.X + x, worldOffset.Z + z);
                             if (f > 0.5f - tallgrassThreshold && f < 0.5f + tallgrassThreshold)
+                            {
                                 blocks.SetBlock((x, y, z), BlockType.TALLGRASS);
+                                continue;
+                            }
                         }
 
                         float t = GetNoiseAt(NoiseLayer.TREE, x, z);
                         
                         if (t > treeThreshold)
                         {
-                            Console.WriteLine($"found a tree at {(treePos)}");
-
                             if (growableSurface)
                             {
                                 for (int tx = 0; tx < 5; tx++)
