@@ -25,7 +25,9 @@ vec4 lerpvec4(vec4 a, vec4 b, float t){
 void main()
 {
     vec4 texColor = texture(texture0, texCoord);
-    vec4 shadowColor = texture(shadowMap, shadowMapCoord.xy+0.5);
+    
+    //vec3 projCoord = shadowMapCoord.xyz/shadowMapCoord.w;
+    vec4 shadowColor = texture(shadowMap, shadowMapCoord.xy);
 
     if (texColor.a < 0.1)
         discard;

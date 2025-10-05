@@ -26,6 +26,8 @@ namespace Minecraft_Clone.World.Chunks
         FBOShadowMap shadowMapFBO;
         int shadowMapResolution = 1024;
         int shadowMapUnit = 10;
+        Matrix4 shadowViewMat;
+        Matrix4 shadowProjMat;
 
         public ChunkRenderer()
         {
@@ -91,11 +93,7 @@ namespace Minecraft_Clone.World.Chunks
             blockShader.SetMatrix4("model", model);
             blockShader.SetMatrix4("view", view);
             blockShader.SetMatrix4("projection", projection);
-
-            Matrix4 shadowModel = Matrix4.CreateTranslation(index * (Chunk.SIZE));
-            Matrix4 shadowView = Matrix4.LookAt(camera.position + sunDirection, camera.position, Vector3.UnitY);
-            Matrix4 shadowProjection = Matrix4.CreateOrthographic(100, 100, 0, 1000f);
-            blockShader.SetMatrix4("lightSpaceMatrix", shadowModel * shadowView * shadowProjection);
+            blockShader.SetMatrix4("lightSpaceMatrix", model * shadowViewMat);
 
             blockShader.SetVector3("cameraPos", camera.position);
             blockShader.SetFloat("u_waterOffset", waterOffset);
@@ -135,8 +133,11 @@ namespace Minecraft_Clone.World.Chunks
 
             List<Vector3i> visibleIndexes = new List<Vector3i>();
 
+            shadowViewMat = Matrix4.LookAt(camera.position + skyRender.sunDirection, camera.position, Vector3.UnitY);
+            shadowProjMat = Matrix4.CreateOrthographic(100, 100, 0, 1000f);
+
             // render all chunks non-transparent mesh
-            foreach(var kvp in chunks)
+            foreach (var kvp in chunks)
             {
                 var chunk = kvp.Value;
                 var idx = kvp.Key;
@@ -170,12 +171,10 @@ namespace Minecraft_Clone.World.Chunks
 
             //with everything prepped, we can now render
             Matrix4 model = Matrix4.CreateTranslation(index*(Chunk.SIZE));
-            Matrix4 view = Matrix4.LookAt(camera.position + sunDirection, camera.position, Vector3.UnitY);
-            Matrix4 projection = Matrix4.CreateOrthographic(10, 10, 0, 1000f);
 
             shadowMapShader.SetMatrix4("model", model);
-            shadowMapShader.SetMatrix4("view", view);
-            shadowMapShader.SetMatrix4("projection", projection);
+            shadowMapShader.SetMatrix4("view", shadowViewMat);
+            shadowMapShader.SetMatrix4("projection", shadowProjMat);
             shadowMapShader.SetFloat("u_waterOffset", waterOffset);
             shadowMapShader.SetFloat("u_waveAmplitude", waterWaveAmplitude);
             shadowMapShader.SetFloat("u_waveScale", waterWaveScale);
