@@ -51,5 +51,5 @@ void main()
 
     vec3 finalFogColor = fogColor + vec3(0.0, 0.0, 1/dist) ;
 
-    FragColor = clamp(lerpvec4(texColor * vec4(vec3(brightness/15), 1) * skyLighting, vec4(fogColor, 1), 1-dist), 0.0, 1.0);
+    FragColor = clamp(shadowColor * lerpvec4(texColor * vec4(vec3(brightness/15), 1) * skyLighting, vec4(fogColor, 1), 1-dist), 0.0, 1.0);
 }
