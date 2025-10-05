@@ -7,6 +7,7 @@ layout(location = 1) in vec2 inTex;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
+uniform vec3 sunDirection;
 
 uniform float u_waterOffset;
 uniform float u_waveAmplitude;
@@ -39,6 +40,8 @@ void main()
         position.x += sin(((worldPos.x + worldPos.z ) + u_time * u_waveSpeed)*6.28318) * u_waveAmplitude * cos(((worldPos.x + worldPos.z - 5 * worldPos.y) * u_waveScale + u_time/2 * u_waveSpeed)*6.28318);
         position.z += u_waveAmplitude * sin(((worldPos.x + worldPos.z + 5 * worldPos.y) * -u_waveScale/2 + u_time * u_waveSpeed)*6.28318);
     }
+
+    vec3 blag = 0.0 * sunDirection;
 
     gl_Position = (position * model * view * projection);
 }

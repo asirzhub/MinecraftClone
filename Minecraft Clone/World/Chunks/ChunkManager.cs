@@ -252,6 +252,7 @@ public class ChunkManager
 
         worldGenerator.Update();
 
+        renderer.RenderShadowMapPass(camera, time, ActiveChunks, skyRender);
         renderer.RenderLightingPass(camera, time, ActiveChunks, skyRender);
     }
 

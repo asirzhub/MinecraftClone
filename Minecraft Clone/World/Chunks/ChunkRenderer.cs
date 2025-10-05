@@ -2,6 +2,7 @@
 using OpenTK.Mathematics;
 using OpenTK.Graphics.OpenGL4;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace Minecraft_Clone.World.Chunks
 {
@@ -21,7 +22,7 @@ namespace Minecraft_Clone.World.Chunks
         List<ChunkState> shadowMapPassVisibleStates = new List<ChunkState>() { ChunkState.INVISIBLE, ChunkState.VISIBLE, ChunkState.MESHING, ChunkState.MESHED, ChunkState.DIRTY };
 
         public Shader shadowMapShader;
-        FBOShadowMap shadowMap;
+        FBOShadowMap shadowMapFBO;
         int shadowMapResolution = 1024;
 
         public ChunkRenderer()
@@ -29,13 +30,15 @@ namespace Minecraft_Clone.World.Chunks
             blockShader = new Shader("PackedBlock.vert", "PackedBlock.frag");
             blockTexture = new Texture("textures.png");
 
-            shadowMap = new(1024, 1024);
+            shadowMapFBO = new(shadowMapResolution, shadowMapResolution);
             shadowMapShader = new Shader("ShadowMap.vert", "EmptyFragment.frag");
         }
 
         public void RenderLightingPass(Camera camera, float time, ConcurrentDictionary<Vector3i, Chunk> chunks, SkyRender skyRender)
         {
+            //stopWatch.Restart();
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+            GL.Viewport(0, 0, (int)camera.screenwidth, (int)camera.screenheight);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             skyRender.RenderSky(camera); // i didnt want to put this in chunk manager but seems the only way to do it after shadow pass and before chunk lighting pass
 
@@ -63,6 +66,7 @@ namespace Minecraft_Clone.World.Chunks
                 RenderChunkLighting(chunks[idx].liquidMesh, camera, idx, time, skyRender);
             }
             GL.DepthMask(true);
+            //Console.WriteLine($"Lighting pass took: {stopWatch.ElapsedMilliseconds} ms");
         }
 
         bool RenderChunkLighting(MeshData mesh, Camera camera, Vector3i index, float time, SkyRender skyRender)
@@ -107,9 +111,14 @@ namespace Minecraft_Clone.World.Chunks
             return true;
         }
 
+        Stopwatch stopWatch = new();
+
         public void RenderShadowMapPass(Camera camera, float time, ConcurrentDictionary<Vector3i, Chunk> chunks, SkyRender skyRender)
         {
-            shadowMap.Bind();
+            //stopWatch.Restart();
+            shadowMapFBO.Bind();
+            GL.Viewport(0, 0, shadowMapResolution, shadowMapResolution);
+            GL.Clear(ClearBufferMask.DepthBufferBit);
             shadowMapShader.Bind();
 
             List<Vector3i> visibleIndexes = new List<Vector3i>();
@@ -133,6 +142,9 @@ namespace Minecraft_Clone.World.Chunks
                 RenderChunkShadowMap(chunks[idx].liquidMesh, camera, idx, time, skyRender);
             }
             GL.DepthMask(true);
+
+            shadowMapFBO.UnBind();
+            //Console.WriteLine($"Shadow pass took: {stopWatch.ElapsedMilliseconds} ms");
         }
 
         bool RenderChunkShadowMap(MeshData mesh, Camera camera, Vector3i index, float time, SkyRender skyRender)
@@ -151,19 +163,15 @@ namespace Minecraft_Clone.World.Chunks
 
             Matrix4 projection = Matrix4.CreateOrthographic(10, 10, 0, 1000f);
 
-            blockShader.SetMatrix4("model", model);
-            blockShader.SetMatrix4("view", view);
-            blockShader.SetMatrix4("projection", projection);
-            blockShader.SetVector3("cameraPos", camera.position);
-            blockShader.SetFloat("u_waterOffset", waterOffset);
-            blockShader.SetFloat("u_waveAmplitude", waterWaveAmplitude);
-            blockShader.SetFloat("u_waveScale", waterWaveScale);
-            blockShader.SetFloat("u_time", time);
-            blockShader.SetFloat("u_waveSpeed", waterWaveSpeed);
-            blockShader.SetVector3("sunDirection", sunDirection);
-            blockShader.SetVector3("ambientColor", new(1.0f, 1.1f, 1.3f)); 
-            blockShader.SetVector3("sunsetColor", new(0.1f, 0.0f, 0.0f)); 
-            blockShader.SetVector3("fogColor", skyRender.finalH);
+            shadowMapShader.SetMatrix4("model", model);
+            shadowMapShader.SetMatrix4("view", view);
+            shadowMapShader.SetMatrix4("projection", projection);
+            shadowMapShader.SetFloat("u_waterOffset", waterOffset);
+            shadowMapShader.SetFloat("u_waveAmplitude", waterWaveAmplitude);
+            shadowMapShader.SetFloat("u_waveScale", waterWaveScale);
+            shadowMapShader.SetFloat("u_time", time);
+            shadowMapShader.SetFloat("u_waveSpeed", waterWaveSpeed);
+            shadowMapShader.SetVector3("sunDirection", sunDirection);
 
             mesh.vao.Bind();
             mesh.vbo.Bind();
