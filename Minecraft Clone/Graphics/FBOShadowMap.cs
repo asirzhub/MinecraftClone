@@ -11,7 +11,7 @@ namespace Minecraft_Clone.Graphics
 
         public void Bind(){
             GL.BindFramebuffer(FramebufferTarget.Framebuffer , ID);
-            GL.BindTexture(TextureTarget.Texture2D , ID);
+            GL.BindTexture(TextureTarget.Texture2D , depthTexture);
         }
         public void UnBind() {
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
