@@ -25,7 +25,7 @@ vec4 lerpvec4(vec4 a, vec4 b, float t){
 void main()
 {
     vec4 texColor = texture(texture0, texCoord);
-    vec4 shadowColor = texture(shadowMap, shadowMapCoord.xy);
+    vec4 shadowColor = texture(shadowMap, shadowMapCoord.xy+0.5);
 
     if (texColor.a < 0.1)
         discard;
@@ -51,5 +51,5 @@ void main()
 
     vec3 finalFogColor = fogColor + vec3(0.0, 0.0, 1/dist) ;
 
-    FragColor = clamp(shadowColor * lerpvec4(texColor * vec4(vec3(brightness/15), 1) * skyLighting, vec4(fogColor, 1), 1-dist), 0.0, 1.0);
+    FragColor = clamp(lerpvec4(texColor * vec4(vec3(brightness/15), 1) * skyLighting * vec4((shadowColor.xxx*0.5 + 0.5), 1.0), vec4(fogColor, 1), 1-dist), 0.0, 1.0);
 }
