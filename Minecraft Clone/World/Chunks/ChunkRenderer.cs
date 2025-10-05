@@ -93,7 +93,7 @@ namespace Minecraft_Clone.World.Chunks
             blockShader.SetMatrix4("model", model);
             blockShader.SetMatrix4("view", view);
             blockShader.SetMatrix4("projection", projection);
-            blockShader.SetMatrix4("lightSpaceMatrix", model * shadowViewMat);
+            blockShader.SetMatrix4("lightSpaceMatrix", model * shadowViewMat * shadowProjMat);
 
             blockShader.SetVector3("cameraPos", camera.position);
             blockShader.SetFloat("u_waterOffset", waterOffset);

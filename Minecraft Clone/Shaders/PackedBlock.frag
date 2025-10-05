@@ -25,9 +25,8 @@ vec4 lerpvec4(vec4 a, vec4 b, float t){
 void main()
 {
     vec4 texColor = texture(texture0, texCoord);
-    
-    //vec3 projCoord = shadowMapCoord.xyz/shadowMapCoord.w;
-    vec4 shadowColor = texture(shadowMap, shadowMapCoord.xy);
+    vec3 projCoord = shadowMapCoord.xyz/shadowMapCoord.w;
+    vec4 shadowDepth = texture(shadowMap, projCoord.xy);
 
     if (texColor.a < 0.1)
         discard;
@@ -49,9 +48,12 @@ void main()
 
     vec4 skyLighting = vec4(faceBrightness * vec3(sunsetColor) + daytime * ambientColor, 1);
 
-    float dist = 1.0 - exp(min((-distance(cameraPos, worldPos.xyz)+100)/150 - worldPos.y/512.0, 0)) ;
+    float dist = 1.0 - exp(min((-distance(cameraPos, worldPos.xyz)+100)/100 - worldPos.y/512.0, 0)) ;
 
     vec3 finalFogColor = fogColor + vec3(0.0, 0.0, 1/dist) ;
 
-    FragColor = clamp(lerpvec4(texColor * vec4(vec3(brightness/15), 1) * skyLighting * vec4((shadowColor.xxx*0.5 + 0.5), 1.0), vec4(fogColor, 1), 1-dist), 0.0, 1.0);
+    float shadowInfluence = shadowDepth.x;
+    vec4 shadowColor = vec4(shadowDepth.xxx, 1.0);
+
+    FragColor = clamp(lerpvec4(texColor * vec4(vec3(brightness/15), 1) * skyLighting *shadowColor, vec4(fogColor, 1), 1-dist), 0.0, 1.0);
 }
