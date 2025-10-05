@@ -11,6 +11,7 @@ namespace Minecraft_Clone.World.Chunks
     {
         public Texture blockTexture;
         public Shader blockShader;
+        public int blockTextureUnit => blockTexture.ID;
 
         // some parameters
         public float waterOffset = 0.15f; // water surface offset from top edge of blocks
@@ -24,6 +25,7 @@ namespace Minecraft_Clone.World.Chunks
         public Shader shadowMapShader;
         FBOShadowMap shadowMapFBO;
         int shadowMapResolution = 1024;
+        int shadowMapUnit = 10;
 
         public ChunkRenderer()
         {
@@ -44,6 +46,9 @@ namespace Minecraft_Clone.World.Chunks
 
             blockShader.Bind();
             blockTexture.Bind();
+
+            GL.ActiveTexture(TextureUnit.Texture0 + shadowMapUnit);
+            GL.BindTexture(TextureTarget.Texture2D, shadowMapFBO.depthTexture);
 
             List<Vector3i> visibleIndexes = new List<Vector3i>();
 
@@ -96,6 +101,7 @@ namespace Minecraft_Clone.World.Chunks
             blockShader.SetVector3("ambientColor", new(1.0f, 1.1f, 1.3f));
             blockShader.SetVector3("sunsetColor", new(0.0f, 0.0f, 0.0f));
             blockShader.SetVector3("fogColor", skyRender.finalH);
+            blockShader.SetTexture2DUnit("shadowMap", shadowMapUnit);
 
             mesh.vao.Bind();
             mesh.vbo.Bind();

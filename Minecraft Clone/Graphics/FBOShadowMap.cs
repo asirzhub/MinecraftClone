@@ -40,7 +40,7 @@ namespace Minecraft_Clone.Graphics
                 PixelInternalFormat.DepthComponent24, 
                 width, height, 0, 
                 PixelFormat.DepthComponent, 
-                PixelType.UnsignedByte, 
+                PixelType.Float, // apparently unsigned bytes arent valid for this
                 0);
 
             // attach depth texture to this framebuffer, specifically in the depth slot of this framebuffer
@@ -48,6 +48,18 @@ namespace Minecraft_Clone.Graphics
                 FramebufferAttachment.DepthAttachment,
                 TextureTarget.Texture2D,
                 depthTexture, 0);
+
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (float)TextureMinFilter.Nearest);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (float)TextureMagFilter.Nearest);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (float)TextureWrapMode.ClampToBorder);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (float)TextureWrapMode.ClampToBorder);
+
+            GL.TextureParameter(depthTexture, TextureParameterName.TextureBorderColor, new float[]{ 1f, 1f, 1f, 1f });
+            // ^ this is so stupid why are TexParameter and TextureParameter different
+
+            var fboStatus = GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
+            if (fboStatus != FramebufferErrorCode.FramebufferComplete)
+                Console.WriteLine($"ShadowMap FBO Error: {fboStatus.ToString()}");
 
             // no drawing or reading colours since this is depth-only
             GL.DrawBuffer(DrawBufferMode.None);

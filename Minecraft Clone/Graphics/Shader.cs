@@ -119,6 +119,16 @@ namespace Minecraft_Clone.Graphics
                 GL.Uniform4(loc, value);
         }
 
+        // you dont actually send a texture, you select which unit to use
+        public void SetTexture2DUnit(string name, int textureUnit)
+        {
+            int loc = GL.GetUniformLocation(ID, name);
+            if (loc == -1)
+                Console.WriteLine($"[Shader Warning] Uniform '{name}' not found in shader {ID}.");
+            else
+                GL.Uniform1(loc, textureUnit);
+        }
+
         // Stuff that the openTK tutorial told me to do but i dont fully understand
         private bool disposedValue = false;
         protected virtual void Dispose(bool disposing)

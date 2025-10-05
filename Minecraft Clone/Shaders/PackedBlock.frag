@@ -4,7 +4,10 @@ in vec2 texCoord;
 in vec3 vNormal;
 in vec4 worldPos;
 in float brightness;
+
 uniform sampler2D texture0;
+uniform sampler2D shadowMap;
+in vec4 shadowMapCoord;
 
 uniform vec3 cameraPos;
 
@@ -22,6 +25,7 @@ vec4 lerpvec4(vec4 a, vec4 b, float t){
 void main()
 {
     vec4 texColor = texture(texture0, texCoord);
+    vec4 shadowColor = texture(shadowMap, shadowMapCoord.xy);
 
     if (texColor.a < 0.1)
         discard;

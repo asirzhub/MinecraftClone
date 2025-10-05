@@ -8,6 +8,9 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
+uniform mat4 lightSpaceMatrix;
+out vec4 shadowMapCoord;
+
 uniform float u_waterOffset;
 uniform float u_waveAmplitude;
 uniform float u_waveScale;
@@ -60,6 +63,8 @@ void main()
         position.x += sin(((worldPos.x + worldPos.z ) + u_time * u_waveSpeed)*6.28318) * u_waveAmplitude * cos(((worldPos.x + worldPos.z - 5 * worldPos.y) * u_waveScale + u_time/2 * u_waveSpeed)*6.28318);
         position.z += u_waveAmplitude * sin(((worldPos.x + worldPos.z + 5 * worldPos.y) * -u_waveScale/2 + u_time * u_waveSpeed)*6.28318);
     }
+
+    shadowMapCoord = position * lightSpaceMatrix;
 
     gl_Position = (position * model * view * projection);
 }
