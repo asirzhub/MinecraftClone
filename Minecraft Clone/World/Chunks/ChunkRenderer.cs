@@ -24,7 +24,7 @@ namespace Minecraft_Clone.World.Chunks
 
         public Shader shadowMapShader;
         FBOShadowMap fboShadowMap;
-        int shadowMapResolution = 1024;
+        int shadowMapResolution = 4096;
 
         Matrix4 shadowMapViewMatrix = new();
         Matrix4 shadowMapProjMatrix = new();
@@ -47,7 +47,7 @@ namespace Minecraft_Clone.World.Chunks
 
             GL.ActiveTexture(TextureUnit.Texture1); // shadowmap channel
             GL.BindTexture(TextureTarget.Texture2D, fboShadowMap.depthTexture);
-            //blockShader.SetInt("shadowMap", 1);
+            blockShader.SetInt("shadowMap", 1);
         }
 
         public void RenderLightingPass(Camera camera, float time, ConcurrentDictionary<Vector3i, Chunk> chunks, SkyRender skyRender)
@@ -100,8 +100,9 @@ namespace Minecraft_Clone.World.Chunks
             blockShader.SetMatrix4("model", model);
             blockShader.SetMatrix4("view", view);
             blockShader.SetMatrix4("projection", projection);
-            blockShader.SetMatrix4("lightProjViewMat", shadowMapProjMatrix * shadowMapViewMatrix);
-            
+            blockShader.SetMatrix4("lightProjMat", shadowMapProjMatrix);
+            blockShader.SetMatrix4("lightViewMat", shadowMapViewMatrix);
+
             blockShader.SetVector3("cameraPos", camera.position);
             blockShader.SetFloat("u_waterOffset", waterOffset);
             blockShader.SetFloat("u_waveAmplitude", waterWaveAmplitude);

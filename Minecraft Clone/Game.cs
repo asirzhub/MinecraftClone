@@ -38,7 +38,7 @@ namespace Minecraft_Clone
             camera = new Camera(width, height, -200f * Vector3.UnitX + 200 * Vector3.UnitY + 250 * Vector3.UnitZ);
             this.width = width;
             this.height = height;
-            skyRender = new SkyRender((0.4f, 1f, -1f));
+            skyRender = new SkyRender((1.0f, 1f, -1f));
         }
 
         protected override void OnLoad()

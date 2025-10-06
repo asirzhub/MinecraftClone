@@ -8,7 +8,8 @@ in float brightness;
 uniform sampler2D albedoTexture;
 uniform sampler2D shadowMap;
 
-uniform mat4 lightProjViewMat;
+uniform mat4 lightProjMat;
+uniform mat4 lightViewMat;
 
 uniform vec3 cameraPos;
 
@@ -29,7 +30,6 @@ void main()
 
     vec4 texColor = texture(albedoTexture, texCoord);
     
-    vec4 lightSpacePos = lightProjViewMat * vec4(1);
 
     if (texColor.a < 0.1)
         discard;
@@ -52,7 +52,18 @@ void main()
     vec4 skyLighting = vec4(faceBrightness * vec3(sunsetColor) + daytime * ambientColor, 1) + vec4(fogColor, 1.0); // remove fogColor after, this is here to avoid error
 
     float dist = exp(min((-distance(cameraPos, worldPos.xyz)+100)/150 - worldPos.y/512.0, 0)) ;
+    
+    vec4 lightSpacePos = lightProjMat * lightViewMat * worldPos; // 
+    vec3 projCoord = (lightSpacePos.xyz/lightSpacePos.w) * 0.5 + 0.5;
 
-    //FragColor = clamp(lerpvec4(vec4(shadow, 1.0) * texColor * vec4(vec3(brightness/15), 1) * skyLighting, vec4(fogColor, 1), dist), 0.0, 1.0);
-    FragColor = vec4(lightSpacePos.xyz, 1);
+    float closest = texture(shadowMap, projCoord.xy).r;
+    float current = projCoord.z - 0.0001;
+
+    float diff = closest - current;
+    float shadow = diff;
+    
+    if(diff >= 0) { shadow = 1; }
+    if(diff < 0) { shadow = 0.5; }
+
+    FragColor = clamp(lerpvec4(vec4(shadow, shadow, shadow, 1.0) * texColor * vec4(vec3(brightness/15), 1) * skyLighting, vec4(fogColor, 1), dist), 0.0, 1.0);
 }
