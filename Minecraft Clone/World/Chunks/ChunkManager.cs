@@ -268,7 +268,7 @@ public class ChunkManager
         if (chunkToCamera.LengthFast < 2 * Chunk.SIZE) // if the chunk is too close, exit out with true
             return true;
 
-        float angle = Vector3.CalculateAngle(camera.front, chunkToCamera);
+        float angle = Vector3.CalculateAngle(camera.forward, chunkToCamera);
 
         if (angle < 1.2f) // if within view, true
             return true;

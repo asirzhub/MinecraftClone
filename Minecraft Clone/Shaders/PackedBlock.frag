@@ -24,9 +24,13 @@ vec4 lerpvec4(vec4 a, vec4 b, float t){
     return ( a*t + b*(1-t));
 }
 
+float lerp(float a, float b, float t){
+    return ( a*t + b*(1-t));
+}
+
 void main()
 {
-    float bias = 0.001;
+    float bias = 0.00005;
 
     vec4 texColor = texture(albedoTexture, texCoord);
     
@@ -49,7 +53,7 @@ void main()
         daytime = clamp(dot(liftedSun, vec3(0, 1, 0)), 0.2, 1);
     }
 
-    vec4 skyLighting = vec4(faceBrightness * vec3(sunsetColor) + daytime * ambientColor, 1) + vec4(fogColor, 1.0); // remove fogColor after, this is here to avoid error
+    vec4 skyLighting = vec4(faceBrightness * vec3(sunsetColor) + daytime * ambientColor, 1); // remove fogColor after, this is here to avoid error
 
     float dist = exp(min((-distance(cameraPos, worldPos.xyz)+100)/150 - worldPos.y/512.0, 0)) ;
     
@@ -57,13 +61,13 @@ void main()
     vec3 projCoord = (lightSpacePos.xyz/lightSpacePos.w) * 0.5 + 0.5;
 
     float closest = texture(shadowMap, projCoord.xy).r;
-    float current = projCoord.z - 0.0001;
+    float current = projCoord.z - bias;
 
     float diff = closest - current;
-    float shadow = diff;
+    float shadow = 0;
     
     if(diff >= 0) { shadow = 1; }
-    if(diff < 0) { shadow = 0.5; }
+    if(diff < 0) { shadow = 0.6; }
 
     FragColor = clamp(lerpvec4(vec4(shadow, shadow, shadow, 1.0) * texColor * vec4(vec3(brightness/15), 1) * skyLighting, vec4(fogColor, 1), dist), 0.0, 1.0);
 }

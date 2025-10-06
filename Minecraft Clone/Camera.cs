@@ -18,7 +18,7 @@ namespace Minecraft_Clone
 
         public Vector3 right = Vector3.UnitX;
         public Vector3 up = Vector3.UnitY; // we define Y as going up, not Z. but you can.
-        public Vector3 front = -Vector3.UnitZ;
+        public Vector3 forward = -Vector3.UnitZ;
         public float fovY = 65;
 
         private float pitch;
@@ -37,7 +37,7 @@ namespace Minecraft_Clone
             this.position = position;
         }
 
-        public Matrix4 GetViewMatrix() => Matrix4.LookAt(position, position + front, up);
+        public Matrix4 GetViewMatrix() => Matrix4.LookAt(position, position + forward, up);
         public Matrix4 GetProjectionMatrix() => Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(fovY), screenwidth / screenheight, 0.01f, 2000f);
 
         private void UpdateVectors()
@@ -46,20 +46,20 @@ namespace Minecraft_Clone
             if (pitch > 85f) pitch = 85f;
             if (pitch < -85f) pitch = -85f;
 
-            front.X = MathF.Cos(MathHelper.DegreesToRadians(pitch)) * MathF.Cos(MathHelper.DegreesToRadians(yaw));
-            front.Y = MathF.Sin(MathHelper.DegreesToRadians(pitch));
-            front.Z = MathF.Cos(MathHelper.DegreesToRadians(pitch)) * MathF.Sin(MathHelper.DegreesToRadians(yaw));
+            forward.X = MathF.Cos(MathHelper.DegreesToRadians(pitch)) * MathF.Cos(MathHelper.DegreesToRadians(yaw));
+            forward.Y = MathF.Sin(MathHelper.DegreesToRadians(pitch));
+            forward.Z = MathF.Cos(MathHelper.DegreesToRadians(pitch)) * MathF.Sin(MathHelper.DegreesToRadians(yaw));
 
-            front = Vector3.Normalize(front);
+            forward = Vector3.Normalize(forward);
 
 
-            right = Vector3.Normalize(Vector3.Cross(front, Vector3.UnitY));
-            up = Vector3.Normalize(Vector3.Cross(right, front));
+            right = Vector3.Normalize(Vector3.Cross(forward, Vector3.UnitY));
+            up = Vector3.Normalize(Vector3.Cross(right, forward));
         }
 
         public void InputController(KeyboardState keyboard, MouseState mouse, FrameEventArgs e)
         {
-            var forward_dir = Vector3.Normalize(new Vector3(front.X, 0, front.Z));
+            var forward_dir = Vector3.Normalize(new Vector3(forward.X, 0, forward.Z));
             if (keyboard.IsKeyDown(Keys.W)) { position += forward_dir * speed * (float)e.Time; }
             if (keyboard.IsKeyDown(Keys.A)) { position -= right * speed * (float)e.Time; }
             if (keyboard.IsKeyDown(Keys.S)) { position -= forward_dir * speed * (float)e.Time; }
