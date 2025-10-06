@@ -43,9 +43,9 @@ void main()
 
     vec4 skyLighting = vec4(faceBrightness * vec3(sunsetColor) + daytime * ambientColor, 1);
 
-    float dist = 1.0 - exp(min((-distance(cameraPos, worldPos.xyz)+100)/150 - worldPos.y/512.0, 0)) ;
+    float dist = exp(min((-distance(cameraPos, worldPos.xyz)+100)/150 - worldPos.y/512.0, 0)) ;
 
     vec3 finalFogColor = fogColor + vec3(0.0, 0.0, 1/dist) ;
 
-    FragColor = clamp(lerpvec4(texColor * vec4(vec3(brightness/15), 1) * skyLighting, vec4(fogColor, 1), 1-dist), 0.0, 1.0);
+    FragColor = clamp(lerpvec4(texColor * vec4(vec3(brightness/15), 1) * skyLighting, vec4(fogColor, 1), dist), 0.0, 1.0);
 }
