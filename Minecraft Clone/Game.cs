@@ -64,12 +64,9 @@ namespace Minecraft_Clone
         protected override void OnRenderFrame(FrameEventArgs args)
         {
             base.OnRenderFrame(args);
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-            // Render sky first
             skyRender.SetSunDirection(Vector3.Transform(skyRender.sunDirection, new Quaternion((float)args.Time * timeMult, 0f, 0f)));
-            skyRender.RenderSky(camera);
-
+            
             chunkManager.Update(camera, (float)args.Time, timeElapsed, skyRender.sunDirection.Normalized(), skyRender);
 
             SwapBuffers();

@@ -252,7 +252,10 @@ public class ChunkManager
 
         worldGenerator.Update();
 
-        renderer.Bind(); // by binding only once (rather than every call), gain 10% FPS!
+        // shadowmap pass
+        renderer.RenderShadowMapPass(camera, time, ActiveChunks, skyRender);
+
+        // render chunks
         renderer.RenderLightingPass(camera, time, ActiveChunks, skyRender);
     }
 

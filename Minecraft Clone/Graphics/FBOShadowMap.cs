@@ -9,15 +9,18 @@ namespace Minecraft_Clone.Graphics
         public int width;
         public int height;
 
-        public void Bind(){
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer , ID);
-            GL.BindTexture(TextureTarget.Texture2D , ID);
+        public void Bind()
+        {
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, ID);
+            GL.BindTexture(TextureTarget.Texture2D, depthTexture);
         }
-        public void UnBind() {
+        public void UnBind()
+        {
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
             GL.BindTexture(TextureTarget.Texture2D, 0);
         }
-        public void Dispose() {
+        public void Dispose()
+        {
             GL.DeleteFramebuffer(ID);
             GL.DeleteTexture(depthTexture);
         }
@@ -35,12 +38,12 @@ namespace Minecraft_Clone.Graphics
             GL.BindTexture(TextureTarget.Texture2D, depthTexture);
 
             // 24-bit buffer with no data yet
-            GL.TexImage2D(TextureTarget.Texture2D, 
-                0, 
-                PixelInternalFormat.DepthComponent24, 
-                width, height, 0, 
-                PixelFormat.DepthComponent, 
-                PixelType.UnsignedByte, 
+            GL.TexImage2D(TextureTarget.Texture2D,
+                0,
+                PixelInternalFormat.DepthComponent24,
+                width, height, 0,
+                PixelFormat.DepthComponent,
+                PixelType.Float, // apparently unsigned bytes arent valid for this
                 0);
 
             // attach depth texture to this framebuffer, specifically in the depth slot of this framebuffer
@@ -48,6 +51,18 @@ namespace Minecraft_Clone.Graphics
                 FramebufferAttachment.DepthAttachment,
                 TextureTarget.Texture2D,
                 depthTexture, 0);
+
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (float)TextureMinFilter.Nearest);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (float)TextureMagFilter.Nearest);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (float)TextureWrapMode.ClampToBorder);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (float)TextureWrapMode.ClampToBorder);
+
+            GL.TextureParameter(depthTexture, TextureParameterName.TextureBorderColor, new float[] { 1f, 1f, 1f, 1f });
+            // ^ this is so stupid why are TexParameter and TextureParameter different
+
+            var fboStatus = GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
+            if (fboStatus != FramebufferErrorCode.FramebufferComplete)
+                Console.WriteLine($"ShadowMap FBO Error: {fboStatus.ToString()}");
 
             // no drawing or reading colours since this is depth-only
             GL.DrawBuffer(DrawBufferMode.None);
