@@ -50,7 +50,6 @@ namespace Minecraft_Clone
 
             //VSync = VSyncMode.On; // only needed when i dont want my laptop to turn into a jet engine at the library
             GL.Enable(EnableCap.DepthTest);
-            //GL.Enable(EnableCap.CullFace);
             GL.Enable(EnableCap.Blend);
             GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
             GL.Enable(EnableCap.Multisample);

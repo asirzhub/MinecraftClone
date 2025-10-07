@@ -28,12 +28,13 @@ float lerp(float a, float b, float t){
     return ( a*t + b*(1-t));
 }
 
+float rand(vec2 co) { return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453); }
+
 void main()
 {
     float bias = 0.00005;
 
     vec4 texColor = texture(albedoTexture, texCoord);
-    
 
     if (texColor.a < 0.1)
         discard;
@@ -53,21 +54,31 @@ void main()
         daytime = clamp(dot(liftedSun, vec3(0, 1, 0)), 0.2, 1);
     }
 
-    vec4 skyLighting = vec4(faceBrightness * vec3(sunsetColor) + daytime * ambientColor, 1); // remove fogColor after, this is here to avoid error
+    vec4 skyLighting = vec4(faceBrightness * vec3(sunsetColor) + daytime * ambientColor, 1);
 
     float dist = exp(min((-distance(cameraPos, worldPos.xyz)+100)/150 - worldPos.y/512.0, 0)) ;
     
-    vec4 lightSpacePos = lightProjMat * lightViewMat * worldPos; // 
+    vec4 lightSpacePos = lightProjMat * lightViewMat * worldPos; 
     vec3 projCoord = (lightSpacePos.xyz/lightSpacePos.w) * 0.5 + 0.5;
 
-    float closest = texture(shadowMap, projCoord.xy).r;
-    float current = projCoord.z - bias;
+    float current = projCoord.z - (bias/dot(vNormal, sunDirection)); // the dot product bit reduces acne when the sun points near perpendicular to a surface normal
 
-    float diff = closest - current;
-    float shadow = 0;
+    int pcfSampleSize = 1;
+
+    float shadow = 0.0;
+
+    vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+    for(int x = -pcfSampleSize; x <= pcfSampleSize; ++x)
+    {
+        for(int y = -pcfSampleSize; y <= pcfSampleSize; ++y)
+        {
+            float pcfDepth = texture(shadowMap, projCoord.xy + vec2(x, y) * texelSize ).r; 
+            shadow += current - bias > pcfDepth ? 1.0 : 0.0;        
+        }    
+    }
+    shadow /= (((pcfSampleSize*2)+1) * ((pcfSampleSize*2)+1)); // ((r*2) + 1)^2
+
+    shadow = clamp(1-shadow, 0.4, 1.0);
     
-    if(diff >= 0) { shadow = 1; }
-    if(diff < 0) { shadow = 0.6; }
-
     FragColor = clamp(lerpvec4(vec4(shadow, shadow, shadow, 1.0) * texColor * vec4(vec3(brightness/15), 1) * skyLighting, vec4(fogColor, 1), dist), 0.0, 1.0);
 }
