@@ -86,7 +86,7 @@ namespace Minecraft_Clone.World
         ConcurrentDictionary<Vector2i, NoiseCacheEntry> heightCache = new();
 
         float noiseCacheLifetime = 180; // 30 frames may pass without noise cache access 
-
+            
         readonly Vector2[] controlPoints;
 
         // define a tree based on vertical slices
@@ -183,8 +183,8 @@ namespace Minecraft_Clone.World
             {
                 if (cache.TryGetValue((x, y), out var entry))
                 {
-                    entry.framesSinceUse = frameCount;
-                    cache.TryUpdate((x, y), new NoiseCacheEntry(entry.value, frameCount), entry);
+                    cache.TryRemove(new KeyValuePair<Vector2i, NoiseCacheEntry>((x, y), entry));
+                    cache.TryAdd((x, y), new NoiseCacheEntry(entry.value, frameCount));
                     return entry.value;
                 }
             }
@@ -205,8 +205,8 @@ namespace Minecraft_Clone.World
         {
             if (heightCache.TryGetValue((worldX, worldZ), out var entry))
             {
-                entry.framesSinceUse = frameCount;
-                heightCache.TryUpdate((worldX, worldZ), new NoiseCacheEntry(entry.value, frameCount), entry);
+                heightCache.TryRemove(new KeyValuePair<Vector2i, NoiseCacheEntry>((worldX, worldZ), entry));
+                heightCache.TryAdd((worldX, worldZ), new NoiseCacheEntry(entry.value, frameCount));
                 return entry.value;
             }
 
@@ -362,12 +362,12 @@ namespace Minecraft_Clone.World
 
             foreach(var kvp in noiseCaches)
             {
-                foreach(var entry in kvp.Value)
+                foreach(var kvpEntry in kvp.Value)
                 {
                     total++;
-                    if (frameCount - entry.Value.framesSinceUse > noiseCacheLifetime)
+                    if (frameCount - kvpEntry.Value.framesSinceUse > noiseCacheLifetime)
                     {
-                        noiseCaches[kvp.Key].TryRemove(entry);
+                        noiseCaches[kvp.Key].TryRemove(kvpEntry);
                         removed++;
                     }
                 }

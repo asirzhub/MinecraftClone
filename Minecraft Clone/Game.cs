@@ -78,7 +78,7 @@ namespace Minecraft_Clone
 
             if (frameTimeAccumulator >= 0.5)
             {
-                Title = $"game - FPS: {totalFrameCount * 2} | " +
+                Title = $"game - FPS: {shortFrameCount * 2} | " +
                     $"Position: {camera.position} | " +
                     $"Chunk: {chunkManager.currentChunkIndex} | " +
                     $"Chunk Tasks: {chunkManager.taskCount}/{chunkManager.maxChunkTasks} | " +
