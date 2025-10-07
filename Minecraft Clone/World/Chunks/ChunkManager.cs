@@ -261,7 +261,7 @@ public class ChunkManager
         }
 
         // check for expired noise cache entries every three seconds
-        if (shadowTime % 1 <= 0.01)
+        if (shadowTime % 5 <= 0.01)
             worldGenerator.Update(frameCount);
 
         // render chunks

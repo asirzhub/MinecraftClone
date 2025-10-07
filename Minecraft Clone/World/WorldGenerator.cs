@@ -1,6 +1,7 @@
 ﻿using Minecraft_Clone.World.Chunks;
 using OpenTK.Mathematics;
 using System.Collections.Concurrent;
+using static Minecraft_Clone.Graphics.CubeMesh;
 
 namespace Minecraft_Clone.World
 {
@@ -84,7 +85,7 @@ namespace Minecraft_Clone.World
         // height cache
         ConcurrentDictionary<Vector2i, NoiseCacheEntry> heightCache = new();
 
-        float noiseCacheLifetime = 30; // 30 frames may pass without noise cache access 
+        float noiseCacheLifetime = 180; // 30 frames may pass without noise cache access 
 
         readonly Vector2[] controlPoints;
 
@@ -127,8 +128,6 @@ namespace Minecraft_Clone.World
             BlockType.AIR, BlockType.AIR, BlockType.LEAVES, BlockType.AIR, BlockType.AIR,
             BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
         };
-
-        private byte[] treeBlocksArray;
 
         public WorldGenerator(int seed = 0)
         {
@@ -185,6 +184,7 @@ namespace Minecraft_Clone.World
                 if (cache.TryGetValue((x, y), out var entry))
                 {
                     entry.framesSinceUse = frameCount;
+                    cache.TryUpdate((x, y), new NoiseCacheEntry(entry.value, frameCount), entry);
                     return entry.value;
                 }
             }
@@ -203,10 +203,11 @@ namespace Minecraft_Clone.World
         // function for calculating terrain height for a given block
         float GetTerrainHeightAt(int worldX, int worldZ)
         {
-            if (heightCache.TryGetValue((worldX, worldZ), out var h))
+            if (heightCache.TryGetValue((worldX, worldZ), out var entry))
             {
-                h.framesSinceUse = frameCount;
-                return h.value;
+                entry.framesSinceUse = frameCount;
+                heightCache.TryUpdate((worldX, worldZ), new NoiseCacheEntry(entry.value, frameCount), entry);
+                return entry.value;
             }
 
             // continental/island
@@ -354,6 +355,7 @@ namespace Minecraft_Clone.World
 
             Console.WriteLine($"Searching for expired noise entries at frame: {frameCount}");
             int removed = 0;
+            int total = 0;
 
             // remove expired noise cache entries
             this.frameCount = frameCount;
@@ -362,6 +364,7 @@ namespace Minecraft_Clone.World
             {
                 foreach(var entry in kvp.Value)
                 {
+                    total++;
                     if (frameCount - entry.Value.framesSinceUse > noiseCacheLifetime)
                     {
                         noiseCaches[kvp.Key].TryRemove(entry);
@@ -372,13 +375,14 @@ namespace Minecraft_Clone.World
 
             foreach(var kvp in heightCache)
             {
+                total++;
                 if (frameCount - kvp.Value.framesSinceUse > noiseCacheLifetime)
                 {
                     heightCache.TryRemove(kvp);
                     removed++;
                 }
             }
-            Console.WriteLine($"Removed {removed} entries");
+            Console.WriteLine($"Removed {removed} entries - {100 * (float)removed/total}%");
         }
 
         private static float Clamp(float v, float min, float max) => v < min ? min : (v > max ? max : v);
