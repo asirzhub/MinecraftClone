@@ -55,13 +55,11 @@ public class ChunkManager
                                 (int)MathF.Floor(camera.position.Z)), out _); ; // first index in the list is always the center index  
     }
 
-    // fun stat
-    public int totalRenderCalls = 0;
+    public int shadowFrameDelay = 0;
+    float shadowTime;
 
     public void Update(Camera camera, float frameTime, float time, Vector3 sunDirection, SkyRender skyRender)
     {
-        totalRenderCalls = 0;
-
         // reduce chunk tasks after first burst 
         if (!chunkTasksHalved)
         {
@@ -252,8 +250,14 @@ public class ChunkManager
 
         worldGenerator.Update();
 
-        // shadowmap pass
-        renderer.RenderShadowMapPass(camera, time, ActiveChunks, skyRender);
+        // shadowmap pass updated every three frames
+        shadowTime += frameTime;
+
+        if(shadowTime % 0.1 <= 0.01 )
+        {
+            renderer.RenderShadowMapPass(camera, time, ActiveChunks, skyRender);
+            shadowFrameDelay = 0;
+        }
 
         // render chunks
         renderer.RenderLightingPass(camera, time, ActiveChunks, skyRender);
