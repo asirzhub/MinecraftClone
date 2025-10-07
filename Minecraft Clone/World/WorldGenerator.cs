@@ -82,7 +82,7 @@ namespace Minecraft_Clone.World
         Dictionary<NoiseLayer, NoiseParams> noiseParams = new();
 
         // height cache
-        ConcurrentDictionary<Vector2i, float> heightCache = new();
+        ConcurrentDictionary<Vector2i, NoiseCacheEntry> heightCache = new();
 
         float noiseCacheLifetime = 30; // 30 frames may pass without noise cache access 
 
@@ -203,8 +203,11 @@ namespace Minecraft_Clone.World
         // function for calculating terrain height for a given block
         float GetTerrainHeightAt(int worldX, int worldZ)
         {
-            if (heightCache.TryGetValue((worldX, worldZ), out float h))
-                return h;
+            if (heightCache.TryGetValue((worldX, worldZ), out var h))
+            {
+                h.framesSinceUse = frameCount;
+                return h.value;
+            }
 
             // continental/island
             float baseNoise = GetNoiseAt(NoiseLayer.BASE, worldX, worldZ);
@@ -215,7 +218,7 @@ namespace Minecraft_Clone.World
             height = heightRemapper(height, controlPoints);
 
             float result = Clamp(height, minHeight + 1, maxHeight - 1);
-            heightCache.TryAdd((worldX, worldZ), result);
+            heightCache.TryAdd((worldX, worldZ), new NoiseCacheEntry(result, frameCount));
             return result;
         }
 
@@ -347,12 +350,14 @@ namespace Minecraft_Clone.World
 
         public void Update(int frameCount)
         {
-            if (frameCount - this.frameCount < 2) return; // avoid double-calls
+            if (frameCount - this.frameCount < 15) return; // avoid double-calls
 
             Console.WriteLine($"Searching for expired noise entries at frame: {frameCount}");
             int removed = 0;
+
             // remove expired noise cache entries
             this.frameCount = frameCount;
+
             foreach(var kvp in noiseCaches)
             {
                 foreach(var entry in kvp.Value)
@@ -362,6 +367,15 @@ namespace Minecraft_Clone.World
                         noiseCaches[kvp.Key].TryRemove(entry);
                         removed++;
                     }
+                }
+            }
+
+            foreach(var kvp in heightCache)
+            {
+                if (frameCount - kvp.Value.framesSinceUse > noiseCacheLifetime)
+                {
+                    heightCache.TryRemove(kvp);
+                    removed++;
                 }
             }
             Console.WriteLine($"Removed {removed} entries");
