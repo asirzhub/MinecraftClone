@@ -50,7 +50,7 @@ void main()
     isFoliage = int(((inPosNorBright >> 21) & 0x1u) + ((inPosNorBright >> 23) & 0x1u));
 
     vec4 position = vec4(DecodePos(inPosNorBright), 1.0);
-    worldPos = position * model;
+    worldPos = model * position;
 
     if(isWater == 1)
     {
@@ -61,5 +61,5 @@ void main()
         position.z += u_waveAmplitude * sin(((worldPos.x + worldPos.z + 5 * worldPos.y) * -u_waveScale/2 + u_time * u_waveSpeed)*6.28318);
     }
 
-    gl_Position = (position * model * view * projection);
+    gl_Position = projection * view * model * position;
 }

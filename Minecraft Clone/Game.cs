@@ -23,7 +23,7 @@ namespace Minecraft_Clone
         private int frameCount = 0;
         public float timeElapsed = 0;
 
-        float timeMult = 0.03f;
+        float timeMult = 0.01f;
 
         // Game Constructor not much to say
         public Game(int width, int height, string title) : base(GameWindowSettings.Default, new NativeWindowSettings()
@@ -38,7 +38,7 @@ namespace Minecraft_Clone
             camera = new Camera(width, height, -200f * Vector3.UnitX + 200 * Vector3.UnitY + 250 * Vector3.UnitZ);
             this.width = width;
             this.height = height;
-            skyRender = new SkyRender((0.4f, 1f, -1f));
+            skyRender = new SkyRender((1.0f, 1f, -1f));
         }
 
         protected override void OnLoad()
@@ -50,7 +50,6 @@ namespace Minecraft_Clone
 
             //VSync = VSyncMode.On; // only needed when i dont want my laptop to turn into a jet engine at the library
             GL.Enable(EnableCap.DepthTest);
-            //GL.Enable(EnableCap.CullFace);
             GL.Enable(EnableCap.Blend);
             GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
             GL.Enable(EnableCap.Multisample);
@@ -64,12 +63,9 @@ namespace Minecraft_Clone
         protected override void OnRenderFrame(FrameEventArgs args)
         {
             base.OnRenderFrame(args);
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-            // Render sky first
             skyRender.SetSunDirection(Vector3.Transform(skyRender.sunDirection, new Quaternion((float)args.Time * timeMult, 0f, 0f)));
-            skyRender.RenderSky(camera);
-
+            
             chunkManager.Update(camera, (float)args.Time, timeElapsed, skyRender.sunDirection.Normalized(), skyRender);
 
             SwapBuffers();
@@ -84,7 +80,6 @@ namespace Minecraft_Clone
                     $"Position: {camera.position} | " +
                     $"Chunk: {chunkManager.currentChunkIndex} | " +
                     $"Chunk Tasks: {chunkManager.taskCount}/{chunkManager.maxChunkTasks} | " +
-                    $"Render Calls: {chunkManager.totalRenderCalls} | " + 
                     $"Render Distance: {chunkManager.radius}";
                 frameTimeAccumulator = 0.0;
                 frameCount = 0;

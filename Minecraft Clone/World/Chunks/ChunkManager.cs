@@ -55,13 +55,11 @@ public class ChunkManager
                                 (int)MathF.Floor(camera.position.Z)), out _); ; // first index in the list is always the center index  
     }
 
-    // fun stat
-    public int totalRenderCalls = 0;
+    public int shadowFrameDelay = 0;
+    float shadowTime;
 
-    public void Update(Camera camera, float frameTime, float time, Vector3 sunDirection, SkyRender sky)
+    public void Update(Camera camera, float frameTime, float time, Vector3 sunDirection, SkyRender skyRender)
     {
-        totalRenderCalls = 0;
-
         // reduce chunk tasks after first burst 
         if (!chunkTasksHalved)
         {
@@ -136,15 +134,14 @@ public class ChunkManager
             RunningTasks.TryRemove(resultChunk.index, out _);
         }
 
-        renderer.Bind(); // by binding only once (rather than every call), gain 10% FPS!
 
         // for every chunk that's still relevant
         foreach (var idx in ActiveChunksIndices)
         {
             // if the chunk has existed already
-            if (ActiveChunks.TryGetValue(idx, out var resultChunk))
+            if (ActiveChunks.TryGetValue(idx, out var chunk))
             {
-                var state = resultChunk.GetState();
+                var state = chunk.GetState();
 
                 // un-expire chunks that were expired but need to be brought back before expiry
                 if (ExpiredChunkLifetimes.ContainsKey(idx))
@@ -152,7 +149,7 @@ public class ChunkManager
 
                 // determine if the chunk is in view or not (for culling)
                 if(state == ChunkState.VISIBLE || state == ChunkState.INVISIBLE)
-                        resultChunk.SetState(IsChunkInView(camera, idx)? ChunkState.VISIBLE : ChunkState.INVISIBLE);
+                        chunk.SetState(IsChunkInView(camera, idx)? ChunkState.VISIBLE : ChunkState.INVISIBLE);
 
                 // different instructions for different chunk states
                 switch (state)
@@ -161,7 +158,7 @@ public class ChunkManager
                         // if theres room to add a generation job for a new chunk, do it
                         if (RunningTasks.Count < maxChunkTasks)
                         {
-                            resultChunk.SetState(ChunkState.GENERATING);
+                            chunk.SetState(ChunkState.GENERATING);
                             CancellationTokenSource cts = new CancellationTokenSource();
                             RunningTasksCTS.TryAdd(idx, cts);
                             RunningTasks.TryAdd(idx, generator.GenerationTask(idx, cts, worldGenerator, CompletedBlocksQueue));
@@ -172,66 +169,45 @@ public class ChunkManager
                         // if the chunk has terrain blocks and theres room for a task, start feature task for it
                         if (AreNeighborsGenerated(idx) && RunningTasks.Count < maxChunkTasks)
                         {
-                            resultChunk.SetState(ChunkState.FEATURING);
+                            chunk.SetState(ChunkState.FEATURING);
                             CancellationTokenSource cts = new CancellationTokenSource();
                             RunningTasksCTS.TryAdd(idx, cts);
-                            RunningTasks.TryAdd(idx, generator.FeatureTask(new ChunkGenerator.CompletedChunkBlocks(idx, resultChunk), cts, worldGenerator, CompletedBlocksQueue, this));
+                            RunningTasks.TryAdd(idx, generator.FeatureTask(new ChunkGenerator.CompletedChunkBlocks(idx, chunk), cts, worldGenerator, CompletedBlocksQueue, this));
                         }
                         break;
                     case ChunkState.FEATURED:
                         // if the chunk has terrain + feature blocks, neighbors have blocks, and theres room for a task, make mesh for it
                         if (AreNeighborsGenerated(idx) && RunningTasks.Count < maxChunkTasks)
                         {
-                            resultChunk.SetState(ChunkState.MESHING);
+                            chunk.SetState(ChunkState.MESHING);
                             CancellationTokenSource cts = new CancellationTokenSource();
                             RunningTasksCTS.TryAdd(idx, cts);
                             RunningTasks.TryAdd(idx, mesher.MeshTask(idx, this, cts, CompletedMeshQueue, ActiveChunks, LOD: 1));
                         }
                         break;
-                    case ChunkState.MESHING:
-                        // avoid flashing chunks by rendering their old mesh while a new one is made
-                        var meshingRendered = renderer.RenderChunk(resultChunk.solidMesh, camera, idx, time, sunDirection, sky);
-                        if (meshingRendered) totalRenderCalls += 1;
-
-                        break;
                     case ChunkState.MESHED:
-                        resultChunk.SetState(ChunkState.VISIBLE);
+                        chunk.SetState(ChunkState.VISIBLE);
 
                         // mark chunks with no mesh (all air) as invisible
-                        if (resultChunk.IsEmpty)
-                            resultChunk.SetState(ChunkState.INVISIBLE);
-
-                        var meshedRender = renderer.RenderChunk(resultChunk.solidMesh, camera, idx, time, sunDirection, sky);
-                        if (meshedRender) totalRenderCalls += 1;
-                        
+                        if (chunk.IsEmpty)
+                            chunk.SetState(ChunkState.INVISIBLE);
+                                                
                         break;
 
                     case ChunkState.VISIBLE:
-                        // render visible chunks, count how many
-                        // only update the blocks if it's visible (lazy chunk update)
-                        // also mark neighboring chunks dirty if the processed blocks do anything at the boundaries
-
-                        var dirtyNeighbors = resultChunk.ProcessPendingBlocksAndGetDirtyNeighbors(); 
+                        var dirtyNeighbors = chunk.ProcessPendingBlocksAndGetDirtyNeighbors(); 
 
                         if(dirtyNeighbors.Result !=null && dirtyNeighbors.Result.Count > 0)
                             foreach(var direction in dirtyNeighbors.Result)
-                                if (ActiveChunks.TryGetValue(idx + direction, out var chunk))
-                                    chunk.TryMarkDirty();                            
-
-                        var rendered = renderer.RenderChunk(resultChunk.solidMesh, camera, idx, time, sunDirection, sky);
-                        if (rendered) totalRenderCalls+=1;
-
+                                if (ActiveChunks.TryGetValue(idx + direction, out var dirtyChunk))
+                                    dirtyChunk.TryMarkDirty();
                         break;
 
                     case ChunkState.DIRTY:
-
-                        var dirtyRendered = renderer.RenderChunk(resultChunk.solidMesh, camera, idx, time, sunDirection, sky);
-                        if (dirtyRendered) totalRenderCalls += 1;
-
                         // dirty chunks need to get re-meshed
                         if (AreNeighborsGenerated(idx) && RunningTasks.Count < maxChunkTasks)
                         {
-                            resultChunk.SetState(ChunkState.MESHING);
+                            chunk.SetState(ChunkState.MESHING);
                             CancellationTokenSource cts = new CancellationTokenSource();
                             RunningTasksCTS.TryAdd(idx, cts);
                             RunningTasks.TryAdd(idx, mesher.MeshTask(idx, this, cts, CompletedMeshQueue, ActiveChunks, LOD: 1));
@@ -244,17 +220,6 @@ public class ChunkManager
             else
                 ActiveChunks.TryAdd(idx, new Chunk()); // adding a brand new chunk to the system
         }
-
-        // render water with no depth mask, after all solids were rendered
-        GL.DepthMask(false);
-        foreach (var ChunkKVP in ActiveChunks)
-            if (ChunkKVP.Value.GetState() == ChunkState.VISIBLE)
-            {
-                var rendered = renderer.RenderChunk(ChunkKVP.Value.liquidMesh, camera, ChunkKVP.Key, time, sunDirection, sky);
-                if(rendered) totalRenderCalls += 1;
-            }
-
-        GL.DepthMask(true);
 
         // assign expired chunks to expiry list if they're not in the current list
         foreach (var idx in LastActivationChunksIndices)
@@ -284,6 +249,18 @@ public class ChunkManager
         }
 
         worldGenerator.Update();
+
+        // shadowmap pass updated every three frames
+        shadowTime += frameTime;
+
+        if(shadowTime % 0.1 <= 0.01 )
+        {
+            renderer.RenderShadowMapPass(camera, time, ActiveChunks, skyRender);
+            shadowFrameDelay = 0;
+        }
+
+        // render chunks
+        renderer.RenderLightingPass(camera, time, ActiveChunks, skyRender);
     }
 
     // naive frustrum culling using a cone frustrum
@@ -295,7 +272,7 @@ public class ChunkManager
         if (chunkToCamera.LengthFast < 2 * Chunk.SIZE) // if the chunk is too close, exit out with true
             return true;
 
-        float angle = Vector3.CalculateAngle(camera.front, chunkToCamera);
+        float angle = Vector3.CalculateAngle(camera.forward, chunkToCamera);
 
         if (angle < 1.2f) // if within view, true
             return true;

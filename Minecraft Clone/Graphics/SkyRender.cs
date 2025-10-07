@@ -86,7 +86,7 @@ namespace Minecraft_Clone.Graphics
 
             skyShader.SetVector3("cameraRight", camera.right);
             skyShader.SetVector3("cameraUp", camera.up);
-            skyShader.SetVector3("cameraForward", camera.front);
+            skyShader.SetVector3("cameraForward", camera.forward);
             skyShader.SetVector3("sunDir", sunDirection);
             skyShader.SetFloat("fovY", camera.fovY);
             skyShader.SetFloat("aspectRatio", camera.screenwidth / camera.screenheight);

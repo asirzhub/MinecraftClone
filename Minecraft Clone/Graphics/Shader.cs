@@ -73,7 +73,7 @@ namespace Minecraft_Clone.Graphics
             if (loc == -1)
                 Console.WriteLine($"[Shader Warning] Uniform '{name}' not found in shader {ID}.");
             else
-                GL.UniformMatrix4(loc, true, ref value);
+                GL.UniformMatrix4(loc, false, ref value);
         }
 
         public void SetMatrix3(string name, Matrix3 value)
@@ -82,7 +82,7 @@ namespace Minecraft_Clone.Graphics
             if (loc == -1)
                 Console.WriteLine($"[Shader Warning] Uniform '{name}' not found in shader {ID}.");
             else
-                GL.UniformMatrix3(loc, true, ref value);
+                GL.UniformMatrix3(loc, false, ref value);
         }
 
         public void SetFloat(string name, float value)

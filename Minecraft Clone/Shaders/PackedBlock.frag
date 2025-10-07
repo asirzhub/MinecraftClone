@@ -4,7 +4,12 @@ in vec2 texCoord;
 in vec3 vNormal;
 in vec4 worldPos;
 in float brightness;
-uniform sampler2D texture0;
+
+uniform sampler2D albedoTexture;
+uniform sampler2D shadowMap;
+
+uniform mat4 lightProjMat;
+uniform mat4 lightViewMat;
 
 uniform vec3 cameraPos;
 
@@ -19,9 +24,17 @@ vec4 lerpvec4(vec4 a, vec4 b, float t){
     return ( a*t + b*(1-t));
 }
 
+float lerp(float a, float b, float t){
+    return ( a*t + b*(1-t));
+}
+
+float rand(vec2 co) { return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453); }
+
 void main()
 {
-    vec4 texColor = texture(texture0, texCoord);
+    float bias = 0.00005;
+
+    vec4 texColor = texture(albedoTexture, texCoord);
 
     if (texColor.a < 0.1)
         discard;
@@ -43,9 +56,29 @@ void main()
 
     vec4 skyLighting = vec4(faceBrightness * vec3(sunsetColor) + daytime * ambientColor, 1);
 
-    float dist = 1.0 - exp(min((-distance(cameraPos, worldPos.xyz)+100)/150 - worldPos.y/512.0, 0)) ;
+    float dist = exp(min((-distance(cameraPos, worldPos.xyz)+100)/150 - worldPos.y/512.0, 0)) ;
+    
+    vec4 lightSpacePos = lightProjMat * lightViewMat * worldPos; 
+    vec3 projCoord = (lightSpacePos.xyz/lightSpacePos.w) * 0.5 + 0.5;
 
-    vec3 finalFogColor = fogColor + vec3(0.0, 0.0, 1/dist) ;
+    float current = projCoord.z - (bias/dot(vNormal, sunDirection)); // the dot product bit reduces acne when the sun points near perpendicular to a surface normal
 
-    FragColor = clamp(lerpvec4(texColor * vec4(vec3(brightness/15), 1) * skyLighting, vec4(fogColor, 1), 1-dist), 0.0, 1.0);
+    int pcfSampleSize = 1;
+
+    float shadow = 0.0;
+
+    vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+    for(int x = -pcfSampleSize; x <= pcfSampleSize; ++x)
+    {
+        for(int y = -pcfSampleSize; y <= pcfSampleSize; ++y)
+        {
+            float pcfDepth = texture(shadowMap, projCoord.xy + vec2(x, y) * texelSize ).r; 
+            shadow += current - bias > pcfDepth ? 1.0 : 0.0;        
+        }    
+    }
+    shadow /= (((pcfSampleSize*2)+1) * ((pcfSampleSize*2)+1)); // ((r*2) + 1)^2
+
+    shadow = clamp(1-shadow, 0.4, 1.0);
+    
+    FragColor = clamp(lerpvec4(vec4(shadow, shadow, shadow, 1.0) * texColor * vec4(vec3(brightness/15), 1) * skyLighting, vec4(fogColor, 1), dist), 0.0, 1.0);
 }
