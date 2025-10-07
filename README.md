@@ -11,7 +11,7 @@ Literally just making a clone of Minecraft. Using C# and OpenTK (A wrapper for O
 8. ~~Vertex-based baked lighting (ambient occlusion)~~
 9. ~~Frustrum culling~~
 10. ~~Surface features (trees, grass, flowers)~~
-16. Shadow mapping
+16. ~~Shadow mapping~~
 13. Intelligent chunk loading
 14. Caching generated chunks to disk
 11. Block placement and destruction
