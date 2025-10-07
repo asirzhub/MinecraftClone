@@ -30,6 +30,17 @@ namespace Minecraft_Clone.World
         }
     }
 
+    public struct NoiseCacheEntry
+    {
+        public float value;
+        public int framesSinceUse;
+
+        public NoiseCacheEntry(float value, int framesSinceUse) {
+            this.value = value;
+            this.framesSinceUse = framesSinceUse;
+        }
+    }
+
     // manages world generation...
     public class WorldGenerator
     {
@@ -67,13 +78,11 @@ namespace Minecraft_Clone.World
         public int seed = 0;
 
         // noise caches
-        ConcurrentDictionary<NoiseLayer, ConcurrentDictionary<Vector2i, float>> noiseCaches;
+        ConcurrentDictionary<NoiseLayer, ConcurrentDictionary<Vector2i, NoiseCacheEntry>> noiseCaches;
         Dictionary<NoiseLayer, NoiseParams> noiseParams = new();
 
         // height cache
         ConcurrentDictionary<Vector2i, float> heightCache = new();
-
-        float noiseCacheTimer = new(); // after a timer goes to zero, delete the cache from memory
 
         float noiseCacheLifetime = 30; // 30 frames may pass without noise cache access 
 
@@ -170,12 +179,14 @@ namespace Minecraft_Clone.World
 
         public float GetNoiseAt(NoiseLayer layer, int x, int y)
         {
-            noiseCacheTimer = noiseCacheLifetime; // reset timer
             // if the cache layer exists
             if (noiseCaches.TryGetValue(layer, out var cache))
             {
-                if (cache.TryGetValue((x, y), out var value))
-                    return value;
+                if (cache.TryGetValue((x, y), out var entry))
+                {
+                    entry.framesSinceUse = frameCount;
+                    return entry.value;
+                }
             }
             else // otherwise add the cache layer
                 noiseCaches.TryAdd(layer, new());
@@ -185,7 +196,7 @@ namespace Minecraft_Clone.World
             float result = noise.Fbm2D(x * p.scale, y * p.scale, p.octaves, p.lacunarity, p.gain);
 
             noiseCaches.TryGetValue(layer, out var layerCache); // store the newly calculated val
-            layerCache.TryAdd((x, y), result);
+            layerCache.TryAdd((x, y), new(result, 0));
             return result;
         }
 
@@ -323,8 +334,6 @@ namespace Minecraft_Clone.World
             return blocks;
         }
 
-        
-
         public Vector3i WorldPosToChunkIndex(Vector3i worldIndex, int chunkSize = Chunk.SIZE)
         {
             int chunkX = (int)Math.Floor(worldIndex.X / (double)chunkSize);
@@ -334,16 +343,28 @@ namespace Minecraft_Clone.World
             return (chunkX, chunkY, chunkZ);
         }
 
-        public void Update()
+        int frameCount = -10;
+
+        public void Update(int frameCount)
         {
-            if (noiseCacheTimer >= 0)
-                noiseCacheTimer--;
-            if (noiseCacheTimer == 0)
+            if (frameCount - this.frameCount < 2) return; // avoid double-calls
+
+            Console.WriteLine($"Searching for expired noise entries at frame: {frameCount}");
+            int removed = 0;
+            // remove expired noise cache entries
+            this.frameCount = frameCount;
+            foreach(var kvp in noiseCaches)
             {
-                Console.WriteLine("Cleared noise cache");
-                noiseCaches.Clear();
-                heightCache.Clear();
+                foreach(var entry in kvp.Value)
+                {
+                    if (frameCount - entry.Value.framesSinceUse > noiseCacheLifetime)
+                    {
+                        noiseCaches[kvp.Key].TryRemove(entry);
+                        removed++;
+                    }
+                }
             }
+            Console.WriteLine($"Removed {removed} entries");
         }
 
         private static float Clamp(float v, float min, float max) => v < min ? min : (v > max ? max : v);

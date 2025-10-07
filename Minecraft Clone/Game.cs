@@ -20,7 +20,8 @@ namespace Minecraft_Clone
         private int width;
         private int height;
         private double frameTimeAccumulator = 0.0;
-        private int frameCount = 0;
+        private int shortFrameCount = 0;
+        private int totalFrameCount = 0;
         public float timeElapsed = 0;
 
         float timeMult = 0.01f;
@@ -66,23 +67,24 @@ namespace Minecraft_Clone
 
             skyRender.SetSunDirection(Vector3.Transform(skyRender.sunDirection, new Quaternion((float)args.Time * timeMult, 0f, 0f)));
             
-            chunkManager.Update(camera, (float)args.Time, timeElapsed, skyRender.sunDirection.Normalized(), skyRender);
+            chunkManager.Update(camera, (float)args.Time, timeElapsed, totalFrameCount, skyRender.sunDirection.Normalized(), skyRender);
 
             SwapBuffers();
 
             // track fps
             frameTimeAccumulator += args.Time;
-            frameCount++;
+            shortFrameCount++;
+            totalFrameCount++;
 
             if (frameTimeAccumulator >= 0.5)
             {
-                Title = $"game - FPS: {frameCount * 2} | " +
+                Title = $"game - FPS: {totalFrameCount * 2} | " +
                     $"Position: {camera.position} | " +
                     $"Chunk: {chunkManager.currentChunkIndex} | " +
                     $"Chunk Tasks: {chunkManager.taskCount}/{chunkManager.maxChunkTasks} | " +
                     $"Render Distance: {chunkManager.radius}";
                 frameTimeAccumulator = 0.0;
-                frameCount = 0;
+                shortFrameCount = 0;
             }
         }
 
