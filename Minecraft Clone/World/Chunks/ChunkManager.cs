@@ -58,7 +58,7 @@ public class ChunkManager
     public int shadowFrameDelay = 0;
     float shadowTime;
 
-    public void Update(Camera camera, float frameTime, float time, Vector3 sunDirection, SkyRender skyRender)
+    public void Update(Camera camera, float frameTime, float time, int frameCount, Vector3 sunDirection, SkyRender skyRender)
     {
         // reduce chunk tasks after first burst 
         if (!chunkTasksHalved)
@@ -104,6 +104,7 @@ public class ChunkManager
             targetChunk.blocks = completedBlocks.blocks;
             targetChunk.IsEmpty = completedBlocks.isEmpty;
             RunningTasks.TryRemove(completedBlocks.index, out _);
+            RunningTasksCTS.TryRemove(completedBlocks.index, out _);
 
             // also store the spilled blocks from features
             if(completedBlocks.pendingBlocks != null)
@@ -132,6 +133,7 @@ public class ChunkManager
             targetChunk.liquidMesh = resultChunk.liquidMesh;
             targetChunk.SetState(ChunkState.MESHED);
             RunningTasks.TryRemove(resultChunk.index, out _);
+            RunningTasksCTS.TryRemove(resultChunk.index, out _);
         }
 
 
@@ -248,16 +250,19 @@ public class ChunkManager
             lastChunkIndex = currentChunkIndex;
         }
 
-        worldGenerator.Update();
 
-        // shadowmap pass updated every three frames
+        // shadowmap pass updated not every frame
         shadowTime += frameTime;
 
-        if(shadowTime % 0.1 <= 0.01 )
+        if(shadowTime % 0.05 <= 0.01 )
         {
             renderer.RenderShadowMapPass(camera, time, ActiveChunks, skyRender);
             shadowFrameDelay = 0;
         }
+
+        // check for expired noise cache entries every three seconds
+        if (shadowTime % 5 <= 0.01)
+            worldGenerator.Update(frameCount);
 
         // render chunks
         renderer.RenderLightingPass(camera, time, ActiveChunks, skyRender);

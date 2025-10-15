@@ -1,12 +1,14 @@
 ﻿using Minecraft_Clone.World.Chunks;
 using OpenTK.Mathematics;
 using System.Collections.Concurrent;
+using static Minecraft_Clone.Graphics.CubeMesh;
 
 namespace Minecraft_Clone.World
 {
     public enum NoiseLayer
     {
         BASE,
+        HEIGHT,
         MOUNTAINBLEND,
         DETAIL,
         TALLGRASS,
@@ -27,6 +29,17 @@ namespace Minecraft_Clone.World
             this.octaves = octaves;
             this.lacunarity = lacunarity;
             this.gain = gain;
+        }
+    }
+
+    public struct NoiseCacheEntry
+    {
+        public float value;
+        public int framesSinceUse;
+
+        public NoiseCacheEntry(float value, int framesSinceUse) {
+            this.value = value;
+            this.framesSinceUse = framesSinceUse;
         }
     }
 
@@ -67,16 +80,14 @@ namespace Minecraft_Clone.World
         public int seed = 0;
 
         // noise caches
-        ConcurrentDictionary<NoiseLayer, ConcurrentDictionary<Vector2i, float>> noiseCaches;
+        ConcurrentDictionary<NoiseLayer, ConcurrentDictionary<Vector2i, NoiseCacheEntry>> noiseCaches;
         Dictionary<NoiseLayer, NoiseParams> noiseParams = new();
 
         // height cache
-        ConcurrentDictionary<Vector2i, float> heightCache = new();
+        ConcurrentDictionary<Vector2i, NoiseCacheEntry> heightCache = new();
 
-        float noiseCacheTimer = new(); // after a timer goes to zero, delete the cache from memory
-
-        float noiseCacheLifetime = 30; // 30 frames may pass without noise cache access 
-
+        float noiseCacheLifetime = 180; // 30 frames may pass without noise cache access 
+            
         readonly Vector2[] controlPoints;
 
         // define a tree based on vertical slices
@@ -119,8 +130,6 @@ namespace Minecraft_Clone.World
             BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
         };
 
-        private byte[] treeBlocksArray;
-
         public WorldGenerator(int seed = 0)
         {
             this.seed = seed;
@@ -129,8 +138,8 @@ namespace Minecraft_Clone.World
             noiseParams.Add(NoiseLayer.MOUNTAINBLEND, mountainBlendNoise);
             noiseParams.Add(NoiseLayer.TALLGRASS, tallgrassNoiseParams);
             noiseParams.Add(NoiseLayer.TREE, treeNoiseParams);
-            noiseCaches = new();
-
+            //noiseCaches = new();
+            
             float s = seaLevel;
             float m = mountainHeightStart;
 
@@ -168,43 +177,43 @@ namespace Minecraft_Clone.World
             return result;
         }
 
-        public float GetNoiseAt(NoiseLayer layer, int x, int y)
+        public float GetNoiseAt(NoiseLayer layer, int x, int z)
         {
-            noiseCacheTimer = noiseCacheLifetime; // reset timer
-            // if the cache layer exists
-            if (noiseCaches.TryGetValue(layer, out var cache))
+        //    if (!noiseCaches.TryGetValue(layer, out var cache))
+        //    {
+        //        cache = new ConcurrentDictionary<Vector2i, NoiseCacheEntry>();
+        //        noiseCaches.TryAdd(layer, cache);
+        //    }
+
+        //    var key = new Vector2i(x, z);
+
+        //    if (cache.TryGetValue(key, out var entry))
+        //    {
+        //        cache[key] = new NoiseCacheEntry(entry.value, frameCount);
+        //        return entry.value;
+        //    }
+
+            float result;
+
+            if (layer == NoiseLayer.HEIGHT)
             {
-                if (cache.TryGetValue((x, y), out var value))
-                    return value;
+                // height has some extra stuff to do
+                float baseN = GetNoiseAt(NoiseLayer.BASE, x, z);
+                float height = baseHeight + (baseN * baseN) * baseAmplitude;
+                height += GetNoiseAt(NoiseLayer.MOUNTAINBLEND, x, z) * mountainBoost;
+
+                result = heightRemapper(height, controlPoints);
+                result = Clamp(result, minHeight + 1, maxHeight - 1);
             }
-            else // otherwise add the cache layer
-                noiseCaches.TryAdd(layer, new());
+            else
+            {
+                // Regular FBM for other layers
+                noiseParams.TryGetValue(layer, out var p);
+                result = noise.Fbm2D(x * p.scale, z * p.scale, p.octaves, p.lacunarity, p.gain);
+            }
 
-            // grab parameters for this layer, calculate the noise once
-            noiseParams.TryGetValue(layer, out var p);
-            float result = noise.Fbm2D(x * p.scale, y * p.scale, p.octaves, p.lacunarity, p.gain);
-
-            noiseCaches.TryGetValue(layer, out var layerCache); // store the newly calculated val
-            layerCache.TryAdd((x, y), result);
-            return result;
-        }
-
-        // function for calculating terrain height for a given block
-        float GetTerrainHeightAt(int worldX, int worldZ)
-        {
-            if (heightCache.TryGetValue((worldX, worldZ), out float h))
-                return h;
-
-            // continental/island
-            float baseNoise = GetNoiseAt(NoiseLayer.BASE, worldX, worldZ);
-            float height = baseHeight + baseNoise * baseNoise * baseAmplitude;
-
-            height += GetNoiseAt(NoiseLayer.MOUNTAINBLEND, worldX, worldZ) * mountainBoost;
-
-            height = heightRemapper(height, controlPoints);
-
-            float result = Clamp(height, minHeight + 1, maxHeight - 1);
-            heightCache.TryAdd((worldX, worldZ), result);
+            // New entries should have a fresh timestamp
+            //cache[key] = new NoiseCacheEntry(result, frameCount);
             return result;
         }
 
@@ -213,12 +222,12 @@ namespace Minecraft_Clone.World
         {
             int x = pos.X, y = pos.Y, z = pos.Z;
 
-            float hF = GetTerrainHeightAt(x, z);
+            float hF = GetNoiseAt(NoiseLayer.HEIGHT, x, z);
             int h = (int)MathF.Floor(hF);
 
             // calculate gradients
-            float dx = (GetTerrainHeightAt(x + 1, z) - GetTerrainHeightAt(x - 1, z)) / 3;
-            float dz = (GetTerrainHeightAt(x, z + 1) - GetTerrainHeightAt(x, z - 1)) / 3;
+            float dx = (GetNoiseAt(NoiseLayer.HEIGHT, x + 1, z) - GetNoiseAt(NoiseLayer.HEIGHT, x - 1, z)) / 3;
+            float dz = (GetNoiseAt(NoiseLayer.HEIGHT, x, z + 1) - GetNoiseAt(NoiseLayer.HEIGHT, x, z - 1)) / 3;
 
             float absdx = MathF.Abs(dx);
             float absdz = MathF.Abs(dz);
@@ -294,8 +303,8 @@ namespace Minecraft_Clone.World
                             }
                         }
 
-                        float t = GetNoiseAt(NoiseLayer.TREE, x, z);
-                        
+                        float t = GetNoiseAt(NoiseLayer.TREE, worldOffset.X + x, worldOffset.Z + z);
+
                         if (t > treeThreshold)
                         {
                             if (growableSurface)
@@ -323,8 +332,6 @@ namespace Minecraft_Clone.World
             return blocks;
         }
 
-        
-
         public Vector3i WorldPosToChunkIndex(Vector3i worldIndex, int chunkSize = Chunk.SIZE)
         {
             int chunkX = (int)Math.Floor(worldIndex.X / (double)chunkSize);
@@ -334,16 +341,35 @@ namespace Minecraft_Clone.World
             return (chunkX, chunkY, chunkZ);
         }
 
-        public void Update()
+        int frameCount = -10;
+
+        public async void Update(int frameCount)
         {
-            if (noiseCacheTimer >= 0)
-                noiseCacheTimer--;
-            if (noiseCacheTimer == 0)
-            {
-                Console.WriteLine("Cleared noise cache");
-                noiseCaches.Clear();
-                heightCache.Clear();
-            }
+            if (frameCount - this.frameCount < 15) return; // avoid double-calls
+
+            //Console.WriteLine($"Searching for expired noise entries at frame: {frameCount}");
+            //int removed = 0;
+            //int total = 0;
+
+            //// remove expired noise cache entries
+            //this.frameCount = frameCount;
+            //await Task.Run(() => {
+
+            //    foreach (var (layer, dict) in noiseCaches)
+            //    {
+            //        foreach (var kv in dict) // kv is KeyValuePair<Vector2i, NoiseCacheEntry>
+            //        {
+            //            total++;
+            //            if (frameCount - kv.Value.framesSinceUse > noiseCacheLifetime)
+            //            {
+            //                dict.TryRemove(kv.Key, out _); // <-- remove by key
+            //                removed++;
+            //            }
+            //        }
+            //    }
+            //    Console.WriteLine($"Removed {removed} entries - {100 * (float)removed / total}%");
+            //});
+
         }
 
         private static float Clamp(float v, float min, float max) => v < min ? min : (v > max ? max : v);
