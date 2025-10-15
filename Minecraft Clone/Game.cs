@@ -24,7 +24,7 @@ namespace Minecraft_Clone
         private int totalFrameCount = 0;
         public float timeElapsed = 0;
 
-        float timeMult = 0.01f;
+        float timeMult = 0.03f;
 
         // Game Constructor not much to say
         public Game(int width, int height, string title) : base(GameWindowSettings.Default, new NativeWindowSettings()
