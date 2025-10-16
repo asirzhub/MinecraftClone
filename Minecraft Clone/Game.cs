@@ -5,12 +5,13 @@ using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
+using System;
 
 namespace Minecraft_Clone
 {
     class Game : GameWindow
     {
-        Camera camera;
+        AerialCameraRig aerialCamera;
         public bool focused = true;
 
         public ChunkManager chunkManager;
@@ -26,6 +27,8 @@ namespace Minecraft_Clone
 
         float timeMult = 0.03f;
 
+        MeshData selectionBox;
+
         // Game Constructor not much to say
         public Game(int width, int height, string title) : base(GameWindowSettings.Default, new NativeWindowSettings()
         {
@@ -36,10 +39,17 @@ namespace Minecraft_Clone
             DepthBits = 24,
         })
         {
-            camera = new Camera(width, height, -200f * Vector3.UnitX + 200 * Vector3.UnitY + 250 * Vector3.UnitZ);
+            aerialCamera = new AerialCameraRig(width, height, (0f,0f,0f));
             this.width = width;
             this.height = height;
             skyRender = new SkyRender((1.0f, 1f, -1f));
+
+            selectionBox = new();
+            foreach (var face in CubeMesh.PackedFaceVertices) {
+                foreach (var v in face.Value) {
+                    selectionBox.AddVertex(v);
+                }
+            }
         }
 
         protected override void OnLoad()
@@ -55,7 +65,7 @@ namespace Minecraft_Clone
             GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
             GL.Enable(EnableCap.Multisample);
 
-            chunkManager = new ChunkManager(camera);
+            chunkManager = new ChunkManager(aerialCamera);
 
             skyRender.InitializeSky();
         }
@@ -67,7 +77,34 @@ namespace Minecraft_Clone
 
             skyRender.SetSunDirection(Vector3.Transform(skyRender.sunDirection, new Quaternion((float)args.Time * timeMult, 0f, 0f)));
             
-            chunkManager.Update(camera, (float)args.Time, timeElapsed, totalFrameCount, skyRender.sunDirection.Normalized(), skyRender);
+            chunkManager.Update(aerialCamera, (float)args.Time, timeElapsed, totalFrameCount, skyRender.sunDirection.Normalized(), skyRender);
+
+            Vector3 focusPoint = new(aerialCamera.focusPoint);
+            float targetFocusHeight = chunkManager.worldGenerator.GetNoiseAt(World.NoiseLayer.HEIGHT, (int)focusPoint.X, (int)focusPoint.Z);
+            aerialCamera.focusPoint.Y = lerp(aerialCamera.focusPoint.Y, targetFocusHeight, aerialCamera.smoothing);
+
+            //selectionBox.Upload();
+
+            ////with everything prepped, we can now render
+            //Matrix4 model = Matrix4.CreateTranslation(chunkManager.currentChunkIndex * (Chunk.SIZE));
+            //Matrix4 view = aerialCamera.GetViewMatrix();
+            //Matrix4 projection = aerialCamera.GetProjectionMatrix();
+            //Shader bleh = chunkManager.renderer.blockShader;
+
+            //bleh.SetMatrix4("model", model);
+            //bleh.SetMatrix4("view", view);
+            //bleh.SetMatrix4("projection", projection);
+
+            //selectionBox.vao.Bind();
+            //selectionBox.vbo.Bind();
+            //selectionBox.ibo.Bind();
+
+            //GL.DrawElements(
+            //PrimitiveType.Triangles,
+            //selectionBox.ibo.length,
+            //DrawElementsType.UnsignedInt,
+            //0
+            //);
 
             SwapBuffers();
 
@@ -79,7 +116,7 @@ namespace Minecraft_Clone
             if (frameTimeAccumulator >= 0.5)
             {
                 Title = $"game - FPS: {shortFrameCount * 2} | " +
-                    $"Position: {camera.position} | " +
+                    $"Position: {aerialCamera.position()} | " +
                     $"Chunk: {chunkManager.currentChunkIndex} | " +
                     $"Chunk Tasks: {chunkManager.taskCount}/{chunkManager.maxChunkTasks} | " +
                     $"Render Distance: {chunkManager.radius}";
@@ -96,7 +133,7 @@ namespace Minecraft_Clone
             height = e.Height;
 
             GL.Viewport(0, 0, width, height);
-            camera.UpdateResolution(width, height);
+            aerialCamera.UpdateResolution(width, height);
         }
 
         // logic, non-rendering frame-by-frame stuff
@@ -108,7 +145,7 @@ namespace Minecraft_Clone
             base.OnUpdateFrame(args);
 
             if(focused)
-                camera.Update(input, mouse, args);
+                aerialCamera.Update(input, mouse, args);
 
             timeElapsed += (float)args.Time;
 
@@ -119,7 +156,7 @@ namespace Minecraft_Clone
                 {
                     CursorState = CursorState.Normal;
                     focused = false;
-                    camera.firstMove = false;
+                    aerialCamera.firstMove = false;
                 }
                 else
                     Close();
@@ -128,7 +165,7 @@ namespace Minecraft_Clone
             {
                 CursorState = CursorState.Grabbed;
                 focused = true;
-                camera.firstMove = true;
+                aerialCamera.firstMove = true;
             }
 
             if (KeyboardState.IsKeyPressed(Keys.Period))
@@ -146,6 +183,11 @@ namespace Minecraft_Clone
         {
             base.OnUnload();
             skyRender.Dispose();
+        }
+
+        float lerp(float x, float y, float t)
+        {
+            return y * t + x * (1 - t);
         }
     }
 

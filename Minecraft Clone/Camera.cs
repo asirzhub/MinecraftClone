@@ -4,6 +4,11 @@ using OpenTK.Windowing.GraphicsLibraryFramework;
 
 namespace Minecraft_Clone
 {
+    public enum PerspectiveMode {
+        PERSPECTIVE,
+        ORTHOGRAPHIC
+    }
+
     public class Camera
     {
         // camera properties
@@ -37,9 +42,12 @@ namespace Minecraft_Clone
             this.position = position;
         }
 
-        public Matrix4 GetViewMatrix() => Matrix4.LookAt(position, position + forward, up);
-        public Matrix4 GetProjectionMatrix() => Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(fovY), screenwidth / screenheight, 0.01f, 2000f);
+        public Matrix4 GetViewMatrix() => 
+            Matrix4.LookAt(position, position + forward, up);
+        public Matrix4 GetPerspectiveMatrix() =>
+            Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(fovY), screenwidth / screenheight, 0.01f, 2000f);
 
+        
         private void UpdateVectors()
         { // copied straight out of the tutorial lol
 
@@ -57,6 +65,7 @@ namespace Minecraft_Clone
             up = Vector3.Normalize(Vector3.Cross(right, forward));
         }
 
+        // old freecam movement code
         public void InputController(KeyboardState keyboard, MouseState mouse, FrameEventArgs e)
         {
             var forward_dir = Vector3.Normalize(new Vector3(forward.X, 0, forward.Z));

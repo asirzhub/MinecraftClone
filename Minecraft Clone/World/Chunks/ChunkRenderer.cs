@@ -51,11 +51,11 @@ namespace Minecraft_Clone.World.Chunks
             blockShader.SetInt("shadowMap", 1);
         }
 
-        public void RenderLightingPass(Camera camera, float time, ConcurrentDictionary<Vector3i, Chunk> chunks, SkyRender skyRender)
+        public void RenderLightingPass(AerialCameraRig camera, float time, ConcurrentDictionary<Vector3i, Chunk> chunks, SkyRender skyRender)
         {
             // clear screen, draw sky first
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-            GL.Viewport(0, 0, (int)camera.screenwidth, (int)camera.screenheight);
+            GL.Viewport(0, 0, (int)camera.screenWidth, (int)camera.screenHeight);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             skyRender.RenderSky(camera);
 
@@ -84,7 +84,7 @@ namespace Minecraft_Clone.World.Chunks
             GL.DepthMask(true);
         }
 
-        bool RenderChunkLit(MeshData mesh, Camera camera, Vector3i index, float time, SkyRender sky)
+        bool RenderChunkLit(MeshData mesh, AerialCameraRig camera, Vector3i index, float time, SkyRender sky)
         {
             // exit if there's no mesh data
             if (mesh == null || mesh.Vertices.Count == 0) return false;
@@ -104,7 +104,7 @@ namespace Minecraft_Clone.World.Chunks
             blockShader.SetMatrix4("lightProjMat", shadowMapProjMatrix);
             blockShader.SetMatrix4("lightViewMat", shadowMapViewMatrix);
 
-            blockShader.SetVector3("cameraPos", camera.position);
+            blockShader.SetVector3("cameraPos", camera.focusPoint);
             blockShader.SetFloat("u_waterOffset", waterOffset);
             blockShader.SetFloat("u_waveAmplitude", waterWaveAmplitude);
             blockShader.SetFloat("u_waveScale", waterWaveScale);
@@ -130,7 +130,7 @@ namespace Minecraft_Clone.World.Chunks
         }
 
         // shadowmap pass renders the scene depth-only from light's perspective
-        public void RenderShadowMapPass(Camera camera, float time, ConcurrentDictionary<Vector3i, Chunk> chunks, SkyRender skyRender)
+        public void RenderShadowMapPass(AerialCameraRig camera, float time, ConcurrentDictionary<Vector3i, Chunk> chunks, SkyRender skyRender)
         {
             // bind shadow stuff
             fboShadowMap.Bind();
@@ -142,8 +142,8 @@ namespace Minecraft_Clone.World.Chunks
             List<Vector3i> visibleIndexes = new List<Vector3i>();
 
             // position the light 500 units away in the direction of the sun, looking at the place the camera looks at. use ortho projection
-            shadowMapViewMatrix = Matrix4.LookAt(camera.position + camera.forward * (shadowRange/2) + 500f * skyRender.sunDirection, 
-                camera.position + camera.forward * (shadowRange/2), 
+            shadowMapViewMatrix = Matrix4.LookAt(camera.position() + camera.forward * (shadowRange/2) + 500f * skyRender.sunDirection, 
+                camera.focusPoint, 
                 camera.up);
             shadowMapProjMatrix = Matrix4.CreateOrthographic(shadowRange, shadowRange, 0.01f, 2000f);
 
@@ -154,7 +154,7 @@ namespace Minecraft_Clone.World.Chunks
                 var idx = kvp.Key;
                 if (shadowMapPassVisibleStates.Contains(chunk.GetState()))
                 {
-                    RenderChunkShadowMap(chunk.solidMesh, camera, idx, time, skyRender);
+                    RenderChunkShadowMap(chunk.solidMesh, idx, time, skyRender);
                     visibleIndexes.Add(idx);
                 }
             }
@@ -163,13 +163,13 @@ namespace Minecraft_Clone.World.Chunks
             GL.DepthMask(false);
             foreach (var idx in visibleIndexes)
             {
-                RenderChunkShadowMap(chunks[idx].liquidMesh, camera, idx, time, skyRender);
+                RenderChunkShadowMap(chunks[idx].liquidMesh, idx, time, skyRender);
             }
             GL.DepthMask(true);
 
         }
 
-        bool RenderChunkShadowMap(MeshData mesh, Camera camera, Vector3i index, float time, SkyRender sky)
+        bool RenderChunkShadowMap(MeshData mesh, Vector3i index, float time, SkyRender sky)
         {
             // exit if there's no mesh data
             if (mesh == null || mesh.Vertices.Count == 0) return false;

@@ -44,21 +44,21 @@ public class ChunkManager
 
     public int taskCount => RunningTasks.Count;
 
-    public ChunkManager(Camera camera)
+    public ChunkManager(AerialCameraRig camera)
     {
         // idk if this is the best way might change later
         maxChunkTasks = (int)(Environment.ProcessorCount -1);
 
         currentChunkIndex = WorldPosToChunkIndex((
-                                (int)MathF.Floor(camera.position.X),
-                                (int)MathF.Floor(camera.position.Y),
-                                (int)MathF.Floor(camera.position.Z)), out _); ; // first index in the list is always the center index  
+                                (int)MathF.Floor(camera.position().X),
+                                (int)MathF.Floor(camera.position().Y),
+                                (int)MathF.Floor(camera.position().Z)), out _); ; // first index in the list is always the center index  
     }
 
     public int shadowFrameDelay = 0;
     float shadowTime;
 
-    public void Update(Camera camera, float frameTime, float time, int frameCount, Vector3 sunDirection, SkyRender skyRender)
+    public void Update(AerialCameraRig camera, float frameTime, float time, int frameCount, Vector3 sunDirection, SkyRender skyRender)
     {
         // reduce chunk tasks after first burst 
         if (!chunkTasksHalved)
@@ -90,12 +90,12 @@ public class ChunkManager
         bool updateIndices = currentChunkIndex != lastChunkIndex; // refresh active chunks list when the camera moves between two chunks
 
         if (updateIndices)
-            ActiveChunksIndices = ListActiveChunksIndices(camera.position, radius, radius / 2);
+            ActiveChunksIndices = ListActiveChunksIndices(camera.focusPoint, radius, radius / 2);
 
         currentChunkIndex = WorldPosToChunkIndex((
-                                (int)MathF.Floor(camera.position.X),
-                                (int)MathF.Floor(camera.position.Y),
-                                (int)MathF.Floor(camera.position.Z)), out _); ;
+                                (int)MathF.Floor(camera.focusPoint.X),
+                                (int)MathF.Floor(camera.focusPoint.Y),
+                                (int)MathF.Floor(camera.focusPoint.Z)), out _); ;
 
         // for each CompletedChunkBlocks, move data from the queue into the respective chunk. MARK STATE
         while (CompletedBlocksQueue.TryDequeue(out var completedBlocks))
@@ -269,10 +269,11 @@ public class ChunkManager
     }
 
     // naive frustrum culling using a cone frustrum
-    public bool IsChunkInView(Camera camera, Vector3i idx)
+    public bool IsChunkInView(AerialCameraRig camera, Vector3i idx)
     {
+        return true;
         Vector3 chunkWorldCoord = idx * Chunk.SIZE + Vector3.One * Chunk.SIZE/2; // center of the chunk
-        Vector3 chunkToCamera = chunkWorldCoord - camera.position;
+        Vector3 chunkToCamera = chunkWorldCoord - camera.position();
 
         if (chunkToCamera.LengthFast < 2 * Chunk.SIZE) // if the chunk is too close, exit out with true
             return true;

@@ -57,7 +57,7 @@ namespace Minecraft_Clone.Graphics
         // <summary>
         // Renders the sky for the given camera
         // </summary>
-        public void RenderSky(Camera camera)
+        public void RenderSky(AerialCameraRig camera)
         {
             skyShader.Bind();
             GL.Disable(EnableCap.DepthTest);
@@ -89,7 +89,7 @@ namespace Minecraft_Clone.Graphics
             skyShader.SetVector3("cameraForward", camera.forward);
             skyShader.SetVector3("sunDir", sunDirection);
             skyShader.SetFloat("fovY", camera.fovY);
-            skyShader.SetFloat("aspectRatio", camera.screenwidth / camera.screenheight);
+            skyShader.SetFloat("aspectRatio", camera.screenWidth / camera.screenHeight);
 
             skyShader.SetVector3("sunColor", new Vector3(1.0f, 0.9f, 0.7f));
             skyShader.SetFloat("sunAngularRadiusDeg", 0.27f);
