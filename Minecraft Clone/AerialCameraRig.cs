@@ -8,7 +8,7 @@ namespace Minecraft_Clone
     {
         public Vector3 focusPoint;
         public float armDistance = 100f;
-        public float speed = 10f;
+        public float speed = 30f;
         public float viewSize = 60f; // the "size" of the projection box
         public float smoothing = 0.1f;
 
@@ -56,10 +56,11 @@ namespace Minecraft_Clone
             screenHeight = height;
         }
 
-        public AerialCameraRig(float width, float height, Vector3 position) 
+        public AerialCameraRig(float width, float height, Vector3 focusPointLoc) 
         {
             screenWidth = width;
             screenHeight = height;
+            focusPoint = focusPointLoc;
         }
 
         public void Update(KeyboardState keyboard, MouseState mouse, FrameEventArgs e) {
@@ -82,6 +83,11 @@ namespace Minecraft_Clone
             {
                 focusPoint += right * (float)e.Time * speed;
             }
+
+            armDistance += mouse.ScrollDelta.Y * -5f;
+
+            if (armDistance < 25f) armDistance = 25f;
+            if (armDistance > 150f) armDistance = 150f;
 
             if (firstMove)
             {

@@ -142,10 +142,10 @@ namespace Minecraft_Clone.World.Chunks
             List<Vector3i> visibleIndexes = new List<Vector3i>();
 
             // position the light 500 units away in the direction of the sun, looking at the place the camera looks at. use ortho projection
-            shadowMapViewMatrix = Matrix4.LookAt(camera.position() + camera.forward * (shadowRange/2) + 500f * skyRender.sunDirection, 
+            shadowMapViewMatrix = Matrix4.LookAt(camera.focusPoint + 500f * skyRender.sunDirection, 
                 camera.focusPoint, 
                 camera.up);
-            shadowMapProjMatrix = Matrix4.CreateOrthographic(shadowRange, shadowRange, 0.01f, 2000f);
+            shadowMapProjMatrix = Matrix4.CreateOrthographic(camera.armDistance*2, camera.armDistance * 2, 0.01f, 2000f);
 
             // render all chunks non-transparent mesh
             foreach (var kvp in chunks)

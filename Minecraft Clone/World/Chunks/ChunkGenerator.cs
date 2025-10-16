@@ -78,7 +78,7 @@ namespace Minecraft_Clone.World.Chunks
         // generates the blocks for a given chunk and world generator 
         async Task<CompletedChunkBlocks> GenerateBlocks(Vector3i chunkIndex, CancellationToken token, WorldGenerator worldGenerator)
         {
-            var tempChunk = new Chunk();
+            var tempChunk = new Chunk(lod:1);
 
             for (int x = 0; x < Chunk.SIZE; x++)
             {

@@ -21,6 +21,7 @@ namespace Minecraft_Clone.World.Chunks
 
     public class Chunk
     {
+        public byte LOD;
         public const int SIZE = 32; // same size in all coordinates
         private ChunkState state;
 
@@ -29,6 +30,34 @@ namespace Minecraft_Clone.World.Chunks
         public bool NeighborReady => !((state == ChunkState.BIRTH) || (state == ChunkState.GENERATING));// can the neighbor query this block for block existence?
 
         public ConcurrentDictionary<Vector3i, BlockType> pendingBlocks; // blocks that the chunk needs to update with
+
+        public byte averageHeight = 255;
+
+        public byte GetAverageHeight() {
+            if (isEmpty) return 0;
+
+            if (averageHeight == 255) // this should not be possible, means it wasnt calculated
+            {
+                short sum = 0;
+                for (short x = 0; x < SIZE; x++) 
+                {
+                    for (short z = 0; z < SIZE; z++)
+                    {
+                        for (short y = SIZE-1; y > 0; y--)
+                        {
+                            if(GetBlock(x, y, z).isSolid)
+                            {
+                                sum += y;
+                                continue;
+                            }
+                        }
+                    }
+                }
+
+                averageHeight = (byte)((byte)(sum) /(SIZE * SIZE));
+            }
+            return averageHeight;
+        }
 
         // is the chunk empty?
         public bool IsEmpty { 
@@ -115,13 +144,16 @@ namespace Minecraft_Clone.World.Chunks
         }
 
         // default new chunk state is birth state... maybe later add "READING" to read from disk cache
-        public Chunk(ChunkState state = ChunkState.BIRTH) { this.state = state; }
+        public Chunk(byte lod, ChunkState state = ChunkState.BIRTH) { 
+            LOD = lod;
+            this.state = state; 
+        }
 
         // returns a block at the gievn local coordinate
         public Block GetBlock(int x, int y, int z)
         {
             if (IsEmpty) return new Block(BlockType.AIR);
-
+            
             BlockType type = BlockType.AIR;
 
             if(blocks!=null) // added this check since there's a random error here sometimes that blocks[] is null... but the debugger clearly shows blocks exists. idfk.
