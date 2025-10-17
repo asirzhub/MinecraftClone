@@ -19,11 +19,11 @@ namespace Minecraft_Clone.World.Chunks
         DIRTY
     };
 
-    public class Chunk
+    public class Chunk(byte lod, ChunkState state = ChunkState.BIRTH)
     {
-        public byte LOD;
+        public byte LOD = lod;
         public const int SIZE = 32; // same size in all coordinates
-        private ChunkState state;
+        private ChunkState state = state;
 
         public ChunkState GetState() { return state; } // protect the state from being directly modified
         
@@ -45,7 +45,7 @@ namespace Minecraft_Clone.World.Chunks
                     {
                         for (short y = SIZE-1; y > 0; y--)
                         {
-                            if(GetBlock(x, y, z).isSolid)
+                            if(GetBlock(x, y, z).IsSolid)
                             {
                                 sum += y;
                                 continue;
@@ -102,7 +102,7 @@ namespace Minecraft_Clone.World.Chunks
         // really need a better function name
         public async Task<List<Vector3i>?> ProcessPendingBlocksAndGetDirtyNeighbors()
         {
-            if (pendingBlocks == null || pendingBlocks.Count == 0)
+            if (pendingBlocks == null || pendingBlocks.IsEmpty)
                 return null;
 
             var result = await Task.Run(async () =>
@@ -141,12 +141,6 @@ namespace Minecraft_Clone.World.Chunks
                 throw new Exception($"nuh uh, can't go from {state} -> {NewState}!");
             else
                 state = NewState;
-        }
-
-        // default new chunk state is birth state... maybe later add "READING" to read from disk cache
-        public Chunk(byte lod, ChunkState state = ChunkState.BIRTH) { 
-            LOD = lod;
-            this.state = state; 
         }
 
         // returns a block at the gievn local coordinate

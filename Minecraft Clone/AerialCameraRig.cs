@@ -4,9 +4,9 @@ using OpenTK.Windowing.GraphicsLibraryFramework;
 
 namespace Minecraft_Clone
 {
-    public class AerialCameraRig
+    public class AerialCameraRig(float width, float height, Vector3 focusPointLoc)
     {
-        public Vector3 focusPoint;
+        public Vector3 focusPoint = focusPointLoc;
         public float armDistance = 100f;
         public float speed = 30f;
         public float viewSize = 60f; // the "size" of the projection box
@@ -16,8 +16,8 @@ namespace Minecraft_Clone
         public Vector3 up = Vector3.UnitY; // we define Y as going up, not Z. but you can.
         public Vector3 forward = -Vector3.UnitZ;
 
-        public float screenWidth;
-        public float screenHeight;
+        public float screenWidth = width;
+        public float screenHeight = height;
 
         private float pitch;
         private float yaw;
@@ -33,7 +33,7 @@ namespace Minecraft_Clone
         public Matrix4 GetProjectionMatrix() => Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(fovY), screenWidth / screenHeight, 0.1f, 2000f);
             //Matrix4.CreateOrthographic(screenWidth/screenHeight * viewSize, viewSize, 0.1f, 2000f);
 
-        public Vector3 position() => focusPoint - forward * armDistance;
+        public Vector3 Position() => focusPoint - forward * armDistance;
 
         private void UpdateVectors()
         { 
@@ -54,13 +54,6 @@ namespace Minecraft_Clone
         {
             screenWidth = width;
             screenHeight = height;
-        }
-
-        public AerialCameraRig(float width, float height, Vector3 focusPointLoc) 
-        {
-            screenWidth = width;
-            screenHeight = height;
-            focusPoint = focusPointLoc;
         }
 
         public void Update(KeyboardState keyboard, MouseState mouse, FrameEventArgs e) {

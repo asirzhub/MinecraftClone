@@ -3,48 +3,34 @@ using OpenTK.Graphics.OpenGL4;
 
 namespace Minecraft_Clone.Graphics
 {
-    public class SkyRender
+    /// A Triangle is rendered over the entire screen, coloured to look like the Sky. Stores its own vao/vbo.
+    /// </summary>
+    public class SkyRender(Vector3 sunDirection)
     {
-        public int skyVAO;
-        public int skyVBO;
-        Shader skyShader;
+        public int skyVAO = GL.GenVertexArray();
+        public int skyVBO = GL.GenBuffer();
+        readonly Shader skyShader = new("sky.vert", "sky.frag");
 
-        public Vector3 sunDirection;
+        public Vector3 sunDirection = sunDirection.Normalized();
 
         Vector3 dayHorizon = new(0.50f, 0.70f, 1.00f);
         Vector3 dayZenith = new(0.30f, 0.50f, 1.00f);
         Vector3 nightHorizon = new(0.05f, 0.10f, 0.20f);
         Vector3 nightZenith = new(0.02f, 0.05f, 0.10f);
 
-        float transitionRange = 0.35f;                  // [0..1]
-        float sunsetStrength = 1.0f;                   // overall scale
-
         public Vector3 finalH = new();
         public Vector3 finalZ = new();
-
-        // <summary>
-        /// A Triangle is rendered over the entire screen, coloured to look like the Sky. Stores its own vao/vbo.
-        /// </summary>
-        public SkyRender(Vector3 sunDirection)
-        {
-            skyVAO = GL.GenVertexArray();
-            skyVBO = GL.GenBuffer();
-            skyShader = new Shader("sky.vert", "sky.frag");
-
-
-            this.sunDirection = sunDirection.Normalized();
-        }
 
         // <summary>
         /// Initialize the sky vao and vbo, and binds them.
         /// </summary>
         public void InitializeSky()
         {
-            float[] skyVerts = {
+            float[] skyVerts = [
                 -1f, -1f,
                 3f, -1f,
                 -1f,  3f
-            };
+            ];
 
             GL.BindVertexArray(skyVAO);
             GL.BindBuffer(BufferTarget.ArrayBuffer, skyVBO);

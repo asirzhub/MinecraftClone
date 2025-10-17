@@ -81,7 +81,7 @@ namespace Minecraft_Clone
 
             Vector3 focusPoint = new(aerialCamera.focusPoint);
             float targetFocusHeight = chunkManager.worldGenerator.GetNoiseAt(World.NoiseLayer.HEIGHT, (int)focusPoint.X, (int)focusPoint.Z);
-            aerialCamera.focusPoint.Y = lerp(aerialCamera.focusPoint.Y, targetFocusHeight, aerialCamera.smoothing);
+            aerialCamera.focusPoint.Y = Lerp(aerialCamera.focusPoint.Y, targetFocusHeight, aerialCamera.smoothing);
 
             //selectionBox.Upload();
 
@@ -116,7 +116,7 @@ namespace Minecraft_Clone
             if (frameTimeAccumulator >= 0.5)
             {
                 Title = $"game - FPS: {shortFrameCount * 2} | " +
-                    $"Position: {aerialCamera.position()} | " +
+                    $"Position: {aerialCamera.Position()} | " +
                     $"Chunk: {chunkManager.currentChunkIndex} | " +
                     $"Chunk Tasks: {chunkManager.taskCount}/{chunkManager.maxChunkTasks} | " +
                     $"Render Distance: {chunkManager.radius}";
@@ -185,7 +185,7 @@ namespace Minecraft_Clone
             skyRender.Dispose();
         }
 
-        float lerp(float x, float y, float t)
+        static float Lerp(float x, float y, float t)
         {
             return y * t + x * (1 - t);
         }
@@ -195,7 +195,7 @@ namespace Minecraft_Clone
     {
         static void Main(string[] args)
         {
-            Game G = new Game(1280, 720, "game");
+            Game G = new(1280, 720, "game");
             G.Run();
         }
     }

@@ -53,9 +53,9 @@ public class ChunkManager
         maxChunkTasks = (int)(Environment.ProcessorCount -1);
 
         currentChunkIndex = WorldPosToChunkIndex((
-                                (int)MathF.Floor(camera.position().X),
-                                (int)MathF.Floor(camera.position().Y),
-                                (int)MathF.Floor(camera.position().Z)), out _); ; // first index in the list is always the center index  
+                                (int)MathF.Floor(camera.Position().X),
+                                (int)MathF.Floor(camera.Position().Y),
+                                (int)MathF.Floor(camera.Position().Z)), out _); ; // first index in the list is always the center index  
     }
 
     public int shadowFrameDelay = 0;
@@ -283,7 +283,7 @@ public class ChunkManager
     public bool IsChunkInView(AerialCameraRig camera, Vector3i idx)
     {
         Vector3 chunkWorldCoord = idx * Chunk.SIZE + Vector3.One * Chunk.SIZE/2; // center of the chunk
-        Vector3 chunkToCamera = chunkWorldCoord - camera.position();
+        Vector3 chunkToCamera = chunkWorldCoord - camera.Position();
 
         if (chunkToCamera.LengthFast < 2 * Chunk.SIZE) // if the chunk is too close, exit out with true
             return true;
