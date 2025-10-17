@@ -15,11 +15,14 @@ public class ChunkManager
 
     public Vector3i currentChunkIndex = new();
     public Vector3i lastChunkIndex = new();
-    public int radius = 9;
+    public int radius = 10;
     public int maxChunkTasks;
     public bool chunkTasksHalved = false;
     public float chunkTaskHalftime = 20f;// after 20 seconds, half the chunk tasks (prioritize speed at first, then smoothness)
     public float expiryTime = 2f; // how long a chunk can be "inactive" (seconds) before disposed from ram?
+
+    public byte[] LODCascades = new byte[] { 6, 9, 12 }; // dist 0-6:LOD1, dist 6-9:LOD2, etc.
+    public byte[] LODValues = new byte[] {1, 2, 4 };
 
     // independant lists to keep track of chunks that actually matter
     List<Vector3i> ActiveChunksIndices = new List<Vector3i>();
@@ -44,21 +47,21 @@ public class ChunkManager
 
     public int taskCount => RunningTasks.Count;
 
-    public ChunkManager(Camera camera)
+    public ChunkManager(AerialCameraRig camera)
     {
         // idk if this is the best way might change later
         maxChunkTasks = (int)(Environment.ProcessorCount -1);
 
         currentChunkIndex = WorldPosToChunkIndex((
-                                (int)MathF.Floor(camera.position.X),
-                                (int)MathF.Floor(camera.position.Y),
-                                (int)MathF.Floor(camera.position.Z)), out _); ; // first index in the list is always the center index  
+                                (int)MathF.Floor(camera.Position().X),
+                                (int)MathF.Floor(camera.Position().Y),
+                                (int)MathF.Floor(camera.Position().Z)), out _); ; // first index in the list is always the center index  
     }
 
     public int shadowFrameDelay = 0;
     float shadowTime;
 
-    public void Update(Camera camera, float frameTime, float time, int frameCount, Vector3 sunDirection, SkyRender skyRender)
+    public void Update(AerialCameraRig camera, float frameTime, float time, int frameCount, Vector3 sunDirection, SkyRender skyRender)
     {
         // reduce chunk tasks after first burst 
         if (!chunkTasksHalved)
@@ -90,12 +93,12 @@ public class ChunkManager
         bool updateIndices = currentChunkIndex != lastChunkIndex; // refresh active chunks list when the camera moves between two chunks
 
         if (updateIndices)
-            ActiveChunksIndices = ListActiveChunksIndices(camera.position, radius, radius / 2);
+            ActiveChunksIndices = ListActiveChunksIndices(camera.focusPoint, radius, radius / 3);
 
         currentChunkIndex = WorldPosToChunkIndex((
-                                (int)MathF.Floor(camera.position.X),
-                                (int)MathF.Floor(camera.position.Y),
-                                (int)MathF.Floor(camera.position.Z)), out _); ;
+                                (int)MathF.Floor(camera.focusPoint.X),
+                                (int)MathF.Floor(camera.focusPoint.Y),
+                                (int)MathF.Floor(camera.focusPoint.Z)), out _); ;
 
         // for each CompletedChunkBlocks, move data from the queue into the respective chunk. MARK STATE
         while (CompletedBlocksQueue.TryDequeue(out var completedBlocks))
@@ -140,6 +143,8 @@ public class ChunkManager
         // for every chunk that's still relevant
         foreach (var idx in ActiveChunksIndices)
         {
+            byte lodLevel = DetermineLOD(currentChunkIndex, idx);
+
             // if the chunk has existed already
             if (ActiveChunks.TryGetValue(idx, out var chunk))
             {
@@ -197,9 +202,15 @@ public class ChunkManager
                         break;
 
                     case ChunkState.VISIBLE:
-                        var dirtyNeighbors = chunk.ProcessPendingBlocksAndGetDirtyNeighbors(); 
+                        if (lodLevel != chunk.LOD)
+                        {
+                            if(chunk.TryMarkDirty())
+                                chunk.LOD = lodLevel;
+                        }
 
-                        if(dirtyNeighbors.Result !=null && dirtyNeighbors.Result.Count > 0)
+                        var dirtyNeighbors = chunk.ProcessPendingBlocksAndGetDirtyNeighbors();
+
+                        if (dirtyNeighbors.Result !=null && dirtyNeighbors.Result.Count > 0)
                             foreach(var direction in dirtyNeighbors.Result)
                                 if (ActiveChunks.TryGetValue(idx + direction, out var dirtyChunk))
                                     dirtyChunk.TryMarkDirty();
@@ -212,7 +223,7 @@ public class ChunkManager
                             chunk.SetState(ChunkState.MESHING);
                             CancellationTokenSource cts = new CancellationTokenSource();
                             RunningTasksCTS.TryAdd(idx, cts);
-                            RunningTasks.TryAdd(idx, mesher.MeshTask(idx, this, cts, CompletedMeshQueue, ActiveChunks, LOD: 1));
+                            RunningTasks.TryAdd(idx, mesher.MeshTask(idx, this, cts, CompletedMeshQueue, ActiveChunks, LOD: lodLevel));
                         }
                         break;
                     default:
@@ -220,7 +231,7 @@ public class ChunkManager
                 }
             }
             else
-                ActiveChunks.TryAdd(idx, new Chunk()); // adding a brand new chunk to the system
+                ActiveChunks.TryAdd(idx, new Chunk(lodLevel)); // adding a brand new chunk to the system
         }
 
         // assign expired chunks to expiry list if they're not in the current list
@@ -269,10 +280,10 @@ public class ChunkManager
     }
 
     // naive frustrum culling using a cone frustrum
-    public bool IsChunkInView(Camera camera, Vector3i idx)
+    public bool IsChunkInView(AerialCameraRig camera, Vector3i idx)
     {
         Vector3 chunkWorldCoord = idx * Chunk.SIZE + Vector3.One * Chunk.SIZE/2; // center of the chunk
-        Vector3 chunkToCamera = chunkWorldCoord - camera.position;
+        Vector3 chunkToCamera = chunkWorldCoord - camera.Position();
 
         if (chunkToCamera.LengthFast < 2 * Chunk.SIZE) // if the chunk is too close, exit out with true
             return true;
@@ -283,6 +294,17 @@ public class ChunkManager
             return true;
 
         return false;
+    }
+
+    public byte DetermineLOD(Vector3 center, Vector3 target)
+    {
+        int dist = (int)MathF.Floor(Vector3.Distance(center, target));
+        for(int i = 0; i < LODCascades.Length; i++)
+        {
+            if (dist < LODCascades[i])
+                return LODValues[i];
+        }
+        return 8;
     }
 
     // idk why i thought this was easier but whatever might need it later on

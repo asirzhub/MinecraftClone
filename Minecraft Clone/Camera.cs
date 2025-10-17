@@ -4,17 +4,24 @@ using OpenTK.Windowing.GraphicsLibraryFramework;
 
 namespace Minecraft_Clone
 {
-    public class Camera
+    public enum PerspectiveMode {
+        PERSPECTIVE,
+        ORTHOGRAPHIC
+    }
+
+    /// Create a camera with a specific width/height (for aspect ratio) and location in worldspace
+    /// </summary>
+    public class Camera(float width, float height, Vector3 position)
     {
         // camera properties
         private float speed = 10f;
         float boostSpeed = 40f;
         float defaultSpeed = 10f;
-        public float screenwidth;
-        public float screenheight;
+        public float screenwidth = width;
+        public float screenheight = height;
         private float sensitivity = 10f;
 
-        public Vector3 position;
+        public Vector3 position = position;
 
         public Vector3 right = Vector3.UnitX;
         public Vector3 up = Vector3.UnitY; // we define Y as going up, not Z. but you can.
@@ -27,19 +34,12 @@ namespace Minecraft_Clone
         public bool firstMove = true;
         public Vector2 lastPos;
 
-        // <summary>
-        /// Create a camera with a specific width/height (for aspect ratio) and location in worldspace
-        /// </summary>
-        public Camera(float width, float height, Vector3 position)
-        {
-            screenwidth = width;
-            screenheight = height;
-            this.position = position;
-        }
+        public Matrix4 GetViewMatrix() => 
+            Matrix4.LookAt(position, position + forward, up);
+        public Matrix4 GetPerspectiveMatrix() =>
+            Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(fovY), screenwidth / screenheight, 0.01f, 2000f);
 
-        public Matrix4 GetViewMatrix() => Matrix4.LookAt(position, position + forward, up);
-        public Matrix4 GetProjectionMatrix() => Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(fovY), screenwidth / screenheight, 0.01f, 2000f);
-
+        
         private void UpdateVectors()
         { // copied straight out of the tutorial lol
 
@@ -57,6 +57,7 @@ namespace Minecraft_Clone
             up = Vector3.Normalize(Vector3.Cross(right, forward));
         }
 
+        // old freecam movement code
         public void InputController(KeyboardState keyboard, MouseState mouse, FrameEventArgs e)
         {
             var forward_dir = Vector3.Normalize(new Vector3(forward.X, 0, forward.Z));

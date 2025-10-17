@@ -47,12 +47,12 @@ namespace Minecraft_Clone.World
     public class WorldGenerator
     {
         // World bounds
-        public int seaLevel = 64;
+        public int seaLevel = 0;
         public int minHeight = -128;
         public int maxHeight = 256;
 
         // Continents (FBM)
-        public NoiseParams baseNoiseParams = new NoiseParams(scale: 0.0005f, octaves: 8, lacunarity: 2.3f, gain: 0.5f);
+        public NoiseParams baseNoiseParams = new NoiseParams(scale: 0.0002f, octaves: 8, lacunarity: 2.3f, gain: 0.5f);
         public float baseHeight = -200f;
         public float baseAmplitude = 1024f;
 
@@ -138,7 +138,7 @@ namespace Minecraft_Clone.World
             noiseParams.Add(NoiseLayer.MOUNTAINBLEND, mountainBlendNoise);
             noiseParams.Add(NoiseLayer.TALLGRASS, tallgrassNoiseParams);
             noiseParams.Add(NoiseLayer.TREE, treeNoiseParams);
-            //noiseCaches = new();
+            noiseCaches = new();
             
             float s = seaLevel;
             float m = mountainHeightStart;
@@ -179,19 +179,19 @@ namespace Minecraft_Clone.World
 
         public float GetNoiseAt(NoiseLayer layer, int x, int z)
         {
-        //    if (!noiseCaches.TryGetValue(layer, out var cache))
-        //    {
-        //        cache = new ConcurrentDictionary<Vector2i, NoiseCacheEntry>();
-        //        noiseCaches.TryAdd(layer, cache);
-        //    }
+            if (!noiseCaches.TryGetValue(layer, out var cache))
+            {
+                cache = new ConcurrentDictionary<Vector2i, NoiseCacheEntry>();
+                noiseCaches.TryAdd(layer, cache);
+            }
 
-        //    var key = new Vector2i(x, z);
+            var key = new Vector2i(x, z);
 
-        //    if (cache.TryGetValue(key, out var entry))
-        //    {
-        //        cache[key] = new NoiseCacheEntry(entry.value, frameCount);
-        //        return entry.value;
-        //    }
+            if (cache.TryGetValue(key, out var entry))
+            {
+                cache[key] = new NoiseCacheEntry(entry.value, frameCount);
+                return entry.value;
+            }
 
             float result;
 
@@ -212,8 +212,8 @@ namespace Minecraft_Clone.World
                 result = noise.Fbm2D(x * p.scale, z * p.scale, p.octaves, p.lacunarity, p.gain);
             }
 
-            // New entries should have a fresh timestamp
-            //cache[key] = new NoiseCacheEntry(result, frameCount);
+            //New entries should have a fresh timestamp
+            cache[key] = new NoiseCacheEntry(result, frameCount);
             return result;
         }
 
@@ -347,28 +347,28 @@ namespace Minecraft_Clone.World
         {
             if (frameCount - this.frameCount < 15) return; // avoid double-calls
 
-            //Console.WriteLine($"Searching for expired noise entries at frame: {frameCount}");
-            //int removed = 0;
-            //int total = 0;
+            Console.WriteLine($"Searching for expired noise entries at frame: {frameCount}");
+            int removed = 0;
+            int total = 0;
 
-            //// remove expired noise cache entries
-            //this.frameCount = frameCount;
-            //await Task.Run(() => {
+            // remove expired noise cache entries
+            this.frameCount = frameCount;
+            await Task.Run(() =>
+            {
 
-            //    foreach (var (layer, dict) in noiseCaches)
-            //    {
-            //        foreach (var kv in dict) // kv is KeyValuePair<Vector2i, NoiseCacheEntry>
-            //        {
-            //            total++;
-            //            if (frameCount - kv.Value.framesSinceUse > noiseCacheLifetime)
-            //            {
-            //                dict.TryRemove(kv.Key, out _); // <-- remove by key
-            //                removed++;
-            //            }
-            //        }
-            //    }
-            //    Console.WriteLine($"Removed {removed} entries - {100 * (float)removed / total}%");
-            //});
+                foreach (var (layer, dict) in noiseCaches)
+                {
+                    foreach (var kv in dict) // kv is KeyValuePair<Vector2i, NoiseCacheEntry>
+                    {
+                        total++;
+                        if (frameCount - kv.Value.framesSinceUse > noiseCacheLifetime)
+                        {
+                            if(dict.TryRemove(kv.Key, out _)) removed++;
+                        }
+                    }
+                }
+                Console.WriteLine($"Removed {removed} entries - {100 * (float)removed / total}%");
+            });
 
         }
 

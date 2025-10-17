@@ -19,16 +19,45 @@ namespace Minecraft_Clone.World.Chunks
         DIRTY
     };
 
-    public class Chunk
+    public class Chunk(byte lod, ChunkState state = ChunkState.BIRTH)
     {
+        public byte LOD = lod;
         public const int SIZE = 32; // same size in all coordinates
-        private ChunkState state;
+        private ChunkState state = state;
 
         public ChunkState GetState() { return state; } // protect the state from being directly modified
         
         public bool NeighborReady => !((state == ChunkState.BIRTH) || (state == ChunkState.GENERATING));// can the neighbor query this block for block existence?
 
         public ConcurrentDictionary<Vector3i, BlockType> pendingBlocks; // blocks that the chunk needs to update with
+
+        public byte averageHeight = 255;
+
+        public byte GetAverageHeight() {
+            if (isEmpty) return 0;
+
+            if (averageHeight == 255) // this should not be possible, means it wasnt calculated
+            {
+                short sum = 0;
+                for (short x = 0; x < SIZE; x++) 
+                {
+                    for (short z = 0; z < SIZE; z++)
+                    {
+                        for (short y = SIZE-1; y > 0; y--)
+                        {
+                            if(GetBlock(x, y, z).IsSolid)
+                            {
+                                sum += y;
+                                continue;
+                            }
+                        }
+                    }
+                }
+
+                averageHeight = (byte)((byte)(sum) /(SIZE * SIZE));
+            }
+            return averageHeight;
+        }
 
         // is the chunk empty?
         public bool IsEmpty { 
@@ -73,7 +102,7 @@ namespace Minecraft_Clone.World.Chunks
         // really need a better function name
         public async Task<List<Vector3i>?> ProcessPendingBlocksAndGetDirtyNeighbors()
         {
-            if (pendingBlocks == null || pendingBlocks.Count == 0)
+            if (pendingBlocks == null || pendingBlocks.IsEmpty)
                 return null;
 
             var result = await Task.Run(async () =>
@@ -114,14 +143,11 @@ namespace Minecraft_Clone.World.Chunks
                 state = NewState;
         }
 
-        // default new chunk state is birth state... maybe later add "READING" to read from disk cache
-        public Chunk(ChunkState state = ChunkState.BIRTH) { this.state = state; }
-
         // returns a block at the gievn local coordinate
         public Block GetBlock(int x, int y, int z)
         {
             if (IsEmpty) return new Block(BlockType.AIR);
-
+            
             BlockType type = BlockType.AIR;
 
             if(blocks!=null) // added this check since there's a random error here sometimes that blocks[] is null... but the debugger clearly shows blocks exists. idfk.

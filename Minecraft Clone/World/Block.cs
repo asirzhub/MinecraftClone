@@ -1,19 +1,12 @@
 ﻿namespace Minecraft_Clone.World
 {
-    public struct Block
+    /// A block only knows what it is, and nothing else.
+    /// </summary>
+    public struct Block(BlockType type)
     {
-        public BlockType Type; 
+        public BlockType Type = type;
 
-        // <summary>
-        /// A block only knows what it is, and nothing else.
-        /// </summary>
-        public Block(BlockType type)
-        {
-            this.Type = type;
-        }
-
-        public bool isAir => Type == BlockType.AIR; 
-        public bool isWater => Type == BlockType.WATER;
-        public bool isSolid => BlockRegistry.Types[Type].IsSolid;
+        public bool IsWater => Type == BlockType.WATER;
+        public bool IsSolid => BlockRegistry.Types[Type].IsSolid;
     }
 }
