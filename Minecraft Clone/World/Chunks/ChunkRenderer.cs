@@ -89,8 +89,6 @@ namespace Minecraft_Clone.World.Chunks
             // exit if there's no mesh data
             if (mesh == null || mesh.Vertices.Count == 0) return false;
 
-            mesh.Upload();
-
             var sunDirection = sky.sunDirection;
 
             //with everything prepped, we can now render
@@ -115,9 +113,8 @@ namespace Minecraft_Clone.World.Chunks
             blockShader.SetVector3("sunsetColor", new(0.1f, 0.0f, 0.0f)); 
             blockShader.SetVector3("fogColor", sky.finalH);
 
-            mesh.vao.Bind();
-            mesh.vbo.Bind();
-            mesh.ibo.Bind();
+            mesh.Upload();
+            mesh.Bind();
 
             GL.DrawElements(
             PrimitiveType.Triangles,
@@ -174,7 +171,6 @@ namespace Minecraft_Clone.World.Chunks
             // exit if there's no mesh data
             if (mesh == null || mesh.Vertices.Count == 0) return false;
 
-            mesh.Upload();
 
             var sunDirection = sky.sunDirection;
             
@@ -193,9 +189,8 @@ namespace Minecraft_Clone.World.Chunks
             blockShader.SetFloat("u_waveSpeed", waterWaveSpeed);
             blockShader.SetVector3("sunDirection", sunDirection);
 
-            mesh.vao.Bind();
-            mesh.vbo.Bind();
-            mesh.ibo.Bind();
+            mesh.Upload();
+            mesh.Bind();
 
             GL.DrawElements(
             PrimitiveType.Triangles,

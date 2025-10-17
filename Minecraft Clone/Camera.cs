@@ -9,6 +9,7 @@ namespace Minecraft_Clone
         ORTHOGRAPHIC
     }
 
+    /// <summary>
     /// Create a camera with a specific width/height (for aspect ratio) and location in worldspace
     /// </summary>
     public class Camera(float width, float height, Vector3 position)
