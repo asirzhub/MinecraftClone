@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using static Minecraft_Clone.Graphics.VBO;
 using static OpenTK.Graphics.OpenGL.GL;
 
@@ -13,11 +14,9 @@ namespace Minecraft_Clone.Graphics
         public VBO vbo;
         public IBO ibo;
 
-        public int stride = -1;
+        public int GetIBOLength() => ibo.length;
 
-        public MeshData()
-        {
-        }
+        public int stride = -1;
 
         public void Upload()
         {
@@ -27,10 +26,14 @@ namespace Minecraft_Clone.Graphics
 
             if(stride == -1) stride = Marshal.SizeOf(typeof(PackedVertex));
 
-            vao.Bind();
-            vbo.Bind();
             vao.LinkToVAOInt(0, 1, vbo, stride, 0);
             vao.LinkToVAO(1, 2, vbo, stride, 4);
+        }
+
+        public void Bind()
+        {
+            vao.Bind();
+            vbo.Bind();
             ibo.Bind();
         }
 
@@ -38,14 +41,7 @@ namespace Minecraft_Clone.Graphics
         {
             Vertices.Add(v);
         }
-        public void AddVertices(List<PackedVertex> vertices) 
-        {
-            Vertices.AddRange(vertices);
-        }
-        public void AddIndices(List<uint> indices)
-        {
-            Indices.AddRange(indices);
-        }
+
         public void Dispose()
         {
             vao?.UnBind();
@@ -57,6 +53,15 @@ namespace Minecraft_Clone.Graphics
 
             Vertices.Clear();
             Indices.Clear();
+        }
+
+        /// <summary>
+        /// Merge the new mesh data into this current mesh's data
+        /// </summary>
+        /// <param name="meshToMerge">Mesh to merge</param>
+        public void MergeMesh(MeshData meshToMerge)
+        {
+            
         }
     }
 }
