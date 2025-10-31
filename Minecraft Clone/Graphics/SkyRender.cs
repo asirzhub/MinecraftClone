@@ -63,8 +63,8 @@ namespace Minecraft_Clone.Graphics
             finalH = Vector3.Lerp(dayHorizon, nightHorizon, t);
             finalZ = Vector3.Lerp(dayZenith, nightZenith, t);
 
-            finalH += sunset * new Vector3(0.3f, 0.0f, 0.0f);
-            finalZ += sunset * new Vector3(0.1f, 0.0f, 0.0f);
+            finalH += sunset * new Vector3(0.5f, 0.0f, 0.4f);
+            finalZ += sunset * new Vector3(0.4f, 0.0f, 0.2f);
 
             // Send to GPU
             skyShader.SetVector3("horizonColor", finalH);

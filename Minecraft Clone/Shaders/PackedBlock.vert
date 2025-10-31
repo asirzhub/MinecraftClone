@@ -17,7 +17,7 @@ uniform float u_waveSpeed;
 out vec2 texCoord;
 out vec3 vNormal;
 out vec4 worldPos;
-out float brightness;
+out float vertexBrightness;
 out int isWater;
 out int isFoliage;
 
@@ -44,7 +44,7 @@ void main()
 {
     texCoord = inTex;
 
-    brightness = uint((inPosNorBright >> 24) & 0xFu);
+    vertexBrightness = uint((inPosNorBright >> 24) & 0xFu);
     vNormal = DecodeNormal(inPosNorBright);
     isWater = int((inPosNorBright >> 22) & 0x1u);
     isFoliage = int(((inPosNorBright >> 21) & 0x1u) + ((inPosNorBright >> 23) & 0x1u));
