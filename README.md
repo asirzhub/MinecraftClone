@@ -1,5 +1,4 @@
-# MinecraftClone
-Literally just making a clone of Minecraft. Using C# and OpenTK (A wrapper for OpenGl). This is because I'm still learning C++, otherwise I'd use OpenGL directly. I plan on remaking this engine in C++ in the near future, once I'm confident with C++. 
+# MinecraftClone 
 ## Development Roadmap
 1. ~~Base-layer absolute minimum engine with chunk generation, camera, and rendering of chunks.~~
 2. ~~Improve chunk meshing to massively increase performance~~
@@ -15,7 +14,6 @@ Literally just making a clone of Minecraft. Using C# and OpenTK (A wrapper for O
 13. Intelligent chunk loading
 14. Caching generated chunks to disk
 11. Block placement and destruction
-12. Player collision with blocks
 15. Occlusion culling?? Is this possible?
 17. Post processing (tonemapping, bloom, SSR)
 
