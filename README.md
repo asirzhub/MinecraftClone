@@ -1,4 +1,7 @@
 # MinecraftClone 
+
+![Screenshot of the current state of the game.](https://github.com/asirzhub/MinecraftClone/Thumbnail.png "A screenshot of the current state.")
+
 ## Development Roadmap
 1. ~~Base-layer absolute minimum engine with chunk generation, camera, and rendering of chunks.~~
 2. ~~Improve chunk meshing to massively increase performance~~
