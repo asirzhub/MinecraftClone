@@ -14,7 +14,7 @@ namespace Minecraft_Clone.World.Chunks
 
         // some parameters
         public float waterOffset = 0.15f; // water surface offset from top edge of blocks
-        public float waterWaveAmplitude = 0.1f; // how much water (and foliage...) deviates from origin
+        public float waterWaveAmplitude = 0.04f; // how much water (and foliage...) deviates from origin
         public float waterWaveScale = 0.1f; // world-size scale of sine waves
         public float waterWaveSpeed = 0.5f; // speed at which oscillations travel
 
@@ -25,7 +25,6 @@ namespace Minecraft_Clone.World.Chunks
         public Shader shadowMapShader;
         FBOShadowMap fboShadowMap;
         int shadowMapResolution = 2048;
-        int shadowRange = 150;
 
         Matrix4 shadowMapViewMatrix = new();
         Matrix4 shadowMapProjMatrix = new();
@@ -50,6 +49,8 @@ namespace Minecraft_Clone.World.Chunks
             GL.BindTexture(TextureTarget.Texture2D, fboShadowMap.depthTexture);
             blockShader.SetInt("shadowMap", 1);
         }
+
+
 
         public void RenderLightingPass(AerialCameraRig camera, float time, ConcurrentDictionary<Vector3i, Chunk> chunks, SkyRender skyRender)
         {
@@ -102,12 +103,12 @@ namespace Minecraft_Clone.World.Chunks
             blockShader.SetMatrix4("lightProjMat", shadowMapProjMatrix);
             blockShader.SetMatrix4("lightViewMat", shadowMapViewMatrix);
 
-            blockShader.SetVector3("cameraPos", camera.focusPoint);
+            blockShader.SetVector3("cameraPos", (camera.CameraPosition() + camera.focusPoint)/2.0f);
             blockShader.SetFloat("u_waterOffset", waterOffset);
             blockShader.SetFloat("u_waveAmplitude", waterWaveAmplitude);
             blockShader.SetFloat("u_waveScale", waterWaveScale);
             blockShader.SetFloat("u_time", time);
-            blockShader.SetFloat("u_minLight", 0.6f);
+            blockShader.SetFloat("u_minLight", 0.4f);
             blockShader.SetFloat("u_maxLight", 1.0f);
             blockShader.SetFloat("u_waveSpeed", waterWaveSpeed);
             blockShader.SetVector3("sunDirection", sunDirection);

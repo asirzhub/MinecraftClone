@@ -100,27 +100,27 @@ namespace Minecraft_Clone.World.Chunks
 
                                 // front
                                 if (manager.TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, 0, +LOD), out var bF))
-                                    occlusions[0] = bF.IsSolid || (block.IsWater && bF.IsWater);
+                                    occlusions[0] = bF.IsSolid || block.Type == bF.Type || (block.IsWater && bF.IsWater) ;
 
                                 // back
                                 if (manager.TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, 0, -LOD), out var bB))
-                                    occlusions[1] = bB.IsSolid || (block.IsWater && bB.IsWater);
+                                    occlusions[1] = bB.IsSolid || block.Type == bB.Type || (block.IsWater && bB.IsWater);
 
                                 // left
                                 if (manager.TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(-LOD, 0, 0), out var bL))
-                                    occlusions[2] = bL.IsSolid || (block.IsWater && bL.IsWater);
+                                    occlusions[2] = bL.IsSolid || block.Type == bL.Type || (block.IsWater && bL.IsWater);
 
                                 // right
                                 if (manager.TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(+LOD, 0, 0), out var bR))
-                                    occlusions[3] = bR.IsSolid || (block.IsWater && bR.IsWater);
+                                    occlusions[3] = bR.IsSolid || block.Type == bR.Type || (block.IsWater && bR.IsWater);
 
                                 // up
                                 if (manager.TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, +LOD, 0), out var bU))
-                                    occlusions[4] = bU.IsSolid || (block.IsWater && bU.IsWater); ;
+                                    occlusions[4] = bU.IsSolid || block.Type == bU.Type || (block.IsWater && bU.IsWater); ;
 
                                 // down
                                 if (manager.TryGetBlockAtWorldPosition(blockWorldPos + new Vector3i(0, -LOD, 0), out var bD))
-                                    occlusions[5] = bD.IsSolid || (block.IsWater && bD.IsWater);
+                                    occlusions[5] = bD.IsSolid || block.Type == bD.Type || (block.IsWater && bD.IsWater);
 
                                 foreach (CubeMesh.Face face in Enum.GetValues(typeof(CubeMesh.Face)))
                                 {
@@ -241,7 +241,7 @@ namespace Minecraft_Clone.World.Chunks
                                         byte ly = (byte)(y + vPos.Y * LOD);
                                         byte lz = (byte)(z + vPos.Z * LOD);
 
-                                        byte lightLevel = 15;
+                                        byte lightLevel = (byte)(14 + vPos.Y);
 
                                         Vector2 uv = (tile + (vertex.TexU, vertex.TexV)) / 8f;
                                         uv.Y = 1f - uv.Y;

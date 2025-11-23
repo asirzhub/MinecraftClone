@@ -38,9 +38,7 @@ namespace Minecraft_Clone.Graphics
         public struct PackedVertex
         {
             public uint PositionNormalLighting; // 32 bits packed
-            // 0000 LLLL WWWN NNZZ ZZZZ YYYY YYXX XXXX
-            // [light lvl] [nrml]  [ local position ]
-            //        [ZYX wiggle] (for water, foliage)
+            // 00WW LLLL NNNZ ZZZZ ZZYY YYYY YXXX XXXX            
 
             public float TexU, TexV;
 
@@ -48,26 +46,28 @@ namespace Minecraft_Clone.Graphics
             {
                 PositionNormalLighting = 0;
 
-                PositionNormalLighting |= (uint)(posX & 0x3F);                      // bits 0–5
-                PositionNormalLighting |= (uint)((posY & 0x3F) << 6);               // bits 6–11
-                PositionNormalLighting |= (uint)((posZ & 0x3F) << 12);              // bits 12–17
-                PositionNormalLighting |= (uint)((normal & 0x7) << 18);             // bits 18–20
-                PositionNormalLighting |= (uint)(((wiggleType == WiggleType.OMNIDIRECTIONAL ? 1 : 0) & 0x1) << 21);
-                PositionNormalLighting |= (uint)(((wiggleType == WiggleType.VERTICAL ? 1 : 0) & 0x1) << 22);  // bit 22 is the vertical wiggle toggle
-                PositionNormalLighting |= (uint)(((wiggleType == WiggleType.OMNIDIRECTIONAL ? 1 : 0) & 0x1) << 23);
-                PositionNormalLighting |= (uint)((lightLevel & 0xF) << 24);
+                PositionNormalLighting |= (uint)(posX & 0x7F);              // bits 0–6
+                PositionNormalLighting |= (uint)((posY & 0x7F) << 7);       // bits 7–13
+                PositionNormalLighting |= (uint)((posZ & 0x7F) << 14);      // bits 14–20
 
+                PositionNormalLighting |= (uint)((normal & 0x7) << 21); // bits 21–23
+                PositionNormalLighting |= (uint)((lightLevel & 0xF) << 24); // bits 24–27
+
+                PositionNormalLighting |= (uint)(((wiggleType == WiggleType.OMNIDIRECTIONAL ? 1 : 0) & 0x1) << 28); // X-Z / omni
+                PositionNormalLighting |= (uint)((((wiggleType == WiggleType.VERTICAL || wiggleType == WiggleType.OMNIDIRECTIONAL) ? 1 : 0) & 0x1) << 29); // Y / vertical
+                
                 TexU = texU;
                 TexV = texV;
             }
 
             public Vector3i Position()
             {
-                int x = (int)PositionNormalLighting & 0x3F;
-                int y = (int)(PositionNormalLighting >> 6) & 0x3F;
-                int z = (int)(PositionNormalLighting >> 12) & 0x3F;
+                int x = (int)(PositionNormalLighting & 0x7F);      // bits 0–6
+                int y = (int)((PositionNormalLighting >> 7) & 0x7F);      // bits 7–13
+                int z = (int)((PositionNormalLighting >> 14) & 0x7F);     // bits 14–20
                 return (x, y, z);
             }
+
         }
 
         public static byte[] FlattenPackedVertices(List<PackedVertex> verts)
