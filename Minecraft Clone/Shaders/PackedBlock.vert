@@ -17,21 +17,20 @@ uniform float u_waveSpeed;
 out vec2 texCoord;
 out vec3 vNormal;
 out vec4 worldPos;
-out float brightness;
+out float vertexBrightness;
 out int isWater;
 out int isFoliage;
 
 vec3 DecodePos(uint p) {
-    float x = ((p >> 0) & 0x3Fu);
-    float y = ((p >> 6) & 0x3Fu);
-    float z = ((p >> 12) & 0x3Fu);
-    y -= u_waterOffset * ((inPosNorBright >> 22) & 0x1u);
+    float x = ((p >> 0) & 0x7Fu);
+    float y = ((p >> 7) & 0x7Fu);
+    float z = ((p >> 14) & 0x7Fu);
 
     return vec3(x, y, z);
 }
 
 vec3 DecodeNormal(uint p) {
-    uint n = (p >> 18) & 0x7u;
+    uint n = (p >> 21) & 0x7u;
     if (n == 0u) return vec3( 0, 0, 1);
     if (n == 1u) return vec3( 0, 0,-1);
     if (n == 2u) return vec3(-1, 0, 0);
@@ -44,16 +43,22 @@ void main()
 {
     texCoord = inTex;
 
-    brightness = uint((inPosNorBright >> 24) & 0xFu);
+    vertexBrightness = uint((inPosNorBright >> 24) & 0xFu);
     vNormal = DecodeNormal(inPosNorBright);
-    isWater = int((inPosNorBright >> 22) & 0x1u);
-    isFoliage = int(((inPosNorBright >> 21) & 0x1u) + ((inPosNorBright >> 23) & 0x1u));
+    
+    uint wigX = (inPosNorBright >> 28) & 1u;  // omnidirectional / water
+    uint wigY = (inPosNorBright >> 29) & 1u;  // vertical / foliage
+
+    isWater   = int(wigX);
+    isFoliage = int(wigY);
+
 
     vec4 position = vec4(DecodePos(inPosNorBright), 1.0);
     worldPos = model * position;
 
     if(isWater == 1)
     {
+        position.y -= u_waterOffset * ((inPosNorBright >> 29) & 0x1u);
         position.y += u_waveAmplitude * sin(((worldPos.x + worldPos.z - 5 * worldPos.y) * u_waveScale + u_time * u_waveSpeed)*6.28318);
     }
     if(isFoliage >= 1){

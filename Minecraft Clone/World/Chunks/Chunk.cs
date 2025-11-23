@@ -22,7 +22,7 @@ namespace Minecraft_Clone.World.Chunks
     public class Chunk(byte lod, ChunkState state = ChunkState.BIRTH)
     {
         public byte LOD = lod;
-        public const int SIZE = 32; // same size in all coordinates
+        public const int SIZE = 64; // same size in all coordinates
         private ChunkState state = state;
 
         public ChunkState GetState() { return state; } // protect the state from being directly modified
@@ -30,35 +30,7 @@ namespace Minecraft_Clone.World.Chunks
         public bool NeighborReady => !((state == ChunkState.BIRTH) || (state == ChunkState.GENERATING));// can the neighbor query this block for block existence?
 
         public ConcurrentDictionary<Vector3i, BlockType> pendingBlocks; // blocks that the chunk needs to update with
-
-        public byte averageHeight = 255;
-
-        public byte GetAverageHeight() {
-            if (isEmpty) return 0;
-
-            if (averageHeight == 255) // this should not be possible, means it wasnt calculated
-            {
-                short sum = 0;
-                for (short x = 0; x < SIZE; x++) 
-                {
-                    for (short z = 0; z < SIZE; z++)
-                    {
-                        for (short y = SIZE-1; y > 0; y--)
-                        {
-                            if(GetBlock(x, y, z).IsSolid)
-                            {
-                                sum += y;
-                                continue;
-                            }
-                        }
-                    }
-                }
-
-                averageHeight = (byte)((byte)(sum) /(SIZE * SIZE));
-            }
-            return averageHeight;
-        }
-
+            
         // is the chunk empty?
         public bool IsEmpty { 
             get => isEmpty; 
