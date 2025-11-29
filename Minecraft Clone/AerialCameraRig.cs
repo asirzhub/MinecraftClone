@@ -25,7 +25,7 @@ namespace Minecraft_Clone
         public bool firstMove = true;
         Vector2 lastPos = new();
         float sensitivity = 15f;
-        public float fovY = 35f;
+        public float fovY = 60f;
         public float z_offset = 0f;
 
         public Matrix4 GetViewMatrix() =>

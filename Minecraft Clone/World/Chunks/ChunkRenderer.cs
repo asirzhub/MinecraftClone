@@ -103,7 +103,7 @@ namespace Minecraft_Clone.World.Chunks
             blockShader.SetMatrix4("lightProjMat", shadowMapProjMatrix);
             blockShader.SetMatrix4("lightViewMat", shadowMapViewMatrix);
 
-            blockShader.SetVector3("cameraPos", (camera.CameraPosition() + camera.focusPoint)/2.0f);
+            blockShader.SetVector3("cameraPos", (camera.CameraPosition()));// + camera.focusPoint)/2.0f);
             blockShader.SetFloat("u_waterOffset", waterOffset);
             blockShader.SetFloat("u_waveAmplitude", waterWaveAmplitude);
             blockShader.SetFloat("u_waveScale", waterWaveScale);

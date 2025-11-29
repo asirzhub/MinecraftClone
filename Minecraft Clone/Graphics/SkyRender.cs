@@ -78,7 +78,7 @@ namespace Minecraft_Clone.Graphics
             skyShader.SetFloat("aspectRatio", camera.screenWidth / camera.screenHeight);
 
             skyShader.SetVector3("sunColor", new Vector3(1.0f, 0.9f, 0.7f));
-            skyShader.SetFloat("sunAngularRadiusDeg", 0.27f);
+            skyShader.SetFloat("sunAngularRadiusDeg", 0.57f);
             skyShader.SetFloat("sunEdgeSoftness", 0.0005f);
             skyShader.SetFloat("sunGlowStrength", 1.1f);
             skyShader.SetFloat("sunGlowSharpness", 1000.0f);

@@ -19,9 +19,18 @@ uniform vec3 fogColor;
 uniform float u_minLight;
 uniform float u_maxLight;
 
+uniform float seaLevel;
+
+in float isWater;
+in float isFoliage;
+
 out vec4 FragColor;
 
 vec4 lerpvec4(vec4 a, vec4 b, float t){
+    return ( a*t + b*(1-t));
+}
+
+vec3 lerpvec3(vec3 a, vec3 b, float t){
     return ( a*t + b*(1-t));
 }
 
@@ -89,14 +98,23 @@ void main()
     if(sunDirection.y + 0.2 < 0){
         daytime = 0.2 - 0.1 * sunDirection.y; // bounce back as if the moon lights things up
     }
-    if(sunDirection.y + 0.2 >= 0)
+    else
     {
         daytime = clamp(dot(sunDirection, vec3(0, 1, 0)), 0.2, 1);
     }
 
     shadowFactor = clamp(shadowFactor, u_minLight, u_maxLight);
 
-    float fogginess = clamp(1.0/exp((dist * dist)/500000.0), 0.0, 1.0);
+    float SSS = clamp(isWater + isFoliage, 0.0, 1.0) * clamp(dot(vNormal, sunDirection), 0.5, 1.0);
 
-    FragColor = lerpvec4(texColor * vec4(lightLevel, 1.0) * vec4(shadowFactor, 1.0), vec4(fogColor.xyz, 1.0), fogginess);
+    float sunAlignment = clamp(dot(normalize(worldPos.xyz - cameraPos), sunDirection), 0.0, 1.0);
+
+    float fogginess = clamp(1.0/exp((dist * dist)/50000.0), 0.0, 1.0);
+
+    sunAlignment *= sunAlignment * sunAlignment; 
+    vec4 finalTexColor = texColor + vec4(1.0, 0.8, 0.0, 0.0) * SSS * sunAlignment * daytime;
+
+    shadowFactor = min(shadowFactor, daytime);
+
+    FragColor = lerpvec4(finalTexColor * vec4(((1.0+daytime) * lightLevel) * shadowFactor, 1.0), vec4(fogColor.xyz, 1.0), fogginess);
 }
