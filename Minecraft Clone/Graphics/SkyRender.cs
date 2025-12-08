@@ -54,13 +54,15 @@ namespace Minecraft_Clone.Graphics
 
             if (dayness > 0f) t = 1 - MathF.Pow(dayness, 0.5f);
 
-                float sunset = 0f;
+            float sunset = 0f;
             if(t > 0.5f)
                 sunset = 2 - 2 * t;
             else if (t <= 0.5f)
                 sunset = 2 * t;
 
-            finalH = Vector3.Lerp(dayHorizon, nightHorizon, t);
+            float y = sunDirection.Y;
+
+            finalH = Vector3.Lerp(Vector3.Lerp(dayHorizon, nightHorizon, t), new Vector3(1.0f, 0.8f, 0.5f), MathF.Pow(y, 4));
             finalZ = Vector3.Lerp(dayZenith, nightZenith, t);
 
             finalH += sunset * new Vector3(0.3f, 0.0f, 0.2f);
@@ -73,6 +75,7 @@ namespace Minecraft_Clone.Graphics
             skyShader.SetVector3("cameraRight", camera.right);
             skyShader.SetVector3("cameraUp", camera.up);
             skyShader.SetVector3("cameraForward", camera.forward);
+            skyShader.SetVector3("cameraPos", camera.CameraPosition());
             skyShader.SetVector3("sunDir", sunDirection);
             skyShader.SetFloat("fovY", camera.fovY);
             skyShader.SetFloat("aspectRatio", camera.screenWidth / camera.screenHeight);

@@ -22,7 +22,7 @@ namespace Minecraft_Clone.World.Chunks
     public class Chunk(byte lod, ChunkState state = ChunkState.BIRTH)
     {
         public byte LOD = lod;
-        public const int SIZE = 64; // same size in all coordinates
+        public const int SIZE = 32; // same size in all coordinates
         private ChunkState state = state;
 
         public ChunkState GetState() { return state; } // protect the state from being directly modified

@@ -11,7 +11,7 @@ public class ChunkManager
     public ChunkRenderer renderer = new ChunkRenderer();
     public ChunkGenerator generator = new ChunkGenerator();
     public ChunkMesher mesher = new ChunkMesher();
-    public WorldGenerator worldGenerator = new WorldGenerator(512);
+    public WorldGenerator worldGenerator = new WorldGenerator(5);
 
     public Vector3i currentChunkIndex = new();
     public Vector3i lastChunkIndex = new();
@@ -276,7 +276,7 @@ public class ChunkManager
             worldGenerator.Update(frameCount);
 
         // render chunks
-        renderer.RenderLightingPass(camera, time, ActiveChunks, skyRender);
+        renderer.RenderLightingPass(camera, time, ActiveChunks, skyRender, worldGenerator.seaLevel);
     }
 
     // naive frustrum culling using a cone frustrum

@@ -42,7 +42,7 @@ namespace Minecraft_Clone
             aerialCamera = new AerialCameraRig(width, height, (0f,0f,0f));
             this.width = width;
             this.height = height;
-            skyRender = new SkyRender((1.0f, 1f, -1f));
+            skyRender = new SkyRender((-1f, 1f, 0f));
 
             selectionBox = new();
             foreach (var face in CubeMesh.PackedFaceVertices) {
