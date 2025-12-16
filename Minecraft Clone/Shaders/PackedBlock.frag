@@ -79,11 +79,11 @@ void main()
     // Explicit night flag
     bool isNight = (warmFactor <= 0.0);
 
-    vec3 shadowFactor = vec3(0.0);
+    vec3 shadowFactor = vec3(u_minLight);
 
-    float sunLightAmount = dot(vNormal, sunDirection);
+    float sunLightAmount = smoothstep(0.0, 0.2, sunDirection.y);
 
-    if (sunLightAmount > 0.0 && !isNight)
+    if (sunLightAmount > 0.0 && !isNight && dot(sunDirection, vNormal) >= 0.0)
     {
         float bias = 0.00005;
         float fade = 0.1;
@@ -127,13 +127,12 @@ void main()
     }
 
     shadowFactor = clamp(shadowFactor, u_minLight, u_maxLight);
-    shadowFactor = min(shadowFactor, daytime);
 
     float SSS = 0.0;
     if (!isNight)
     {
         float surf = clamp(isWater + isFoliage, 0.0, 1.0);
-        float facing = clamp(dot(vNormal, sunDirection), 0.5, 1.0);
+        float facing = clamp(dot(vNormal, sunDirection), 0.1, 1.0);
         SSS = surf * facing;
     }
 
@@ -162,5 +161,5 @@ void main()
 
     vec4 finalFogColor = vec4(fogColor, 1.0) + fogWarm;
 
-    FragColor = lerpvec4(litColor, finalFogColor, fogginess);
+    FragColor = mix(litColor, finalFogColor, 1 - fogginess);
 }

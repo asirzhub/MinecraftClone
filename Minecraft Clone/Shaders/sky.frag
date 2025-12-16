@@ -65,7 +65,7 @@ void main()
 
     // sun disc + glow
     float c = max(dot(rd, sunDir), 0.0);
-    float c4 = (c * c * c * c)/2;
+    float c4 = smoothstep(0.0, 2.0, c);
     float h = clamp(sunDir.y, -1.0, 1.0);                 // sun height proxy
     float cosR    = cos(radians(sunAngularRadiusDeg));
     float sunDisc = smoothstep(cosR, cosR + sunEdgeSoftness, c) * max(h, 0.0);
@@ -82,6 +82,6 @@ void main()
     
     vec3 finalHorizonColour = horizonColor + vec3(1-smoothstep(0.0, 0.2, abs(sunDir.y)), 0, 0);
     vec3 sky = mix(finalHorizonColour, zenithColor, bz);
-    vec3 col = sky + sunGlow + sunDisc * sunColor + vec3(c4, c4/2, c4/3);
+    vec3 col = sky + sunGlow + sunDisc * sunColor + vec3(c4, c4/2, c4/4);
     FragColor = vec4(col + vec3(cloudiness) * h, 1.0);
 }

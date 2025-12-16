@@ -109,7 +109,7 @@ namespace Minecraft_Clone.World.Chunks
             blockShader.SetFloat("u_waveScale", waterWaveScale);
             blockShader.SetFloat("u_time", time);
             //blockShader.SetFloat("u_seaLevel", seaLevel);
-            blockShader.SetFloat("u_minLight", 0.4f);
+            blockShader.SetFloat("u_minLight", 0.35f);
             blockShader.SetFloat("u_maxLight", 1.0f);
             blockShader.SetFloat("u_waveSpeed", waterWaveSpeed);
             blockShader.SetVector3("sunDirection", sunDirection);
