@@ -18,8 +18,8 @@ out vec2 texCoord;
 out vec3 vNormal;
 out vec4 worldPos;
 out float vertexBrightness;
-out int isWater;
-out int isFoliage;
+out float isWater;
+out float isFoliage;
 
 vec3 DecodePos(uint p) {
     float x = ((p >> 0) & 0x7Fu);
@@ -46,12 +46,11 @@ void main()
     vertexBrightness = uint((inPosNorBright >> 24) & 0xFu);
     vNormal = DecodeNormal(inPosNorBright);
     
-    uint wigX = (inPosNorBright >> 28) & 1u;  // omnidirectional / water
-    uint wigY = (inPosNorBright >> 29) & 1u;  // vertical / foliage
+    uint wigX = (inPosNorBright >> 28) & 1u;  // omnidirectional / foliage
+    uint wigY = (inPosNorBright >> 29) & 1u;  // vertical / water
 
-    isWater   = int(wigX);
-    isFoliage = int(wigY);
-
+    isWater   = int(wigY);
+    isFoliage = int(wigX);
 
     vec4 position = vec4(DecodePos(inPosNorBright), 1.0);
     worldPos = model * position;

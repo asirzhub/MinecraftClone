@@ -25,13 +25,13 @@ namespace Minecraft_Clone
         public bool firstMove = true;
         Vector2 lastPos = new();
         float sensitivity = 15f;
-        public float fovY = 35f;
+        public float fovY = 60f;
         public float z_offset = 0f;
 
         public Matrix4 GetViewMatrix() =>
-            Matrix4.LookAt(CameraPosition(), focusPoint + Vector3.UnitY * z_offset, up);
+            Matrix4.LookAt(CameraPosition(), focusPoint , up);
 
-        public Vector3 CameraPosition() => focusPoint - forward * armDistance;
+        public Vector3 CameraPosition() => focusPoint - forward * armDistance + Vector3.UnitY * z_offset;
 
         public Matrix4 GetProjectionMatrix() => Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(fovY), screenWidth / screenHeight, 0.1f, 2000f);
             //Matrix4.CreateOrthographic(screenWidth/screenHeight * viewSize, viewSize, 0.1f, 2000f);

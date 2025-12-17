@@ -52,7 +52,7 @@ namespace Minecraft_Clone.World.Chunks
 
 
 
-        public void RenderLightingPass(AerialCameraRig camera, float time, ConcurrentDictionary<Vector3i, Chunk> chunks, SkyRender skyRender)
+        public void RenderLightingPass(AerialCameraRig camera, float time, ConcurrentDictionary<Vector3i, Chunk> chunks, SkyRender skyRender, float seaLevel)
         {
             // clear screen, draw sky first
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
@@ -71,7 +71,7 @@ namespace Minecraft_Clone.World.Chunks
                 var idx = kvp.Key;
                 if(lightingPassVisibleStates.Contains(chunk.GetState()))
                 {
-                    RenderChunkLit(chunk.solidMesh, camera, idx, time, skyRender);
+                    RenderChunkLit(chunk.solidMesh, camera, idx, time, skyRender, seaLevel);
                     visibleIndexes.Add(idx);
                 }
             }
@@ -80,12 +80,12 @@ namespace Minecraft_Clone.World.Chunks
             GL.DepthMask(false);
             foreach (var idx in visibleIndexes)
             {
-                RenderChunkLit(chunks[idx].liquidMesh, camera, idx, time, skyRender);
+                RenderChunkLit(chunks[idx].liquidMesh, camera, idx, time, skyRender, seaLevel);
             }
             GL.DepthMask(true);
         }
 
-        bool RenderChunkLit(MeshData mesh, AerialCameraRig camera, Vector3i index, float time, SkyRender sky)
+        bool RenderChunkLit(MeshData mesh, AerialCameraRig camera, Vector3i index, float time, SkyRender sky, float seaLevel)
         {
             // exit if there's no mesh data
             if (mesh == null || mesh.Vertices.Count == 0) return false;
@@ -103,12 +103,13 @@ namespace Minecraft_Clone.World.Chunks
             blockShader.SetMatrix4("lightProjMat", shadowMapProjMatrix);
             blockShader.SetMatrix4("lightViewMat", shadowMapViewMatrix);
 
-            blockShader.SetVector3("cameraPos", (camera.CameraPosition() + camera.focusPoint)/2.0f);
+            blockShader.SetVector3("cameraPos", (camera.CameraPosition()));// + camera.focusPoint)/2.0f);
             blockShader.SetFloat("u_waterOffset", waterOffset);
             blockShader.SetFloat("u_waveAmplitude", waterWaveAmplitude);
             blockShader.SetFloat("u_waveScale", waterWaveScale);
             blockShader.SetFloat("u_time", time);
-            blockShader.SetFloat("u_minLight", 0.4f);
+            //blockShader.SetFloat("u_seaLevel", seaLevel);
+            blockShader.SetFloat("u_minLight", 0.35f);
             blockShader.SetFloat("u_maxLight", 1.0f);
             blockShader.SetFloat("u_waveSpeed", waterWaveSpeed);
             blockShader.SetVector3("sunDirection", sunDirection);
