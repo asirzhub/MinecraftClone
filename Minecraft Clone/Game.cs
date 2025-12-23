@@ -12,7 +12,7 @@ namespace Minecraft_Clone
     class Game : GameWindow
     {
         AerialCameraRig aerialCamera;
-        public bool focused = true;
+        public bool camOrbiting = true;
 
         public ChunkManager chunkManager;
         SkyRender skyRender;
@@ -83,29 +83,6 @@ namespace Minecraft_Clone
             float targetFocusHeight = chunkManager.worldGenerator.GetNoiseAt(World.NoiseLayer.HEIGHT, (int)focusPoint.X, (int)focusPoint.Z);
             aerialCamera.focusPoint.Y = Lerp(aerialCamera.focusPoint.Y, targetFocusHeight, aerialCamera.smoothing);
 
-            //selectionBox.Upload();
-
-            ////with everything prepped, we can now render
-            //Matrix4 model = Matrix4.CreateTranslation(chunkManager.currentChunkIndex * (Chunk.SIZE));
-            //Matrix4 view = aerialCamera.GetViewMatrix();
-            //Matrix4 projection = aerialCamera.GetProjectionMatrix();
-            //Shader bleh = chunkManager.renderer.blockShader;
-
-            //bleh.SetMatrix4("model", model);
-            //bleh.SetMatrix4("view", view);
-            //bleh.SetMatrix4("projection", projection);
-
-            //selectionBox.vao.Bind();
-            //selectionBox.vbo.Bind();
-            //selectionBox.ibo.Bind();
-
-            //GL.DrawElements(
-            //PrimitiveType.Triangles,
-            //selectionBox.ibo.length,
-            //DrawElementsType.UnsignedInt,
-            //0
-            //);
-
             SwapBuffers();
 
             // track fps
@@ -144,39 +121,31 @@ namespace Minecraft_Clone
 
             base.OnUpdateFrame(args);
 
-            if(focused)
-                aerialCamera.Update(input, mouse, args);
 
             timeElapsed += (float)args.Time;
 
             // press escape to close this window or release mouse
-            if (KeyboardState.IsKeyPressed(Keys.Escape))
-            {
-                if (CursorState == CursorState.Grabbed)
-                {
-                    CursorState = CursorState.Normal;
-                    focused = false;
-                    aerialCamera.firstMove = false;
-                }
-                else
-                    Close();
-            }
-            if (MouseState.IsButtonPressed(MouseButton.Left))
+            if (KeyboardState.IsKeyPressed(Keys.Escape)) Close();
+
+            camOrbiting = MouseState.IsButtonDown(MouseButton.Right);
+
+            if (camOrbiting)
             {
                 CursorState = CursorState.Grabbed;
-                focused = true;
+                aerialCamera.Update(input, mouse, args);
+                aerialCamera.firstMove = false;
+            }
+            else
+            {
+                CursorState = CursorState.Normal;
                 aerialCamera.firstMove = true;
             }
 
-            if (KeyboardState.IsKeyPressed(Keys.Period))
-            {
-                chunkManager.radius++;
-            }
 
-            if (KeyboardState.IsKeyPressed(Keys.Comma))
-            {
-                chunkManager.radius--;
-            }
+            if (KeyboardState.IsKeyPressed(Keys.Period)) chunkManager.radius++;            
+
+            if (KeyboardState.IsKeyPressed(Keys.Comma)) chunkManager.radius--;
+            
         }
 
         protected override void OnUnload()
