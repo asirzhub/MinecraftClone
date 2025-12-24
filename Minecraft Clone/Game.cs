@@ -1,4 +1,5 @@
 ﻿using Minecraft_Clone.Graphics;
+using Minecraft_Clone.World;
 using Minecraft_Clone.World.Chunks;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
@@ -6,9 +7,17 @@ using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using System;
+using static Minecraft_Clone.Graphics.VBO;
 
 namespace Minecraft_Clone
 {
+    public struct Ray () {
+        public Vector3 origin;
+        public Vector3 direction;
+        public bool hit;
+        public Vector3 hitLoc;
+    };
+
     class Game : GameWindow
     {
         AerialCameraRig aerialCamera;
@@ -27,7 +36,7 @@ namespace Minecraft_Clone
 
         float timeMult = 0.03f;
 
-        MeshData selectionBox;
+        Ray mouseRay;
 
         // Game Constructor not much to say
         public Game(int width, int height, string title) : base(GameWindowSettings.Default, new NativeWindowSettings()
@@ -43,13 +52,6 @@ namespace Minecraft_Clone
             this.width = width;
             this.height = height;
             skyRender = new SkyRender((-1f, 1f, 0f));
-
-            selectionBox = new();
-            foreach (var face in CubeMesh.PackedFaceVertices) {
-                foreach (var v in face.Value) {
-                    selectionBox.AddVertex(v);
-                }
-            }
         }
 
         protected override void OnLoad()
@@ -79,10 +81,6 @@ namespace Minecraft_Clone
             
             chunkManager.Update(aerialCamera, (float)args.Time, timeElapsed, totalFrameCount, skyRender.sunDirection.Normalized(), skyRender);
 
-            Vector3 focusPoint = new(aerialCamera.focusPoint);
-            float targetFocusHeight = chunkManager.worldGenerator.GetNoiseAt(World.NoiseLayer.HEIGHT, (int)focusPoint.X, (int)focusPoint.Z);
-            aerialCamera.focusPoint.Y = Lerp(aerialCamera.focusPoint.Y, targetFocusHeight, aerialCamera.smoothing);
-
             SwapBuffers();
 
             // track fps
@@ -93,7 +91,7 @@ namespace Minecraft_Clone
             if (frameTimeAccumulator >= 0.5)
             {
                 Title = $"game - FPS: {shortFrameCount * 2} | " +
-                    $"Position: {aerialCamera.Position()} | " +
+                    $"Position: {aerialCamera.CameraPosition()} | " +
                     $"Chunk: {chunkManager.currentChunkIndex} | " +
                     $"Chunk Tasks: {chunkManager.taskCount}/{chunkManager.maxChunkTasks} | " +
                     $"Render Distance: {chunkManager.radius}";
@@ -121,7 +119,6 @@ namespace Minecraft_Clone
 
             base.OnUpdateFrame(args);
 
-
             timeElapsed += (float)args.Time;
 
             // press escape to close this window or release mouse
@@ -141,11 +138,93 @@ namespace Minecraft_Clone
                 aerialCamera.firstMove = true;
             }
 
-
             if (KeyboardState.IsKeyPressed(Keys.Period)) chunkManager.radius++;            
 
             if (KeyboardState.IsKeyPressed(Keys.Comma)) chunkManager.radius--;
-            
+
+            Vector3 focusPoint = new(aerialCamera.focusPoint);
+            float targetFocusHeight = chunkManager.worldGenerator.GetNoiseAt(World.NoiseLayer.HEIGHT, (int)focusPoint.X, (int)focusPoint.Z);
+            aerialCamera.focusPoint.Y = Lerp(aerialCamera.focusPoint.Y, targetFocusHeight, aerialCamera.smoothing);
+
+            if (MouseState.IsButtonPressed(MouseButton.Left)) {
+
+                mouseRay = new Ray();
+                mouseRay.origin = aerialCamera.focusPoint + (0, 1, 0);
+
+                float y = (mouse.Y - aerialCamera.screenHeight / 2) / aerialCamera.screenHeight;
+                float x = (mouse.X - aerialCamera.screenWidth / 2) / aerialCamera.screenWidth; // normalize mouse coords to [-1, 1]
+                int halfFovY = (int)(aerialCamera.fovY / 2);
+                int halfFovX = (int)(halfFovY * (aerialCamera.screenHeight / aerialCamera.screenWidth));
+
+                mouseRay.direction = new Vector3(0, -1, 0);
+
+                bool hit = false;
+                int searchNum = 0;
+                int maxSearch = 256;
+
+                float t = 0;
+                
+                float tMaxX = 0;
+                float tMaxY = 0;
+                float tMaxZ = 0;
+
+                int X = (int)MathF.Floor(mouseRay.origin.X);
+                int Y = (int)MathF.Floor(mouseRay.origin.Y);
+                int Z = (int)MathF.Floor(mouseRay.origin.Z);
+
+                int xStep = MathF.Sign(mouseRay.direction.X);
+                int yStep = MathF.Sign(mouseRay.direction.Y);
+                int zStep = MathF.Sign(mouseRay.direction.Z);
+
+                float tDeltaX = mouseRay.origin.X - X;
+                float tDeltaY = mouseRay.origin.Y - Y;
+                float tDeltaZ = mouseRay.origin.Z - Z;
+
+                Console.WriteLine("SEARCH");
+
+                while (!hit && searchNum < maxSearch)
+                {
+                    searchNum++;
+                    if(tMaxX < tMaxY)
+                    {
+                        if(tMaxX < tMaxZ)
+                        {
+                            X += xStep;
+                            tMaxX = tMaxX + tDeltaX;
+                        }
+                        else
+                        {
+                            Z = Z + zStep;
+                            tMaxZ = tMaxZ + tDeltaZ;
+                        }
+                    }
+                    else
+                    {
+                        if (tMaxY < tMaxZ)
+                        {
+                            Y += yStep;
+                            tMaxY = tMaxY + tDeltaY;
+                        }
+                        else
+                        {
+                            Z = Z + zStep;
+                            tMaxZ = tMaxZ + tDeltaZ;
+                        }
+                    }
+                    if(chunkManager.TryGetBlockAtWorldPosition(new Vector3i(X, Y, Z), out var b)){
+                        if (b.IsSolid)
+                        {
+                            hit = true; 
+                            Console.WriteLine($"HIT {X}, {Y}, {Z}");
+                        }                        
+                    }
+                }
+
+                if (hit)
+                {
+                    chunkManager.TrySetBlockAtWorldPosition(new Vector3i(X, Y, Z), BlockType.AIR);
+                }
+            }
         }
 
         protected override void OnUnload()

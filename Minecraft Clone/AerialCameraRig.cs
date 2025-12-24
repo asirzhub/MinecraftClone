@@ -30,12 +30,10 @@ namespace Minecraft_Clone
         public Matrix4 GetViewMatrix() =>
             Matrix4.LookAt(CameraPosition(), focusPoint , up);
 
-        public Vector3 CameraPosition() => focusPoint - forward * armDistance;
-
         public Matrix4 GetProjectionMatrix() => Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(fovY), screenWidth / screenHeight, 0.1f, 2000f);
             //Matrix4.CreateOrthographic(screenWidth/screenHeight * viewSize, viewSize, 0.1f, 2000f);
 
-        public Vector3 Position() => focusPoint - forward * armDistance;
+        public Vector3 CameraPosition() => focusPoint - forward * armDistance;
 
         private void UpdateVectors()
         { 
