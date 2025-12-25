@@ -24,7 +24,7 @@ namespace Minecraft_Clone.World.Chunks
 
         public Shader shadowMapShader;
         FBOShadowMap fboShadowMap;
-        int shadowMapResolution = 2048;
+        int shadowMapResolution = 8192;
 
         Matrix4 shadowMapViewMatrix = new();
         Matrix4 shadowMapProjMatrix = new();
