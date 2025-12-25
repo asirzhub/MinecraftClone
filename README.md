@@ -1,6 +1,6 @@
 # MinecraftClone 
 
-![https://github.com/asirzhub/MinecraftClone/Thumbnail.png](https://github.com/asirzhub/MinecraftClone/blob/main/Thumbnail.png "A screenshot of the current state.")
+![https://github.com/asirzhub/MinecraftClone/Thumbnail.png](https://github.com/asirzhub/MinecraftClone/blob/main/Thumbnail1.png "A screenshot of the current state.")
 
 ## Development Roadmap
 1. ~~Base-layer absolute minimum engine with chunk generation, camera, and rendering of chunks.~~
