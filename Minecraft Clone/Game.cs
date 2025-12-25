@@ -1,4 +1,5 @@
 ﻿using Minecraft_Clone.Graphics;
+using Minecraft_Clone.World;
 using Minecraft_Clone.World.Chunks;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
@@ -6,13 +7,106 @@ using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using System;
+using static Minecraft_Clone.Graphics.VBO;
 
 namespace Minecraft_Clone
 {
+    public struct Ray () {
+        public Vector3 origin;
+        public Vector3 direction;
+        public bool hit;
+        public Vector3 hitLoc;
+    };
+
+
     class Game : GameWindow
     {
+        public static bool RaycastSolidBlock(
+        ChunkManager cm,
+        Vector3 origin,
+        Vector3 dir,
+        float maxDist,
+        int maxSteps,
+        out Vector3i hitBlock,
+        out Vector3i lastBlockBeforeHit
+        )
+        {
+            hitBlock = default;
+
+            // Start cell
+            int x = (int)MathF.Floor(origin.X);
+            int y = (int)MathF.Floor(origin.Y);
+            int z = (int)MathF.Floor(origin.Z);
+
+            int stepX = dir.X > 0f ? 1 : (dir.X < 0f ? -1 : 0);
+            int stepY = dir.Y > 0f ? 1 : (dir.Y < 0f ? -1 : 0);
+            int stepZ = dir.Z > 0f ? 1 : (dir.Z < 0f ? -1 : 0);
+
+            float tDeltaX = stepX == 0 ? float.PositiveInfinity : MathF.Abs(1f / dir.X);
+            float tDeltaY = stepY == 0 ? float.PositiveInfinity : MathF.Abs(1f / dir.Y);
+            float tDeltaZ = stepZ == 0 ? float.PositiveInfinity : MathF.Abs(1f / dir.Z);
+
+            // Distance to first boundary
+            float nextVoxelBoundaryX = stepX > 0 ? (x + 1) : x;
+            float nextVoxelBoundaryY = stepY > 0 ? (y + 1) : y;
+            float nextVoxelBoundaryZ = stepZ > 0 ? (z + 1) : z;
+
+            // infinities are protection against edge case where pointing exactly along an axis
+            float tMaxX = stepX == 0 ? float.PositiveInfinity : (nextVoxelBoundaryX - origin.X) / dir.X;
+            float tMaxY = stepY == 0 ? float.PositiveInfinity : (nextVoxelBoundaryY - origin.Y) / dir.Y;
+            float tMaxZ = stepZ == 0 ? float.PositiveInfinity : (nextVoxelBoundaryZ - origin.Z) / dir.Z;
+
+            // no negatives
+            if (tMaxX < 0f) tMaxX = 0f;
+            if (tMaxY < 0f) tMaxY = 0f;
+            if (tMaxZ < 0f) tMaxZ = 0f;
+
+            float t = 0f;
+
+            Vector3i lastMove = (0, 0, 0);
+
+            for (int i = 0; i < maxSteps && t <= maxDist; i++)
+            {
+                // Check current cell
+                if (cm.TryGetBlockAtWorldPosition(new Vector3i(x, y, z), out var b) && b.IsSolid)
+                {
+                    hitBlock = new Vector3i(x, y, z);
+                    lastBlockBeforeHit = hitBlock - lastMove;
+                    return true;
+                }
+
+                // Step to next cell
+                if (tMaxX <= tMaxY && tMaxX <= tMaxZ)
+                {
+                    x += stepX;
+                    t = tMaxX;
+                    tMaxX += tDeltaX;
+                    lastMove = (stepX, 0, 0);
+                }
+                else if (tMaxY <= tMaxZ)
+                {
+                    y += stepY;
+                    t = tMaxY;
+                    tMaxY += tDeltaY;
+                    lastMove = (0, stepY, 0);
+                }
+                else
+                {
+                    z += stepZ;
+                    t = tMaxZ;
+                    tMaxZ += tDeltaZ;
+                    lastMove = (0, 0, stepZ);
+                }
+
+            }
+
+            lastBlockBeforeHit = lastMove;
+            return false;
+        }
+
+
         AerialCameraRig aerialCamera;
-        public bool focused = true;
+        public bool camOrbiting = true;
 
         public ChunkManager chunkManager;
         SkyRender skyRender;
@@ -27,7 +121,7 @@ namespace Minecraft_Clone
 
         float timeMult = 0.03f;
 
-        MeshData selectionBox;
+        Ray mouseRay;
 
         // Game Constructor not much to say
         public Game(int width, int height, string title) : base(GameWindowSettings.Default, new NativeWindowSettings()
@@ -43,13 +137,6 @@ namespace Minecraft_Clone
             this.width = width;
             this.height = height;
             skyRender = new SkyRender((-1f, 1f, 0f));
-
-            selectionBox = new();
-            foreach (var face in CubeMesh.PackedFaceVertices) {
-                foreach (var v in face.Value) {
-                    selectionBox.AddVertex(v);
-                }
-            }
         }
 
         protected override void OnLoad()
@@ -79,33 +166,6 @@ namespace Minecraft_Clone
             
             chunkManager.Update(aerialCamera, (float)args.Time, timeElapsed, totalFrameCount, skyRender.sunDirection.Normalized(), skyRender);
 
-            Vector3 focusPoint = new(aerialCamera.focusPoint);
-            float targetFocusHeight = chunkManager.worldGenerator.GetNoiseAt(World.NoiseLayer.HEIGHT, (int)focusPoint.X, (int)focusPoint.Z);
-            aerialCamera.focusPoint.Y = Lerp(aerialCamera.focusPoint.Y, targetFocusHeight, aerialCamera.smoothing);
-
-            //selectionBox.Upload();
-
-            ////with everything prepped, we can now render
-            //Matrix4 model = Matrix4.CreateTranslation(chunkManager.currentChunkIndex * (Chunk.SIZE));
-            //Matrix4 view = aerialCamera.GetViewMatrix();
-            //Matrix4 projection = aerialCamera.GetProjectionMatrix();
-            //Shader bleh = chunkManager.renderer.blockShader;
-
-            //bleh.SetMatrix4("model", model);
-            //bleh.SetMatrix4("view", view);
-            //bleh.SetMatrix4("projection", projection);
-
-            //selectionBox.vao.Bind();
-            //selectionBox.vbo.Bind();
-            //selectionBox.ibo.Bind();
-
-            //GL.DrawElements(
-            //PrimitiveType.Triangles,
-            //selectionBox.ibo.length,
-            //DrawElementsType.UnsignedInt,
-            //0
-            //);
-
             SwapBuffers();
 
             // track fps
@@ -116,7 +176,7 @@ namespace Minecraft_Clone
             if (frameTimeAccumulator >= 0.5)
             {
                 Title = $"game - FPS: {shortFrameCount * 2} | " +
-                    $"Position: {aerialCamera.Position()} | " +
+                    $"Position: {aerialCamera.CameraPosition()} | " +
                     $"Chunk: {chunkManager.currentChunkIndex} | " +
                     $"Chunk Tasks: {chunkManager.taskCount}/{chunkManager.maxChunkTasks} | " +
                     $"Render Distance: {chunkManager.radius}";
@@ -144,39 +204,57 @@ namespace Minecraft_Clone
 
             base.OnUpdateFrame(args);
 
-            if(focused)
-                aerialCamera.Update(input, mouse, args);
-
             timeElapsed += (float)args.Time;
 
             // press escape to close this window or release mouse
-            if (KeyboardState.IsKeyPressed(Keys.Escape))
-            {
-                if (CursorState == CursorState.Grabbed)
-                {
-                    CursorState = CursorState.Normal;
-                    focused = false;
-                    aerialCamera.firstMove = false;
-                }
-                else
-                    Close();
-            }
-            if (MouseState.IsButtonPressed(MouseButton.Left))
+            if (KeyboardState.IsKeyPressed(Keys.Escape)) Close();
+
+            camOrbiting = MouseState.IsButtonDown(MouseButton.Right);
+
+            if (camOrbiting)
             {
                 CursorState = CursorState.Grabbed;
-                focused = true;
+                aerialCamera.Update(input, mouse, args);
+                aerialCamera.firstMove = false;
+            }
+            else
+            {
+                CursorState = CursorState.Normal;
                 aerialCamera.firstMove = true;
             }
 
-            if (KeyboardState.IsKeyPressed(Keys.Period))
+            if (KeyboardState.IsKeyPressed(Keys.Period)) chunkManager.radius++;            
+
+            if (KeyboardState.IsKeyPressed(Keys.Comma)) chunkManager.radius--;
+
+            Vector3 focusPoint = new(aerialCamera.focusPoint);
+            float targetFocusHeight = chunkManager.worldGenerator.GetNoiseAt(World.NoiseLayer.HEIGHT, (int)focusPoint.X, (int)focusPoint.Z);
+            aerialCamera.focusPoint.Y = Lerp(aerialCamera.focusPoint.Y, targetFocusHeight, aerialCamera.smoothing);
+
+            if (MouseState.IsButtonPressed(MouseButton.Left))
             {
-                chunkManager.radius++;
+                var origin = aerialCamera.CameraPosition();   // more stable than focusPoint
+
+                float aspect = aerialCamera.screenWidth / aerialCamera.screenHeight;
+
+                float tanHalfFovY = MathF.Tan(MathHelper.DegreesToRadians(aerialCamera.fovY * 0.5f));
+                float tanHalfFovX = tanHalfFovY * aspect;
+
+                Vector2 ndc = mouse.Position;
+                ndc.X = (ndc.X / aerialCamera.screenWidth) * 2f - 1f;
+                ndc.Y = 1f - (ndc.Y / aerialCamera.screenHeight) * 2f;
+
+                Vector3 dir =
+                    aerialCamera.forward +
+                    aerialCamera.right * (ndc.X * tanHalfFovX) +
+                    aerialCamera.up * (ndc.Y * tanHalfFovY);
+
+                dir = Vector3.Normalize(dir);
+
+                if (RaycastSolidBlock(chunkManager, origin, dir, maxDist: 256f, maxSteps: 256, out var hit, out var place))
+                    chunkManager.TrySetBlockAtWorldPosition(hit, BlockType.AIR);
             }
 
-            if (KeyboardState.IsKeyPressed(Keys.Comma))
-            {
-                chunkManager.radius--;
-            }
         }
 
         protected override void OnUnload()

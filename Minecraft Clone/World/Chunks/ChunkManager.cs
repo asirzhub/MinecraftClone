@@ -11,7 +11,7 @@ public class ChunkManager
     public ChunkRenderer renderer = new ChunkRenderer();
     public ChunkGenerator generator = new ChunkGenerator();
     public ChunkMesher mesher = new ChunkMesher();
-    public WorldGenerator worldGenerator = new WorldGenerator(5);
+    public WorldGenerator worldGenerator = new WorldGenerator(6);
 
     public Vector3i currentChunkIndex = new();
     public Vector3i lastChunkIndex = new();
@@ -53,9 +53,9 @@ public class ChunkManager
         maxChunkTasks = (int)(Environment.ProcessorCount -1);
 
         currentChunkIndex = WorldPosToChunkIndex((
-                                (int)MathF.Floor(camera.Position().X),
-                                (int)MathF.Floor(camera.Position().Y),
-                                (int)MathF.Floor(camera.Position().Z)), out _); ; // first index in the list is always the center index  
+                                (int)MathF.Floor(camera.CameraPosition().X),
+                                (int)MathF.Floor(camera.CameraPosition().Y),
+                                (int)MathF.Floor(camera.CameraPosition().Z)), out _); ; // first index in the list is always the center index  
     }
 
     public int shadowFrameDelay = 0;
@@ -283,7 +283,7 @@ public class ChunkManager
     public bool IsChunkInView(AerialCameraRig camera, Vector3i idx)
     {
         Vector3 chunkWorldCoord = idx * Chunk.SIZE + Vector3.One * Chunk.SIZE/2; // center of the chunk
-        Vector3 chunkToCamera = chunkWorldCoord - camera.Position();
+        Vector3 chunkToCamera = chunkWorldCoord - camera.CameraPosition();
 
         if (chunkToCamera.LengthFast < 2 * Chunk.SIZE) // if the chunk is too close, exit out with true
             return true;
@@ -431,17 +431,21 @@ public class ChunkManager
 
         Vector3i chunkIndex = WorldPosToChunkIndex(worldIndex, out Vector3i localBlockPos, chunkSize);
 
-        // sanity check (should not be necessary if floor division is correct)
-        if (localBlockPos.X < 0 || localBlockPos.X >= chunkSize ||
-            localBlockPos.Y < 0 || localBlockPos.Y >= chunkSize ||
-            localBlockPos.Z < 0 || localBlockPos.Z >= chunkSize)
-        {
-            return false;
-        }
-
         if (TryGetChunkAtIndex(chunkIndex, out Chunk targetChunk))
         {
             result = targetChunk.GetBlock(localBlockPos.X, localBlockPos.Y, localBlockPos.Z);
+            return true;
+        }
+        return false;
+    }
+
+    public bool TrySetBlockAtWorldPosition(Vector3i worldIndex, BlockType type, int chunkSize = Chunk.SIZE)
+    {
+        Vector3i chunkIndex = WorldPosToChunkIndex(worldIndex, out Vector3i localBlockPos, chunkSize);
+
+        if (TryGetChunkAtIndex(chunkIndex, out Chunk targetChunk))
+        {
+            targetChunk.AddPendingBlock(localBlockPos, type);
             return true;
         }
         return false;
