@@ -34,7 +34,7 @@ namespace Minecraft_Clone.World.Chunks
             blockShader = new Shader("PackedBlock.vert", "PackedBlock.frag");
             blockTexture = new Texture("textures.png");
 
-            shadowMapShader = new Shader("PackedBlock.vert", "PackedBlock.frag");
+            shadowMapShader = new Shader("BlockShadowPass.vert", "BlockShadowPass.frag");
             fboShadowMap = new(shadowMapResolution, shadowMapResolution);
         }
 
@@ -180,16 +180,9 @@ namespace Minecraft_Clone.World.Chunks
             Matrix4 view = shadowMapViewMatrix;
             Matrix4 projection = shadowMapProjMatrix;
 
-            blockShader.SetMatrix4("model", model);
-            blockShader.SetMatrix4("view", view);
-            blockShader.SetMatrix4("projection", projection);
-
-            blockShader.SetFloat("u_waterOffset", waterOffset);
-            blockShader.SetFloat("u_waveAmplitude", waterWaveAmplitude);
-            blockShader.SetFloat("u_waveScale", waterWaveScale);
-            blockShader.SetFloat("u_time", time);
-            blockShader.SetFloat("u_waveSpeed", waterWaveSpeed);
-            blockShader.SetVector3("sunDirection", sunDirection);
+            shadowMapShader.SetMatrix4("model", model);
+            shadowMapShader.SetMatrix4("view", view);
+            shadowMapShader.SetMatrix4("projection", projection);
 
             mesh.Upload();
             mesh.Bind();
