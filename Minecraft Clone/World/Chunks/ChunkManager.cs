@@ -11,7 +11,7 @@ public class ChunkManager
     public ChunkRenderer renderer = new ChunkRenderer();
     public ChunkGenerator generator = new ChunkGenerator();
     public ChunkMesher mesher = new ChunkMesher();
-    public WorldGenerator worldGenerator = new WorldGenerator(5);
+    public WorldGenerator worldGenerator = new WorldGenerator(6);
 
     public Vector3i currentChunkIndex = new();
     public Vector3i lastChunkIndex = new();
@@ -431,14 +431,6 @@ public class ChunkManager
 
         Vector3i chunkIndex = WorldPosToChunkIndex(worldIndex, out Vector3i localBlockPos, chunkSize);
 
-        // sanity check (should not be necessary if floor division is correct)
-        if (localBlockPos.X < 0 || localBlockPos.X >= chunkSize ||
-            localBlockPos.Y < 0 || localBlockPos.Y >= chunkSize ||
-            localBlockPos.Z < 0 || localBlockPos.Z >= chunkSize)
-        {
-            return false;
-        }
-
         if (TryGetChunkAtIndex(chunkIndex, out Chunk targetChunk))
         {
             result = targetChunk.GetBlock(localBlockPos.X, localBlockPos.Y, localBlockPos.Z);
@@ -451,18 +443,9 @@ public class ChunkManager
     {
         Vector3i chunkIndex = WorldPosToChunkIndex(worldIndex, out Vector3i localBlockPos, chunkSize);
 
-        // sanity check (should not be necessary if floor division is correct)
-        if (localBlockPos.X < 0 || localBlockPos.X >= chunkSize ||
-            localBlockPos.Y < 0 || localBlockPos.Y >= chunkSize ||
-            localBlockPos.Z < 0 || localBlockPos.Z >= chunkSize)
-        {
-            return false;
-        }
-
         if (TryGetChunkAtIndex(chunkIndex, out Chunk targetChunk))
         {
             targetChunk.AddPendingBlock(localBlockPos, type);
-            //result = targetChunk.GetBlock(localBlockPos.X, localBlockPos.Y, localBlockPos.Z);
             return true;
         }
         return false;
