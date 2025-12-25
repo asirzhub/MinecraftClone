@@ -150,7 +150,7 @@ void main()
     vec4 litColor = tintedColor * vec4(1.0 + SSS * warmFactor * sunAlignment * warmTint, 1.0);
 
     vec3 lightLevel = vec3(vertexBrightness / 16.0);
-    litColor *= vec4(((1.0 + daytime) * lightLevel) * shadowFactor, 1.0);
+    litColor *= vec4((0.2 + daytime) * lightLevel * shadowFactor, 1.0);
 
     // Fog
     float distToCamera = distance(cameraPos, worldPos.xyz);
