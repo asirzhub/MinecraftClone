@@ -39,5 +39,21 @@ void main()
     texCoord = inTex;
     vec4 position = vec4(DecodePos(inPosNorBright), 1.0);
 
+    uint wigX = (inPosNorBright >> 28) & 1u;  // omnidirectional / foliage
+    uint wigY = (inPosNorBright >> 29) & 1u;  // vertical / water
+    vec4 worldPos = model * position;
+
+    float q_time = floor(u_time * 60.0)/60.0;
+
+    if(int(wigY) == 1)
+    {
+        position.y -= u_waterOffset * ((inPosNorBright >> 29) & 0x1u);
+        position.y += u_waveAmplitude * sin(((worldPos.x + worldPos.z - 5 * worldPos.y) * u_waveScale + q_time * u_waveSpeed)*6.28318);
+    }
+    if(int(wigX) >= 1){
+        position.x += sin(((worldPos.x + worldPos.z ) + u_time * u_waveSpeed)*6.28318) * u_waveAmplitude * cos(((worldPos.x + worldPos.z - 5 * worldPos.y) * u_waveScale + u_time/2 * u_waveSpeed)*6.28318);
+        position.z += u_waveAmplitude * sin(((worldPos.x + worldPos.z + 5 * worldPos.y) * -u_waveScale/2 + q_time * u_waveSpeed)*6.28318);
+    }
+
     gl_Position = projection * view * model * position;
 }

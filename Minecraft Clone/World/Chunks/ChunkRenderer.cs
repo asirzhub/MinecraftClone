@@ -24,10 +24,12 @@ namespace Minecraft_Clone.World.Chunks
 
         public Shader shadowMapShader;
         FBOShadowMap fboShadowMap;
-        int shadowMapResolution = 8192;
+        int shadowMapResolution = 2048;
 
         Matrix4 shadowMapViewMatrix = new();
         Matrix4 shadowMapProjMatrix = new();
+
+        Random random = new Random();
 
         public ChunkRenderer()
         {
@@ -109,11 +111,14 @@ namespace Minecraft_Clone.World.Chunks
             blockShader.SetFloat("u_waveScale", waterWaveScale);
             blockShader.SetFloat("u_time", time);
             //blockShader.SetFloat("u_seaLevel", seaLevel);
-            blockShader.SetFloat("u_minLight", 0.35f);
-            blockShader.SetFloat("u_maxLight", 1.0f);
+            //blockShader.SetFloat("u_minLight", 0.35f);
+            //blockShader.SetFloat("u_maxLight", 1.0f);
             blockShader.SetFloat("u_waveSpeed", waterWaveSpeed);
-            blockShader.SetVector3("sunDirection", sunDirection);
-            blockShader.SetVector3("fogColor", sky.finalH);
+            blockShader.SetVector3("u_sunDirection", sunDirection);
+            blockShader.SetVector3("u_fogColor", sky.finalH);
+
+            blockShader.SetVector3("u_horizonColor", sky.finalH);
+            blockShader.SetVector3("u_zenithColor", sky.finalZ);
 
             mesh.Upload();
             mesh.Bind();
@@ -142,8 +147,8 @@ namespace Minecraft_Clone.World.Chunks
 
             // position the light 500 units away in the direction of the sun, looking at the place the camera looks at. use ortho projection
             shadowMapViewMatrix = Matrix4.LookAt(camera.focusPoint + 500f * skyRender.sunDirection, 
-                camera.focusPoint, 
-                camera.up);
+                camera.focusPoint , 
+                Vector3.UnitX);
             shadowMapProjMatrix = Matrix4.CreateOrthographic(camera.armDistance*2, camera.armDistance * 2, 0.01f, 2000f);
 
             // render all chunks non-transparent mesh

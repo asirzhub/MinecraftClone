@@ -264,11 +264,9 @@ public class ChunkManager
 
         // shadowmap pass updated not every frame
         shadowTime += frameTime;
-
-        if(shadowTime % 0.05 <= 0.01 )
+        if(shadowTime % 0.1 <= 0.01 )
         {
             renderer.RenderShadowMapPass(camera, time, ActiveChunks, skyRender);
-            shadowFrameDelay = 0;
         }
 
         // check for expired noise cache entries every three seconds
