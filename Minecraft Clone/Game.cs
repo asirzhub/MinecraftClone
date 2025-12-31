@@ -26,7 +26,7 @@ namespace Minecraft_Clone
         private int totalFrameCount = 0;
         public float timeElapsed = 0;
 
-        float timeMult = 0.03f;
+        float timeMult = 0.01f;
 
 
         // Game Constructor not much to say
@@ -42,7 +42,7 @@ namespace Minecraft_Clone
             aerialCamera = new AerialCameraRig(width, height, (0f,0f,0f));
             this.width = width;
             this.height = height;
-            skyRender = new SkyRender((-1f, 1f, 0f));
+            skyRender = new SkyRender((0.3f, 1f, 0f));
         }
 
         protected override void OnLoad()
