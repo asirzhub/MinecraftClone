@@ -24,7 +24,7 @@ namespace Minecraft_Clone.World.Chunks
 
         public Shader shadowMapShader;
         FBOShadowMap fboShadowMap;
-        int shadowMapResolution = 8192;
+        int shadowMapResolution = 2048;
 
         Matrix4 shadowMapViewMatrix = new();
         Matrix4 shadowMapProjMatrix = new();
@@ -98,7 +98,7 @@ namespace Minecraft_Clone.World.Chunks
             GL.DepthMask(false);
             foreach (var idx in visibleIndexes)
             {
-                RenderChunkLit(chunks[idx].liquidMesh, camera, idx, time, skyRender, seaLevel);
+                RenderChunkLit(chunks[idx].transparentMesh, camera, idx, time, skyRender, seaLevel);
             }
             GL.DepthMask(true);
         }
@@ -149,8 +149,14 @@ namespace Minecraft_Clone.World.Chunks
             // position the light 500 units away in the direction of the sun, looking at the place the camera looks at. use ortho projection
             shadowMapViewMatrix = Matrix4.LookAt(camera.focusPoint + 500f * skyRender.sunDirection, 
                 camera.focusPoint , 
-                Vector3.UnitZ);
+                camera.up);
             shadowMapProjMatrix = Matrix4.CreateOrthographic(camera.armDistance*3, camera.armDistance * 2, 0.01f, 2000f);
+
+            
+            Matrix4 view = shadowMapViewMatrix;
+            Matrix4 projection = shadowMapProjMatrix;
+            shadowMapShader.SetMatrix4("view", view);
+            shadowMapShader.SetMatrix4("projection", projection);
 
             // render all chunks non-transparent mesh
             foreach (var kvp in chunks)
@@ -164,11 +170,11 @@ namespace Minecraft_Clone.World.Chunks
                 }
             }
 
-            // render water with no depth mask, after all solids were rendered
+            // render transparent with no depth mask, after all solids were rendered
             GL.DepthMask(false);
             foreach (var idx in visibleIndexes)
             {
-                RenderChunkShadowMap(chunks[idx].liquidMesh, idx, time, skyRender);
+                RenderChunkShadowMap(chunks[idx].transparentMesh, idx, time, skyRender);
             }
             GL.DepthMask(true);
 
@@ -183,12 +189,8 @@ namespace Minecraft_Clone.World.Chunks
             var sunDirection = sky.sunDirection;
             
             Matrix4 model = Matrix4.CreateTranslation(index * (Chunk.SIZE));
-            Matrix4 view = shadowMapViewMatrix;
-            Matrix4 projection = shadowMapProjMatrix;
 
             shadowMapShader.SetMatrix4("model", model);
-            shadowMapShader.SetMatrix4("view", view);
-            shadowMapShader.SetMatrix4("projection", projection);
 
             mesh.Upload();
             mesh.Bind();

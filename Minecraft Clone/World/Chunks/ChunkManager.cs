@@ -11,7 +11,7 @@ public class ChunkManager
     public ChunkRenderer renderer = new ChunkRenderer();
     public ChunkGenerator generator = new ChunkGenerator();
     public ChunkMesher mesher = new ChunkMesher();
-    public WorldGenerator worldGenerator = new WorldGenerator(6);
+    public WorldGenerator worldGenerator = new WorldGenerator(11);
 
     public Vector3i currentChunkIndex = new();
     public Vector3i lastChunkIndex = new();
@@ -133,7 +133,7 @@ public class ChunkManager
         {
             Chunk targetChunk = ActiveChunks[resultChunk.index];
             targetChunk.solidMesh = resultChunk.solidMesh;
-            targetChunk.liquidMesh = resultChunk.liquidMesh;
+            targetChunk.transparentMesh = resultChunk.liquidMesh;
             targetChunk.SetState(ChunkState.MESHED);
             RunningTasks.TryRemove(resultChunk.index, out _);
             RunningTasksCTS.TryRemove(resultChunk.index, out _);

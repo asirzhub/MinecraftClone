@@ -50,9 +50,8 @@ namespace Minecraft_Clone.Graphics
             skyShader.Bind();
             GL.Disable(EnableCap.DepthTest);
 
-            float y = MathF.Min(1.0f, MathF.Max(sunDirection.Y, 0.0f));
-
-            sunColor = (MathF.Sqrt(y), MathF.Sqrt(y), y);
+            float y = MathF.Min(1.0f, MathF.Max(sunDirection.Y + 0.2f, 0.0f));
+            sunColor = (MathF.Sqrt(y), y, y*y);
 
             finalH = Vector3.Lerp(dayHorizon, nightHorizon, 1-y);
             finalZ = Vector3.Lerp(dayZenith, nightZenith, 1-y);

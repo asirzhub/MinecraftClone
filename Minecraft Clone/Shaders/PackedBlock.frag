@@ -59,7 +59,7 @@ float fbm(vec2 p, int octaves, float lacunarity, float gain) {
     return sum;
 }
 
-float shadowAtQuantPos(vec4 qpos, float bias, float fade)
+float shadowAtQuantPos(vec4 qpos, float bias)
 {
     vec4 lightSpacePos = lightProjMat * lightViewMat * qpos;
     vec3 projCoord = (lightSpacePos.xyz / lightSpacePos.w) * 0.5 + 0.5;
@@ -69,23 +69,18 @@ float shadowAtQuantPos(vec4 qpos, float bias, float fade)
         projCoord.y < 0.0 || projCoord.y > 1.0)
         return 0.0; // 0 shadow
 
-    float edgeFadeX = smoothstep(0.0, fade, projCoord.x) *
-                      smoothstep(1.0, 1.0 - fade, projCoord.x);
-    float edgeFadeY = smoothstep(0.0, fade, projCoord.y) *
-                      smoothstep(1.0, 1.0 - fade, projCoord.y);
-
     // hardware compare: returns 1.0 when lit, 0.0 when shadowed (with LEQUAL/LESS depending)
     float visibility = texture(shadowMap, vec3(projCoord.xy, projCoord.z - bias));
 
-    // convert to "shadow amount" (1 = shadowed, 0 = lit) and apply edge fade
-    return (1.0 - visibility) * (edgeFadeX * edgeFadeY);
+    // convert to "shadow amount" (1 = shadowed, 0 = lit)
+    return (1.0 - visibility);
 }
 
 
 
 void main()
 {
-    const float oneTexel = 1.0/32.0;
+    const float oneTexel = 1.0/16.0;
 
     vec4 texColor = texture(albedoTexture, texCoord); 
     if(texColor.a < 0.1) discard;
@@ -95,29 +90,33 @@ void main()
 
     if (dot(u_sunDirection, vNormal) >= 0.0)
     {
-        float bias = 0.00001;
-        float fade = 0.1;
-
-        vec4 quantPos = floor(worldPos/oneTexel)*oneTexel;
+        float bias = 0.00002;
+        float fade = 0.3;
+        vec4 centerOffset = vec4(vec3(oneTexel/2.0), 0.0);
+        vec4 quantPos = (floor((worldPos + centerOffset)/oneTexel)-centerOffset)*oneTexel;
 
         vec4 lightSpacePos = lightProjMat * lightViewMat * quantPos;
         vec3 projCoord = (lightSpacePos.xyz / lightSpacePos.w) * 0.5 + 0.5;
+
+        float edgeFadeX = smoothstep(0.0, fade, projCoord.x) *
+                          smoothstep(1.0, 1.0 - fade, projCoord.x);
+        float edgeFadeY = smoothstep(0.0, fade, projCoord.y) *
+                          smoothstep(1.0, 1.0 - fade, projCoord.y);
 
         // 6 axis-adjacent offsets in the grid
         vec4 dx = vec4(oneTexel, 0.0,     0.0,     0.0);
         vec4 dy = vec4(0.0,     oneTexel, 0.0,     0.0);
         vec4 dz = vec4(0.0,     0.0,     oneTexel, 0.0);
 
-        shadowAmount = 
-            shadowAtQuantPos(quantPos, bias, fade) * 0.5 +
-            shadowAtQuantPos(quantPos + dx + dy + dz, bias, fade) * 0.0625 +
-            shadowAtQuantPos(quantPos + dx - dy + dz, bias, fade) * 0.0625 +
-            shadowAtQuantPos(quantPos - dx + dy + dz, bias, fade) * 0.0625 +
-            shadowAtQuantPos(quantPos - dx - dy + dz, bias, fade) * 0.0625 +
-            shadowAtQuantPos(quantPos + dx + dy - dz, bias, fade) * 0.0625 +
-            shadowAtQuantPos(quantPos + dx - dy - dz, bias, fade) * 0.0625 +
-            shadowAtQuantPos(quantPos - dx + dy - dz, bias, fade) * 0.0625 +
-            shadowAtQuantPos(quantPos - dx - dy - dz, bias, fade) * 0.0625;
+        shadowAmount = edgeFadeX * edgeFadeY * (
+        0.5 * shadowAtQuantPos(quantPos, bias) + 
+        0.5 / 6.0 * ( 
+        shadowAtQuantPos(quantPos + dx, bias) + 
+        shadowAtQuantPos(quantPos - dx, bias) + 
+        shadowAtQuantPos(quantPos + dy, bias) + 
+        shadowAtQuantPos(quantPos - dy, bias) + 
+        shadowAtQuantPos(quantPos + dz, bias) + 
+        shadowAtQuantPos(quantPos - dz, bias) ) );
     }
 
     // Fog
@@ -130,9 +129,9 @@ void main()
     float SSS = clamp(isFoliage + isWater, 0.0, 1.0) * smoothstep(0.0, 2.0, dot(normalize(fragDirection), u_sunDirection));
 
     vec3 faceLight = vertexBrightness*vertexBrightness/(16.0*16.0) * (
-    (1 - isTopFace) * normalize( u_horizonColor )
-    + isTopFace * normalize( u_zenithColor )
-    + (clamp(dot(vNormal, u_sunDirection) + SSS, 0, 1.0) * daylight) * (1 - shadowAmount) * u_sunColor
+    ((1.2 - isTopFace) * normalize( u_horizonColor )
+    + 0.2 + isTopFace * normalize( u_zenithColor )) * 0.8
+    + (clamp(dot(vNormal, u_sunDirection) + SSS, 0, 1.0) * sqrt(daylight)) * (1 - shadowAmount) * u_sunColor
     );
 
     FragColor = mix(texColor * vec4(faceLight, 1.0), vec4(u_fogColor, 1.0), fogginess);
