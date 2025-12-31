@@ -66,8 +66,24 @@ namespace Minecraft_Clone.World.Chunks
             Bind();
             List<Vector3i> visibleIndexes = new List<Vector3i>();
 
+
+            blockShader.SetVector3("u_sunColor", skyRender.sunColor * 2.5f);
+            blockShader.SetVector3("cameraPos", (camera.CameraPosition()));// + camera.focusPoint)/2.0f);
+            blockShader.SetFloat("u_waterOffset", waterOffset);
+            blockShader.SetFloat("u_waveAmplitude", waterWaveAmplitude);
+            blockShader.SetFloat("u_waveScale", waterWaveScale);
+            blockShader.SetFloat("u_time", time);
+            blockShader.SetFloat("u_waveSpeed", waterWaveSpeed);
+            blockShader.SetVector3("u_sunDirection", skyRender.sunDirection);
+            blockShader.SetVector3("u_fogColor", skyRender.finalH);
+            blockShader.SetFloat("u_fogStartDistance", 100f);
+            blockShader.SetFloat("u_fogEndDistance", 400f);
+
+            blockShader.SetVector3("u_horizonColor", skyRender.finalH * 1.2f);
+            blockShader.SetVector3("u_zenithColor", skyRender.finalZ * 1.2f);
+
             // render all chunks non-transparent mesh
-            foreach(var kvp in chunks)
+            foreach (var kvp in chunks)
             {
                 var chunk = kvp.Value;
                 var idx = kvp.Key;
@@ -105,21 +121,6 @@ namespace Minecraft_Clone.World.Chunks
             blockShader.SetMatrix4("lightProjMat", shadowMapProjMatrix);
             blockShader.SetMatrix4("lightViewMat", shadowMapViewMatrix);
 
-            blockShader.SetVector3("cameraPos", (camera.CameraPosition()));// + camera.focusPoint)/2.0f);
-            blockShader.SetFloat("u_waterOffset", waterOffset);
-            blockShader.SetFloat("u_waveAmplitude", waterWaveAmplitude);
-            blockShader.SetFloat("u_waveScale", waterWaveScale);
-            blockShader.SetFloat("u_time", time);
-            //blockShader.SetFloat("u_seaLevel", seaLevel);
-            //blockShader.SetFloat("u_minLight", 0.35f);
-            //blockShader.SetFloat("u_maxLight", 1.0f);
-            blockShader.SetFloat("u_waveSpeed", waterWaveSpeed);
-            blockShader.SetVector3("u_sunDirection", sunDirection);
-            blockShader.SetVector3("u_fogColor", sky.finalH);
-
-            blockShader.SetVector3("u_horizonColor", sky.finalH);
-            blockShader.SetVector3("u_zenithColor", sky.finalZ);
-
             mesh.Upload();
             mesh.Bind();
 
@@ -149,7 +150,7 @@ namespace Minecraft_Clone.World.Chunks
             shadowMapViewMatrix = Matrix4.LookAt(camera.focusPoint + 500f * skyRender.sunDirection, 
                 camera.focusPoint , 
                 Vector3.UnitX);
-            shadowMapProjMatrix = Matrix4.CreateOrthographic(camera.armDistance*2, camera.armDistance * 2, 0.01f, 2000f);
+            shadowMapProjMatrix = Matrix4.CreateOrthographic(camera.armDistance*3, camera.armDistance * 2, 0.01f, 2000f);
 
             // render all chunks non-transparent mesh
             foreach (var kvp in chunks)
