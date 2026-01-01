@@ -23,6 +23,7 @@ uniform float u_maxLight;
 
 uniform vec3 u_horizonColor;
 uniform vec3 u_zenithColor;
+uniform float u_hzLightMix;
 
 uniform float u_fogStartDistance;
 uniform float u_fogEndDistance;
@@ -87,6 +88,7 @@ void main()
 
     float shadowAmount = 0.0;
     float daylight = smoothstep(-0.2, 0.2, clamp(u_sunDirection.y + 0.2, 0.0, 1.0));
+    float sqrtDaylight = sqrt(daylight);
 
     if (dot(u_sunDirection, vNormal) >= 0.0)
     {
@@ -129,10 +131,13 @@ void main()
     float SSS = clamp(isFoliage + isWater, 0.0, 1.0) * smoothstep(0.0, 2.0, dot(normalize(fragDirection), u_sunDirection));
 
     vec3 faceLight = vertexBrightness*vertexBrightness/(16.0*16.0) * (
-    ((1.2 - isTopFace) * normalize( u_horizonColor )
-    + 0.2 + isTopFace * normalize( u_zenithColor )) * 0.8
-    + (clamp(dot(vNormal, u_sunDirection) + SSS, 0, 1.0) * sqrt(daylight)) * (1 - shadowAmount) * u_sunColor
-    );
+    (
+    (1.0 + u_hzLightMix - isTopFace) * u_horizonColor
+    + u_hzLightMix + isTopFace * u_zenithColor ) 
+    * (1.0/(1.0+u_hzLightMix))
+
+    + (clamp(dot(vNormal, u_sunDirection) + SSS, 0, 1.0) * sqrtDaylight) 
+    * (1 - shadowAmount) * u_sunColor * vec3(2.0-daylight, 1.0, 2.0 - sqrtDaylight));
 
     FragColor = mix(texColor * vec4(faceLight, 1.0), vec4(u_fogColor, 1.0), fogginess);
 }

@@ -72,6 +72,7 @@ namespace Minecraft_Clone.World.Chunks
             blockShader.SetFloat("u_waterOffset", waterOffset);
             blockShader.SetFloat("u_waveAmplitude", waterWaveAmplitude);
             blockShader.SetFloat("u_waveScale", waterWaveScale);
+            blockShader.SetFloat("u_hzLightMix", 0.2f);
             blockShader.SetFloat("u_time", time);
             blockShader.SetFloat("u_waveSpeed", waterWaveSpeed);
             blockShader.SetVector3("u_sunDirection", skyRender.sunDirection);
