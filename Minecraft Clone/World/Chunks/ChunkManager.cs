@@ -11,7 +11,7 @@ public class ChunkManager
     public ChunkRenderer renderer = new ChunkRenderer();
     public ChunkGenerator generator = new ChunkGenerator();
     public ChunkMesher mesher = new ChunkMesher();
-    public WorldGenerator worldGenerator = new WorldGenerator(6);
+    public WorldGenerator worldGenerator = new WorldGenerator(11);
 
     public Vector3i currentChunkIndex = new();
     public Vector3i lastChunkIndex = new();
@@ -133,7 +133,7 @@ public class ChunkManager
         {
             Chunk targetChunk = ActiveChunks[resultChunk.index];
             targetChunk.solidMesh = resultChunk.solidMesh;
-            targetChunk.liquidMesh = resultChunk.liquidMesh;
+            targetChunk.transparentMesh = resultChunk.liquidMesh;
             targetChunk.SetState(ChunkState.MESHED);
             RunningTasks.TryRemove(resultChunk.index, out _);
             RunningTasksCTS.TryRemove(resultChunk.index, out _);
@@ -264,11 +264,9 @@ public class ChunkManager
 
         // shadowmap pass updated not every frame
         shadowTime += frameTime;
-
-        if(shadowTime % 0.05 <= 0.01 )
+        if(shadowTime % 0.1 <= 0.01 )
         {
             renderer.RenderShadowMapPass(camera, time, ActiveChunks, skyRender);
-            shadowFrameDelay = 0;
         }
 
         // check for expired noise cache entries every three seconds

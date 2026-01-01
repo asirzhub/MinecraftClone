@@ -6,18 +6,27 @@ in vec4 worldPos;
 in float vertexBrightness;
 
 uniform sampler2D albedoTexture;
-uniform sampler2D shadowMap;
+uniform sampler2DShadow shadowMap;
 
 uniform mat4 lightProjMat;
 uniform mat4 lightViewMat;
 
 uniform vec3 cameraPos;
 
-uniform vec3 sunDirection;
-uniform vec3 fogColor;
+uniform vec3 u_sunColor;
+uniform vec3 u_nightLight;
+uniform vec3 u_sunDirection;
+uniform vec3 u_fogColor;
 
 uniform float u_minLight;
 uniform float u_maxLight;
+
+uniform vec3 u_horizonColor;
+uniform vec3 u_zenithColor;
+uniform float u_hzLightMix;
+
+uniform float u_fogStartDistance;
+uniform float u_fogEndDistance;
 
 //uniform float u_seaLevel;
 
@@ -25,18 +34,6 @@ in float isWater;
 in float isFoliage;
 
 out vec4 FragColor;
-
-vec4 lerpvec4(vec4 a, vec4 b, float t){
-    return ( a*t + b*(1-t));
-}
-
-vec3 lerpvec3(vec3 a, vec3 b, float t){
-    return ( a*t + b*(1-t));
-}
-
-float lerp(float a, float b, float t){
-    return ( a*t + b*(1-t));
-}
 
 float rand(vec2 co) { return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453); }
 
@@ -63,103 +60,84 @@ float fbm(vec2 p, int octaves, float lacunarity, float gain) {
     return sum;
 }
 
+float shadowAtQuantPos(vec4 qpos, float bias)
+{
+    vec4 lightSpacePos = lightProjMat * lightViewMat * qpos;
+    vec3 projCoord = (lightSpacePos.xyz / lightSpacePos.w) * 0.5 + 0.5;
+
+    // outside the shadow map = treat as lit
+    if (projCoord.x < 0.0 || projCoord.x > 1.0 ||
+        projCoord.y < 0.0 || projCoord.y > 1.0)
+        return 0.0; // 0 shadow
+
+    // hardware compare: returns 1.0 when lit, 0.0 when shadowed (with LEQUAL/LESS depending)
+    float visibility = texture(shadowMap, vec3(projCoord.xy, projCoord.z - bias));
+
+    // convert to "shadow amount" (1 = shadowed, 0 = lit)
+    return (1.0 - visibility);
+}
+
+
+
 void main()
 {
+    const float oneTexel = 1.0/16.0;
+
     vec4 texColor = texture(albedoTexture, texCoord); 
     if(texColor.a < 0.1) discard;
 
-    float daylightRaw = clamp(dot(sunDirection, vec3(0.0, 1.0, 0.0)), 0.0, 1.0);
+    float shadowAmount = 0.0;
+    float daylight = smoothstep(-0.2, 0.2, clamp(u_sunDirection.y + 0.2, 0.0, 1.0));
+    float sqrtDaylight = sqrt(daylight);
 
-    float daytime = (sunDirection.y < 0.0)
-        ? 0.447
-        : sqrt(clamp(daylightRaw, 0.2, 1.0));
-
-    float warmFactor = max(0.0, daytime - 0.447);
-
-    // Explicit night flag
-    bool isNight = (warmFactor <= 0.0);
-
-    vec3 shadowFactor = vec3(u_minLight);
-
-    float sunLightAmount = smoothstep(0.0, 0.2, sunDirection.y);
-
-    if (sunLightAmount > 0.0 && !isNight && dot(sunDirection, vNormal) >= 0.0)
+    if (dot(u_sunDirection, vNormal) >= 0.0)
     {
-        float bias = 0.00005;
-        float fade = 0.1;
+        float bias = 0.00002;
+        float fade = 0.3;
+        vec4 centerOffset = vec4(vec3(oneTexel/2.0), 0.0);
+        vec4 quantPos = (floor((worldPos + centerOffset)/oneTexel)-centerOffset)*oneTexel;
 
-        vec4 lightSpacePos = lightProjMat * lightViewMat * worldPos;
+        vec4 lightSpacePos = lightProjMat * lightViewMat * quantPos;
         vec3 projCoord = (lightSpacePos.xyz / lightSpacePos.w) * 0.5 + 0.5;
 
-        float shadow = 0.0;
+        float edgeFadeX = smoothstep(0.0, fade, projCoord.x) *
+                          smoothstep(1.0, 1.0 - fade, projCoord.x);
+        float edgeFadeY = smoothstep(0.0, fade, projCoord.y) *
+                          smoothstep(1.0, 1.0 - fade, projCoord.y);
 
-        if (projCoord.x >= 0.0 && projCoord.x <= 1.0 &&
-            projCoord.y >= 0.0 && projCoord.y <= 1.0)
-        {
-            float edgeFadeX = smoothstep(0.0, fade, projCoord.x) *
-                              smoothstep(1.0, 1.0 - fade, projCoord.x);
+        // 6 axis-adjacent offsets in the grid
+        vec4 dx = vec4(oneTexel, 0.0,     0.0,     0.0);
+        vec4 dy = vec4(0.0,     oneTexel, 0.0,     0.0);
+        vec4 dz = vec4(0.0,     0.0,     oneTexel, 0.0);
 
-            float edgeFadeY = smoothstep(0.0, fade, projCoord.y) *
-                              smoothstep(1.0, 1.0 - fade, projCoord.y);
-
-            float current = projCoord.z;
-
-            int pcfSampleSize = 1;
-            vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
-
-            for (int x = -pcfSampleSize; x <= pcfSampleSize; ++x)
-            {
-                for (int y = -pcfSampleSize; y <= pcfSampleSize; ++y)
-                {
-                    // Spread sampling using randomness and texel size
-                    vec2 offset = vec2(x, y) / max(1.0, float(abs(x) + abs(y)));
-                    float pcfDepth = texture(shadowMap, projCoord.xy + offset * texelSize * rand(worldPos.xz)).r;
-
-                    shadow += (current - bias > pcfDepth) ? 1.0 : 0.0;
-                }
-            }
-
-            float kernel = float((pcfSampleSize * 2 + 1) * (pcfSampleSize * 2 + 1));
-            shadow /= (kernel / (edgeFadeX * edgeFadeY));
-        }
-
-        shadowFactor = vec3((1.0 - shadow) * sqrt(sunLightAmount));
+        shadowAmount = edgeFadeX * edgeFadeY * (
+        0.5 * shadowAtQuantPos(quantPos, bias) + 
+        0.5 / 6.0 * ( 
+        shadowAtQuantPos(quantPos + dx, bias) + 
+        shadowAtQuantPos(quantPos - dx, bias) + 
+        shadowAtQuantPos(quantPos + dy, bias) + 
+        shadowAtQuantPos(quantPos - dy, bias) + 
+        shadowAtQuantPos(quantPos + dz, bias) + 
+        shadowAtQuantPos(quantPos - dz, bias) ) );
     }
-
-    shadowFactor = clamp(shadowFactor, u_minLight, u_maxLight);
-
-    float SSS = 0.0;
-    if (!isNight)
-    {
-        float surf = clamp(isWater + isFoliage, 0.0, 1.0);
-        float facing = clamp(dot(vNormal, sunDirection), 0.1, 1.0);
-        SSS = surf * facing;
-    }
-
-    // Sun-facing fog tint only during daytime
-    float sunAlignment = 0.0;
-    if (!isNight)
-    {
-        sunAlignment = smoothstep(0.0, 0.3, dot(normalize(worldPos.xyz - cameraPos), sunDirection));
-    }
-
-    // fake subsurface scattering
-    vec4 tintedColor = texColor + vec4(0.3, 0.2, 0.1, 0.0) * (SSS * sunAlignment * warmFactor);
-
-    vec3 warmTint = vec3(1.1, 0.6, 0.3);
-    vec4 litColor = tintedColor * vec4(1.0 + SSS * warmFactor * sunAlignment * warmTint, 1.0);
-
-    vec3 lightLevel = vec3(vertexBrightness / 16.0);
-    litColor *= vec4((0.2 + daytime) * lightLevel * shadowFactor, 1.0);
 
     // Fog
-    float distToCamera = distance(cameraPos, worldPos.xyz);
-    float fogginess = clamp(1.0 / exp((distToCamera * distToCamera) / (100000.0 * daytime)), 0.0, 1.0);
-        
-    // Warm fog only during daytime
-    vec4 fogWarm = vec4(sunAlignment, sunAlignment * 0.5, sunAlignment * 0.333, 0.0) * warmFactor;
+    vec3 fragDirection = worldPos.xyz - cameraPos;
+    float fogginess = smoothstep(u_fogStartDistance, u_fogEndDistance, length(fragDirection));
 
-    vec4 finalFogColor = vec4(fogColor, 1.0) + fogWarm;
+    // combination of horizon or zenith light (fixed), sunlight * (dynamic), fake SSS, clamped by vertex ambient occlusion
+    float isTopFace = clamp(vNormal.y, 0.0, 1.0);
 
-    FragColor = mix(litColor, finalFogColor, 1 - fogginess);
+    float SSS = clamp(isFoliage + isWater, 0.0, 1.0) * smoothstep(0.0, 2.0, dot(normalize(fragDirection), u_sunDirection));
+
+    vec3 faceLight = vertexBrightness*vertexBrightness/(16.0*16.0) * (
+    (
+    (1.0 + u_hzLightMix - isTopFace) * u_horizonColor
+    + u_hzLightMix + isTopFace * u_zenithColor ) 
+    * (1.0/(1.0+u_hzLightMix))
+
+    + (clamp(dot(vNormal, u_sunDirection) + SSS, 0, 1.0) * sqrtDaylight) 
+    * (1 - shadowAmount) * u_sunColor * vec3(2.0-daylight, 1.0, 2.0 - sqrtDaylight));
+
+    FragColor = mix(texColor * vec4(faceLight, 1.0), vec4(u_fogColor, 1.0), fogginess);
 }

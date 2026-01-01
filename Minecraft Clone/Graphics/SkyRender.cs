@@ -13,10 +13,12 @@ namespace Minecraft_Clone.Graphics
 
         public Vector3 sunDirection = sunDirection.Normalized();
 
-        Vector3 dayHorizon = new(0.50f, 0.70f, 1.00f);
+        Vector3 dayHorizon = new(0.70f, 0.80f, 1.00f);
         Vector3 dayZenith = new(0.30f, 0.50f, 1.00f);
         Vector3 nightHorizon = new(0.05f, 0.10f, 0.20f);
         Vector3 nightZenith = new(0.02f, 0.05f, 0.10f);
+
+        public Vector3 sunColor = new Vector3(1.0f, 0.9f, 0.7f);
 
         public Vector3 finalH = new();
         public Vector3 finalZ = new();
@@ -48,25 +50,11 @@ namespace Minecraft_Clone.Graphics
             skyShader.Bind();
             GL.Disable(EnableCap.DepthTest);
 
-            float dayness = MathF.Cos(Vector3.CalculateAngle(Vector3.UnitY, sunDirection));
+            float y = MathF.Min(1.0f, MathF.Max(sunDirection.Y + 0.2f, 0.0f));
+            sunColor = (MathF.Sqrt(y), y, y*y);
 
-            float t = 1;
-
-            if (dayness > 0f) t = 1 - MathF.Pow(dayness, 0.5f);
-
-            float sunset = 0f;
-            if(t > 0.5f)
-                sunset = 2 - 2 * t;
-            else if (t <= 0.5f)
-                sunset = 2 * t;
-
-            float y = sunDirection.Y;
-
-            finalH = Vector3.Lerp(Vector3.Lerp(dayHorizon, nightHorizon, t), new Vector3(1.0f, 0.8f, 0.5f), MathF.Pow(y, 4));
-            finalZ = Vector3.Lerp(dayZenith, nightZenith, t);
-
-            finalH += sunset * new Vector3(0.3f, 0.0f, 0.2f);
-            finalZ += sunset * new Vector3(0.2f, 0.0f, 0.1f);
+            finalH = Vector3.Lerp(dayHorizon, nightHorizon, 1-y);
+            finalZ = Vector3.Lerp(dayZenith, nightZenith, 1-y);
 
             // Send to GPU
             skyShader.SetVector3("horizonColor", finalH);
@@ -80,7 +68,7 @@ namespace Minecraft_Clone.Graphics
             skyShader.SetFloat("fovY", camera.fovY);
             skyShader.SetFloat("aspectRatio", camera.screenWidth / camera.screenHeight);
 
-            skyShader.SetVector3("sunColor", new Vector3(1.0f, 0.9f, 0.7f));
+            skyShader.SetVector3("sunColor", sunColor);
             skyShader.SetFloat("sunAngularRadiusDeg", 0.57f);
             skyShader.SetFloat("sunEdgeSoftness", 0.0005f);
             skyShader.SetFloat("sunGlowStrength", 1.1f);

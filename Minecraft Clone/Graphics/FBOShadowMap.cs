@@ -37,14 +37,13 @@ namespace Minecraft_Clone.Graphics
             depthTexture = GL.GenTexture();
             GL.BindTexture(TextureTarget.Texture2D, depthTexture);
 
-            // 24-bit buffer with no data yet
-            GL.TexImage2D(TextureTarget.Texture2D,
-                0,
-                PixelInternalFormat.DepthComponent24,
-                width, height, 0,
-                PixelFormat.DepthComponent,
-                PixelType.Float, // apparently unsigned bytes arent valid for this
-                0);
+            GL.TexImage2D(TextureTarget.Texture2D, 0,
+            PixelInternalFormat.DepthComponent24,
+            width, height, 0,
+            PixelFormat.DepthComponent,
+            PixelType.UnsignedInt,
+            IntPtr.Zero);
+
 
             // attach depth texture to this framebuffer, specifically in the depth slot of this framebuffer
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
@@ -59,6 +58,13 @@ namespace Minecraft_Clone.Graphics
 
             GL.TextureParameter(depthTexture, TextureParameterName.TextureBorderColor, new float[] { 1f, 1f, 1f, 1f });
             // ^ this is so stupid why are TexParameter and TextureParameter different
+
+            // Tell GL this depth texture will be used for shadow comparisons
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureCompareMode, (int)TextureCompareMode.CompareRefToTexture);
+
+            // Choose compare function (LESS or LEQUAL are typical)
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureCompareFunc, (int)DepthFunction.Lequal);
+
 
             var fboStatus = GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
             if (fboStatus != FramebufferErrorCode.FramebufferComplete)
