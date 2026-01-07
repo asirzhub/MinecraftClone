@@ -150,15 +150,6 @@ namespace Minecraft_Clone.World.Chunks
 
                                         byte lightLevel = 15;
 
-                                        if (blockWorldPos.Y < seaLevel && blockWorldPos.Y > seaLevel - 6)
-                                        {
-                                            lightLevel = (byte)(15 - (seaLevel - blockWorldPos.Y));
-                                        }
-                                        else if (blockWorldPos.Y <= seaLevel - 6)
-                                        {
-                                            lightLevel = (byte)9;
-                                        }
-
                                         // check the edges in the direction of the vertex to do ambient occlusion with
                                         Vector3i[] AOCheckDirection = new Vector3i[4];
                                         AOCheckDirection[0] = ((int)(MathF.Round((vPos.X - 0.5f) * 2f)),

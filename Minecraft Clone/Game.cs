@@ -26,7 +26,7 @@ namespace Minecraft_Clone
         private int totalFrameCount = 0;
         public float timeElapsed = 0;
 
-        float timeMult = 0.03f;
+        float timeMult = 0.01f;
 
 
         // Game Constructor not much to say
@@ -134,8 +134,7 @@ namespace Minecraft_Clone
             if (KeyboardState.IsKeyPressed(Keys.Comma)) chunkManager.radius--;
 
             Vector3 focusPoint = new(aerialCamera.focusPoint);
-            float targetFocusHeight = chunkManager.worldGenerator.GetNoiseAt(World.NoiseLayer.HEIGHT, (int)focusPoint.X, (int)focusPoint.Z);
-            aerialCamera.focusPoint.Y = Lerp(aerialCamera.focusPoint.Y, targetFocusHeight, aerialCamera.smoothing);
+            aerialCamera.focusPoint.Y = Lerp(focusPoint.Y, focusPoint.Y, aerialCamera.smoothing);
 
             if (MouseState.IsButtonPressed(MouseButton.Left))
             {
@@ -158,7 +157,7 @@ namespace Minecraft_Clone
                 dir = Vector3.Normalize(dir);
 
                 if (Raycast.RaycastSolidBlock(chunkManager, origin, dir, maxDist: 256f, maxSteps: 256, out var hit, out var place))
-                    chunkManager.TrySetBlockAtWorldPosition(hit, BlockType.AIR);
+                    aerialCamera.focusPoint = hit;
             }
 
             if (KeyboardState.IsKeyPressed(Keys.F))

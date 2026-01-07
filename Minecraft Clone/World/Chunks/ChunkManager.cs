@@ -21,7 +21,7 @@ public class ChunkManager
     public float chunkTaskHalftime = 20f;// after 20 seconds, half the chunk tasks (prioritize speed at first, then smoothness)
     public float expiryTime = 2f; // how long a chunk can be "inactive" (seconds) before disposed from ram?
 
-    public byte[] LODCascades = new byte[] { 6, 9, 12 }; // dist 0-6:LOD1, dist 6-9:LOD2, etc.
+    public byte[] LODCascades = new byte[] { 5, 7, 9 }; // dist 0-6:LOD1, dist 6-9:LOD2, etc.
     public byte[] LODValues = new byte[] {1, 2, 4 };
 
     // independant lists to keep track of chunks that actually matter
@@ -125,7 +125,6 @@ public class ChunkManager
             {
                 targetChunk.SetState(ChunkState.GENERATED);
             }
-
         }
 
         // for each CompletedMesh, move data from the queue into the respective chunk. MARK STATE

@@ -24,12 +24,10 @@ namespace Minecraft_Clone.World.Chunks
 
         public Shader shadowMapShader;
         FBOShadowMap fboShadowMap;
-        int shadowMapResolution = 2048;
+        int shadowMapResolution = 8192;
 
         Matrix4 shadowMapViewMatrix = new();
         Matrix4 shadowMapProjMatrix = new();
-
-        Random random = new Random();
 
         public ChunkRenderer()
         {
@@ -77,8 +75,8 @@ namespace Minecraft_Clone.World.Chunks
             blockShader.SetFloat("u_waveSpeed", waterWaveSpeed);
             blockShader.SetVector3("u_sunDirection", skyRender.sunDirection);
             blockShader.SetVector3("u_fogColor", skyRender.finalH);
-            blockShader.SetFloat("u_fogStartDistance", 100f);
-            blockShader.SetFloat("u_fogEndDistance", 400f);
+            blockShader.SetFloat("u_fogStartDistance", 200f);
+            blockShader.SetFloat("u_fogEndDistance", 1000f);
 
             blockShader.SetVector3("u_horizonColor", skyRender.finalH * 1.2f);
             blockShader.SetVector3("u_zenithColor", skyRender.finalZ * 1.2f);

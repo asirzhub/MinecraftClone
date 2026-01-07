@@ -80,7 +80,7 @@ namespace Minecraft_Clone
             armDistance += mouse.ScrollDelta.Y * -5f;
 
             if (armDistance < 25f) armDistance = 25f;
-            if (armDistance > 150f) armDistance = 150f;
+            if (armDistance > 450f) armDistance = 450f;
 
             if (firstMove)
             {

@@ -95,7 +95,7 @@ void main()
         float bias = 0.00002;
         float fade = 0.3;
         vec4 centerOffset = vec4(vec3(oneTexel/2.0), 0.0);
-        vec4 quantPos = (floor((worldPos + centerOffset)/oneTexel)-centerOffset)*oneTexel;
+        vec4 quantPos = (floor(worldPos/oneTexel)+centerOffset + vec4(vNormal, 0.0))*oneTexel;
 
         vec4 lightSpacePos = lightProjMat * lightViewMat * quantPos;
         vec3 projCoord = (lightSpacePos.xyz / lightSpacePos.w) * 0.5 + 0.5;
@@ -130,14 +130,22 @@ void main()
 
     float SSS = clamp(isFoliage + isWater, 0.0, 1.0) * smoothstep(0.0, 2.0, dot(normalize(fragDirection), u_sunDirection));
 
-    vec3 faceLight = vertexBrightness*vertexBrightness/(16.0*16.0) * (
-    (
-    (1.0 + u_hzLightMix - isTopFace) * u_horizonColor
-    + u_hzLightMix + isTopFace * u_zenithColor ) 
-    * (1.0/(1.0+u_hzLightMix))
+    float m = clamp(u_hzLightMix, 0.0, 1.0);
 
-    + (clamp(dot(vNormal, u_sunDirection) + SSS, 0, 1.0) * sqrtDaylight) 
-    * (1 - shadowAmount) * u_sunColor * vec3(2.0-daylight, 1.0, 2.0 - sqrtDaylight));
+    vec3 H = u_horizonColor;
+    vec3 Z = u_zenithColor;
+
+    vec3 base = mix(H, Z, isTopFace);          
+    vec3 avg  = 0.5 * (H + Z);          
+
+    vec3 hemi = mix(base, avg, m);      
+
+    vec3 faceLight =
+    vertexBrightness*vertexBrightness/(16.0*16.0) *
+    (hemi
+     + (clamp(dot(vNormal, u_sunDirection) + SSS, 0.0, 1.0) * sqrtDaylight)
+       * (1.0 - shadowAmount) * u_sunColor * vec3(2.0 - daylight, 1.0, 2.0 - sqrtDaylight));
+
 
     FragColor = mix(texColor * vec4(faceLight, 1.0), vec4(u_fogColor, 1.0), fogginess);
 }

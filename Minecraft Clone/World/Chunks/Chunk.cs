@@ -19,6 +19,30 @@ namespace Minecraft_Clone.World.Chunks
         DIRTY
     };
 
+    public struct ChunkHeightMap
+    {
+        public readonly int size;
+        public readonly float[] H; // (Size+2)*(Size+2)
+
+        public ChunkHeightMap(int size)
+        {
+            this.size = size;
+            H = new float[(size + 2) * (size + 2)];
+        }
+
+        public float Get(int lx, int lz) // lx/lz in [-1..Size]
+        {
+            int stride = size + 2;
+            return H[(lz + 1) * stride + (lx + 1)];
+        }
+
+        public void Set(int lx, int lz, float v)
+        {
+            int stride = size + 2;
+            H[(lz + 1) * stride + (lx + 1)] = v;
+        }
+    }
+
     public class Chunk(byte lod, ChunkState state = ChunkState.BIRTH)
     {
         public byte LOD = lod;
@@ -96,6 +120,7 @@ namespace Minecraft_Clone.World.Chunks
         // {result state , beginning state(s) allowed}
         public static readonly Dictionary<ChunkState, List<ChunkState>> LegalTransitions = new()
         {
+            { ChunkState.BIRTH, new(){ ChunkState.DIRTY} },
             { ChunkState.GENERATING, new(){ ChunkState.BIRTH } },
             { ChunkState.GENERATED, new() { ChunkState.GENERATING} },
             { ChunkState.FEATURING, new() { ChunkState.GENERATED} },
