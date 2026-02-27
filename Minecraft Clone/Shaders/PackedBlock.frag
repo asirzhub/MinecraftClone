@@ -14,9 +14,9 @@ uniform mat4 lightViewMat;
 uniform vec3 cameraPos;
 
 uniform vec3 u_sunColor;
+uniform vec3 u_sunsetColor;
 uniform vec3 u_nightLight;
 uniform vec3 u_sunDirection;
-uniform vec3 u_fogColor;
 
 uniform float u_minLight;
 uniform float u_maxLight;
@@ -27,6 +27,9 @@ uniform float u_hzLightMix;
 
 uniform float u_fogStartDistance;
 uniform float u_fogEndDistance;
+
+uniform float u_fogSampleSpacing; 
+uniform int u_fogSamples;
 
 //uniform float u_seaLevel;
 
@@ -60,7 +63,7 @@ float fbm(vec2 p, int octaves, float lacunarity, float gain) {
     return sum;
 }
 
-float shadowAtQuantPos(vec4 qpos, float bias)
+float ShadowAtQuantPos(vec4 qpos, float bias)
 {
     vec4 lightSpacePos = lightProjMat * lightViewMat * qpos;
     vec3 projCoord = (lightSpacePos.xyz / lightSpacePos.w) * 0.5 + 0.5;
@@ -78,10 +81,10 @@ float shadowAtQuantPos(vec4 qpos, float bias)
 }
 
 
-
 void main()
 {
-    const float oneTexel = 1.0/16.0;
+    const float oneTexel = 1.0/16;
+    float bias = 0.00002;
 
     vec4 texColor = texture(albedoTexture, texCoord); 
     if(texColor.a < 0.1) discard;
@@ -89,10 +92,11 @@ void main()
     float shadowAmount = 0.0;
     float daylight = smoothstep(-0.2, 0.2, clamp(u_sunDirection.y + 0.2, 0.0, 1.0));
     float sqrtDaylight = sqrt(daylight);
+    float sunNormalDot = clamp(dot(vNormal, u_sunDirection), 0.0, 1.0);
+    float sunCameraAlignment = clamp(dot(vNormal, u_sunDirection), 0.0, 1.0);
 
     if (dot(u_sunDirection, vNormal) >= 0.0)
     {
-        float bias = 0.00002;
         float fade = 0.3;
         vec4 centerOffset = vec4(vec3(oneTexel/2.0), 0.0);
         vec4 quantPos = (floor((worldPos + centerOffset)/oneTexel)-centerOffset)*oneTexel;
@@ -111,33 +115,52 @@ void main()
         vec4 dz = vec4(0.0,     0.0,     oneTexel, 0.0);
 
         shadowAmount = edgeFadeX * edgeFadeY * (
-        0.5 * shadowAtQuantPos(quantPos, bias) + 
+        0.5 * ShadowAtQuantPos(quantPos, bias) + 
         0.5 / 6.0 * ( 
-        shadowAtQuantPos(quantPos + dx, bias) + 
-        shadowAtQuantPos(quantPos - dx, bias) + 
-        shadowAtQuantPos(quantPos + dy, bias) + 
-        shadowAtQuantPos(quantPos - dy, bias) + 
-        shadowAtQuantPos(quantPos + dz, bias) + 
-        shadowAtQuantPos(quantPos - dz, bias) ) );
+        ShadowAtQuantPos(quantPos + dx, bias) + 
+        ShadowAtQuantPos(quantPos - dx, bias) + 
+        ShadowAtQuantPos(quantPos + dy, bias) + 
+        ShadowAtQuantPos(quantPos - dy, bias) + 
+        ShadowAtQuantPos(quantPos + dz, bias) + 
+        ShadowAtQuantPos(quantPos - dz, bias) ) );
     }
 
     // Fog
-    vec3 fragDirection = worldPos.xyz - cameraPos;
-    float fogginess = smoothstep(u_fogStartDistance, u_fogEndDistance, length(fragDirection));
+    vec3 cameraToFragWorld = worldPos.xyz - cameraPos;
+    float fragDirLength = length(cameraToFragWorld);
+
+    float fogginess = 0.0;
+
+    for (int i = 1; i < u_fogSamples+1; i++) {
+        float t = (float(i) + rand(cameraToFragWorld.zx)) / float(u_fogSamples); 
+        vec4 samplePoint = vec4(cameraPos + cameraToFragWorld * t, 1.0);
+        float shadowAmt = ShadowAtQuantPos(samplePoint, bias);
+        float litAmt = t - shadowAmt;
+        
+        fogginess += litAmt;
+    }
+    fogginess = clamp(fogginess * fogginess * fogginess, 0.0, 2.0)/ u_fogSamples;
 
     // combination of horizon or zenith light (fixed), sunlight * (dynamic), fake SSS, clamped by vertex ambient occlusion
     float isTopFace = clamp(vNormal.y, 0.0, 1.0);
 
-    float SSS = clamp(isFoliage + isWater, 0.0, 1.0) * smoothstep(0.0, 2.0, dot(normalize(fragDirection), u_sunDirection));
+    float SSS = clamp(isFoliage + isWater, 0.0, 1.0) * smoothstep(0.0, 2.0, dot(normalize(cameraToFragWorld), u_sunDirection));
 
-    vec3 faceLight = vertexBrightness*vertexBrightness/(16.0*16.0) * (
+    vec3 faceLight = clamp(vertexBrightness*vertexBrightness/(16.0*16.0) * (
     (
     (1.0 + u_hzLightMix - isTopFace) * u_horizonColor
     + u_hzLightMix + isTopFace * u_zenithColor ) 
     * (1.0/(1.0+u_hzLightMix))
 
     + (clamp(dot(vNormal, u_sunDirection) + SSS, 0, 1.0) * sqrtDaylight) 
-    * (1 - shadowAmount) * u_sunColor * vec3(2.0-daylight, 1.0, 2.0 - sqrtDaylight));
+    * (1 - shadowAmount) * u_sunColor * vec3(2.0-daylight, 1.0, 2.0 - sqrtDaylight))
+    , 0.0, 1.5);
 
-    FragColor = mix(texColor * vec4(faceLight, 1.0), vec4(u_fogColor, 1.0), fogginess);
+    vec3 camToFragDir = normalize(cameraToFragWorld);
+    vec4 fogColor = vec4(u_horizonColor * length(camToFragDir.xz) + u_zenithColor * camToFragDir.y, 1.0);
+
+    //FragColor = vec4(camToFragDir, 1.0);
+
+    //FragColor = vec4(vec3(fogginess, 0.0, 1.0-fogginess) * (vertexBrightness*vertexBrightness/(16.0*16.0)), 1.0);
+    FragColor = mix(texColor * vec4(faceLight, 1.0), fogColor + vec4(sunCameraAlignment * u_sunColor, 1.0), fogginess);
 }

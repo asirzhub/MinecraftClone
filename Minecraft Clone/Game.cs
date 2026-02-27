@@ -13,7 +13,10 @@ namespace Minecraft_Clone
     {    
         AerialCameraRig aerialCamera;
         public bool camOrbiting = true;
-        public bool fullscreen = false;
+
+        private Vector2i savedWindowedSize;
+        private Vector2i savedWindowedLocation;
+        private bool isFullscreen = false;
 
         public ChunkManager chunkManager;
         SkyRender skyRender;
@@ -42,7 +45,7 @@ namespace Minecraft_Clone
             aerialCamera = new AerialCameraRig(width, height, (0f,0f,0f));
             this.width = width;
             this.height = height;
-            skyRender = new SkyRender((0.3f, 1f, 0f));
+            skyRender = new SkyRender((1f, 1f, 0f));
         }
 
         protected override void OnLoad()
@@ -161,17 +164,29 @@ namespace Minecraft_Clone
                     chunkManager.TrySetBlockAtWorldPosition(hit, BlockType.AIR);
             }
 
-            if (KeyboardState.IsKeyPressed(Keys.F))
-                fullscreen = !fullscreen;
-
-            if (fullscreen && !IsFullscreen)
+            if (KeyboardState.IsKeyPressed(Keys.F)) ToggleFullscreen();
+        }
+        private void ToggleFullscreen()
+        {
+            if (!isFullscreen)
             {
+                // Save windowed state
+                savedWindowedSize = Size;
+                savedWindowedLocation = Location;
+
                 WindowState = WindowState.Fullscreen;
+                isFullscreen = true;
             }
-            else if (!fullscreen)
+            else
+            {
                 WindowState = WindowState.Normal;
 
+                // Restore previous size and position
+                Size = savedWindowedSize;
+                Location = savedWindowedLocation;
 
+                isFullscreen = false;
+            }
         }
 
         protected override void OnUnload()

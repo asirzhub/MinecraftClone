@@ -11,14 +11,15 @@ uniform vec3  cameraPos;
 // sun (disc + glow)
 uniform vec3  sunDir;               // normalized
 uniform vec3  sunColor;             // also tints the disc
-uniform float sunAngularRadiusDeg;  // e.g., 0.27
-uniform float sunEdgeSoftness;      // e.g., 0.0005 (cos-space)
-uniform float sunGlowStrength;      // e.g., 1.0
-uniform float sunGlowSharpness;     // e.g., 300.0
+uniform float sunAngularRadiusDeg;  //
+uniform float sunEdgeSoftness;      // 
+uniform float sunGlowStrength;      // 
+uniform float sunGlowSharpness;     // 
 
 // sky colors (already blended on CPU: day/night + sunset)
 uniform vec3  horizonColor;
 uniform vec3  zenithColor;
+uniform vec3  sunsetColor;          
 
 in vec2 screenUV;
 out vec4 FragColor;
@@ -70,7 +71,7 @@ void main()
     float sunDisc = smoothstep(cosR, cosR + sunEdgeSoftness, c) * max(h, 0.0);
     vec3  sunGlow = sunColor * pow(c, sunGlowSharpness) * sunGlowStrength;
     
-    float cloudHeight = 256;
+    float cloudHeight = 512;
 
     float t = (cloudHeight - cameraPos.y) / rd.y;
     vec3 hit = rd * t;
@@ -78,8 +79,7 @@ void main()
     float cloudScale = 120;    
     float cloudiness = pow(fbm((hit.xz + cameraPos.xz)/cloudScale, 7, 2.6, 0.6), 1.2) * bz;
     
-    vec3 sunsetFactor = pow(1.0-abs(rd.y), 3) * (dot(rd, sunDir)+1.0)/2.0 * sunColor * vec3(1.1, 0.3, 0.8);
-    vec3 sky = mix(horizonColor + sunsetFactor, zenithColor, bz);
+    vec3 sky = mix(horizonColor, zenithColor, bz);
     vec3 col = sky + sunGlow + sunDisc * sunColor;
-    FragColor = vec4(col + vec3(cloudiness), 1.0);
+    FragColor = vec4(col + vec3(cloudiness) * up, 1.0);
 }

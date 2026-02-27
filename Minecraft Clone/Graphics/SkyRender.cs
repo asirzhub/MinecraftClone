@@ -13,12 +13,13 @@ namespace Minecraft_Clone.Graphics
 
         public Vector3 sunDirection = sunDirection.Normalized();
 
-        Vector3 dayHorizon = new(0.70f, 0.80f, 1.00f);
+        Vector3 dayHorizon = new(0.80f, 0.90f, 1.00f);
         Vector3 dayZenith = new(0.30f, 0.50f, 1.00f);
         Vector3 nightHorizon = new(0.05f, 0.10f, 0.20f);
         Vector3 nightZenith = new(0.02f, 0.05f, 0.10f);
 
         public Vector3 sunColor = new Vector3(1.0f, 0.9f, 0.7f);
+        public Vector3 sunsetColor = new Vector3(1.0f, 0.2f, 0.5f);
 
         public Vector3 finalH = new();
         public Vector3 finalZ = new();
@@ -69,6 +70,7 @@ namespace Minecraft_Clone.Graphics
             skyShader.SetFloat("aspectRatio", camera.screenWidth / camera.screenHeight);
 
             skyShader.SetVector3("sunColor", sunColor);
+            skyShader.SetVector3("sunsetColor", sunsetColor);
             skyShader.SetFloat("sunAngularRadiusDeg", 0.57f);
             skyShader.SetFloat("sunEdgeSoftness", 0.0005f);
             skyShader.SetFloat("sunGlowStrength", 1.1f);
