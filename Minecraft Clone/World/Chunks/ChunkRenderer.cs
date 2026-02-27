@@ -24,7 +24,7 @@ namespace Minecraft_Clone.World.Chunks
 
         public Shader shadowMapShader;
         FBOShadowMap fboShadowMap;
-        int shadowMapResolution = 2048;
+        int shadowMapResolution = 4096;
 
         Matrix4 shadowMapViewMatrix = new();
         Matrix4 shadowMapProjMatrix = new();
@@ -76,9 +76,8 @@ namespace Minecraft_Clone.World.Chunks
             blockShader.SetFloat("u_time", time);
             blockShader.SetFloat("u_waveSpeed", waterWaveSpeed);
             blockShader.SetVector3("u_sunDirection", skyRender.sunDirection);
-            blockShader.SetVector3("u_fogColor", skyRender.finalH);
-            blockShader.SetFloat("u_fogStartDistance", 100f);
-            blockShader.SetFloat("u_fogEndDistance", 400f);
+
+            blockShader.SetInt("u_fogSamples", 12);
 
             blockShader.SetVector3("u_horizonColor", skyRender.finalH * 1.2f);
             blockShader.SetVector3("u_zenithColor", skyRender.finalZ * 1.2f);

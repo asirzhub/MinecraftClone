@@ -167,9 +167,9 @@ namespace Minecraft_Clone.World.Chunks
             if (localCoord.X == 0) result.Add(new Vector3i(-1, 0, 0));
             if (localCoord.Y == 0) result.Add(new Vector3i(0, -1, 0));
             if (localCoord.Z == 0) result.Add(new Vector3i(0, 0, -1));
-            if (localCoord.X == 31) result.Add(new Vector3i(1, 0, 0));
-            if (localCoord.Y == 31) result.Add(new Vector3i(0, 1, 0));
-            if (localCoord.Z == 31) result.Add(new Vector3i(0, 0, 1));
+            if (localCoord.X == SIZE - 1) result.Add(new Vector3i(1, 0, 0));
+            if (localCoord.Y == SIZE - 1) result.Add(new Vector3i(0, 1, 0));
+            if (localCoord.Z == SIZE - 1) result.Add(new Vector3i(0, 0, 1));
 
             return result;
         }
