@@ -15,10 +15,13 @@
 10. ~~Surface features (trees, grass, flowers)~~
 11. ~~Shadow mapping~~
 12. ~~Block placement and destruction~~
-13. User interface (text and images)
-14. Intelligent chunk loading (instead of moving volume, use chunk data and occlusion info)
-15. Post processing (tonemapping, bloom, SSR)
-16. Caching generated chunks to disk (save/load worlds)
+13. ~~Volumetric fog~~ and clouds
+14. Tree parameterization
+15. Yet another terrain generation upgrade
+16. User interface (text and images)
+17. Intelligent chunk loading (instead of moving volume, use chunk data and occlusion info)
+18. Post processing (tonemapping, bloom, SSR)
+19. Caching generated chunks to disk (save/load worlds)
 
 ## Lessons I've learned
 ### Separate data, logic, and rendering into unique scripts
