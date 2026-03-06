@@ -24,7 +24,7 @@ namespace Minecraft_Clone.World.Chunks
 
         public Shader shadowMapShader;
         FBOShadowMap fboShadowMap;
-        int shadowMapResolution = 4096;
+        int shadowMapResolution = 2048;
 
         Matrix4 shadowMapViewMatrix = new();
         Matrix4 shadowMapProjMatrix = new();
@@ -79,8 +79,9 @@ namespace Minecraft_Clone.World.Chunks
 
             blockShader.SetInt("u_fogSamples", 12);
 
-            blockShader.SetVector3("u_horizonColor", skyRender.finalH * 1.2f);
-            blockShader.SetVector3("u_zenithColor", skyRender.finalZ * 1.2f);
+            blockShader.SetVector3("u_horizonColor", skyRender.finalH);
+            blockShader.SetVector3("u_zenithColor", skyRender.finalZ);
+            blockShader.SetVector3("u_sunsetColor", skyRender.sunsetColor);
 
             // render all chunks non-transparent mesh
             foreach (var kvp in chunks)
@@ -149,7 +150,7 @@ namespace Minecraft_Clone.World.Chunks
             // position the light 500 units away in the direction of the sun, looking at the place the camera looks at. use ortho projection
             shadowMapViewMatrix = Matrix4.LookAt(camera.focusPoint + 500f * skyRender.sunDirection, 
                 camera.focusPoint , 
-                camera.up);
+                Vector3.UnitZ);
             shadowMapProjMatrix = Matrix4.CreateOrthographic(camera.armDistance*3, camera.armDistance * 2, 0.01f, 2000f);
 
             

@@ -5,6 +5,7 @@ using Minecraft_Clone.World.Chunks;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 
 public class ChunkManager
 {
@@ -56,11 +57,13 @@ public class ChunkManager
                                 (int)MathF.Floor(camera.CameraPosition().X),
                                 (int)MathF.Floor(camera.CameraPosition().Y),
                                 (int)MathF.Floor(camera.CameraPosition().Z)), out _); ; // first index in the list is always the center index  
+
+        noiseWatch.Start();
     }
 
-    public int shadowFrameDelay = 0;
-    float shadowTime;
-
+    bool shadowFrame = true;
+    Stopwatch noiseWatch = new Stopwatch();
+    
     public void Update(AerialCameraRig camera, float frameTime, float time, int frameCount, Vector3 sunDirection, SkyRender skyRender)
     {
         // reduce chunk tasks after first burst 
@@ -261,17 +264,19 @@ public class ChunkManager
             lastChunkIndex = currentChunkIndex;
         }
 
-
-        // shadowmap pass updated not every frame
-        shadowTime += frameTime;
-        if(shadowTime % 0.1 <= 0.01 )
+        if (shadowFrame)
         {
             renderer.RenderShadowMapPass(camera, time, ActiveChunks, skyRender);
+            shadowFrame = false;
         }
+        else shadowFrame = true;
 
         // check for expired noise cache entries every three seconds
-        if (shadowTime % 5 <= 0.01)
+        if (noiseWatch.ElapsedMilliseconds > 10000f)
+        {
             worldGenerator.Update(frameCount);
+            noiseWatch.Restart();
+        }
 
         // render chunks
         renderer.RenderLightingPass(camera, time, ActiveChunks, skyRender, worldGenerator.seaLevel);

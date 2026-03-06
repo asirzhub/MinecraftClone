@@ -29,7 +29,7 @@ namespace Minecraft_Clone
         private int totalFrameCount = 0;
         public float timeElapsed = 0;
 
-        float timeMult = 0.03f;
+        float timeMult = 0.01f;
 
 
         // Game Constructor not much to say
@@ -59,7 +59,8 @@ namespace Minecraft_Clone
             GL.Enable(EnableCap.DepthTest);
             GL.Enable(EnableCap.Blend);
             GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
-            GL.Enable(EnableCap.Multisample);
+            //GL.Enable(EnableCap.Multisample);
+            //GL.Enable(EnableCap.)
 
             chunkManager = new ChunkManager(aerialCamera);
 
