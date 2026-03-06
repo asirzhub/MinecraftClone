@@ -19,7 +19,7 @@ namespace Minecraft_Clone.Graphics
         Vector3 nightZenith = new(0.02f, 0.05f, 0.10f);
 
         public Vector3 sunColor = new Vector3(1.0f, 0.9f, 0.7f);
-        public Vector3 sunsetColor = new Vector3(1.0f, 0.2f, 0.5f);
+        public Vector3 sunsetColor = new Vector3(1.0f, 0.1f, 0.3f);
 
         public Vector3 finalH = new();
         public Vector3 finalZ = new();
@@ -52,7 +52,7 @@ namespace Minecraft_Clone.Graphics
             GL.Disable(EnableCap.DepthTest);
 
             float y = MathF.Min(1.0f, MathF.Max(sunDirection.Y + 0.2f, 0.0f));
-            sunColor = (MathF.Sqrt(y), y, y*y);
+            sunColor = (MathF.Sqrt(MathF.Max(y, 0.2f)), MathF.Max(y, 0.2f), MathF.Max(y*y, 0.2f));
 
             finalH = Vector3.Lerp(dayHorizon, nightHorizon, 1-y);
             finalZ = Vector3.Lerp(dayZenith, nightZenith, 1-y);

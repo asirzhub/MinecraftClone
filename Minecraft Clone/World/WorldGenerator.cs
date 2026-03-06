@@ -52,9 +52,7 @@ namespace Minecraft_Clone.World
         public int maxHeight = 256;
 
         // Continents (FBM)
-        public NoiseParams baseNoiseParams = new NoiseParams(scale: 0.0007f, octaves: 5, lacunarity: 2.3f, gain: 0.5f);
-        public float baseHeight = -200f;
-        public float baseAmplitude = 1024f;
+        public NoiseParams baseNoiseParams = new NoiseParams(scale: 0.0007f, octaves: 5, lacunarity: 2.6f, gain: 0.5f);
 
         // feature generation
         public NoiseParams tallgrassNoiseParams = new NoiseParams(scale: 0.12f, octaves: 3, lacunarity: 2.5f, gain: 0.5f);
@@ -71,7 +69,7 @@ namespace Minecraft_Clone.World
         public int subsoilDepth = 3;
 
         public NoiseParams mountainBlendNoise = new NoiseParams(scale: 0.002f, octaves: 3, lacunarity: 2.4f, gain: 0.8f);
-        public int mountainHeightStart = 64;
+        public int mountainHeightStart = 128;
         public int snowLineOffset = 32;
         public float mountainBoost = 10.0f;
 
@@ -90,44 +88,21 @@ namespace Minecraft_Clone.World
             
         readonly Vector2[] controlPoints;
 
-        // define a tree based on vertical slices
-        // I need to find a better way to do things
-        private BlockType[] treeBlocks = {
-            BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
-            BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
-            BlockType.AIR, BlockType.AIR, BlockType.LOG, BlockType.AIR, BlockType.AIR,
-            BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
-            BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
+        public struct TreeParams {
+            public int trunkThickness;  
+            public int minHeight;
+            public int maxHeight;
+            public int leafStartHeight;  // local Y where leaves begin
+            public int maxLeafRadius;    // furthest radial leaf distance
+        }
 
-            BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
-            BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
-            BlockType.AIR, BlockType.AIR, BlockType.LOG, BlockType.AIR, BlockType.AIR,
-            BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
-            BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
-
-            BlockType.AIR, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.AIR,
-            BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES,
-            BlockType.LEAVES, BlockType.LEAVES, BlockType.LOG,    BlockType.LEAVES, BlockType.LEAVES,
-            BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES,
-            BlockType.AIR, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.AIR,
-
-            BlockType.AIR, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.AIR,
-            BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES,
-            BlockType.LEAVES, BlockType.LEAVES, BlockType.LOG,    BlockType.LEAVES, BlockType.LEAVES,
-            BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES,
-            BlockType.AIR, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.AIR,
-
-            BlockType.AIR, BlockType.AIR, BlockType.LEAVES, BlockType.AIR, BlockType.AIR,
-            BlockType.AIR, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.AIR,
-            BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES,    BlockType.LEAVES, BlockType.LEAVES,
-            BlockType.AIR, BlockType.LEAVES, BlockType.LEAVES, BlockType.LEAVES, BlockType.AIR,
-            BlockType.AIR, BlockType.AIR, BlockType.LEAVES, BlockType.AIR, BlockType.AIR,
-
-            BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
-            BlockType.AIR, BlockType.AIR, BlockType.LEAVES, BlockType.AIR, BlockType.AIR,
-            BlockType.AIR, BlockType.LEAVES, BlockType.LEAVES,    BlockType.LEAVES, BlockType.AIR,
-            BlockType.AIR, BlockType.AIR, BlockType.LEAVES, BlockType.AIR, BlockType.AIR,
-            BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR, BlockType.AIR,
+        public TreeParams treeParams = new TreeParams()
+        {
+            trunkThickness = 1,
+            minHeight = 8,
+            maxHeight = 18,
+            leafStartHeight = 3,
+            maxLeafRadius = 3
         };
 
         public WorldGenerator(int seed = 0)
@@ -145,15 +120,8 @@ namespace Minecraft_Clone.World
 
             controlPoints = new Vector2[]{
                 (minHeight, minHeight),
-                (s-150, s-180),
-                (s-100, s-60),
-                (s-40, s-50),
-                (s-15, s-5),
                 (s, s),
-                (s+25, s+10),
-                (s+50, s+25),
-                (m+50, m-10),
-                (m+100, m+90),
+                (m, m),
                 (maxHeight, maxHeight) }; // needs to be in order along x
         }
 
@@ -199,7 +167,7 @@ namespace Minecraft_Clone.World
             {
                 // height has some extra stuff to do
                 float baseN = GetNoiseAt(NoiseLayer.BASE, x, z);
-                float height = baseHeight + (baseN * baseN) * baseAmplitude;
+                float height = minHeight + (baseN * baseN) * (maxHeight-minHeight);
                 height += GetNoiseAt(NoiseLayer.MOUNTAINBLEND, x, z) * mountainBoost;
 
                 result = heightRemapper(height, controlPoints);
@@ -277,6 +245,69 @@ namespace Minecraft_Clone.World
             return BlockType.STONE;
         }
 
+        private int GetTreeHeight(float treeNoiseValue)
+        {
+            if (treeParams.maxHeight <= treeParams.minHeight)
+                return treeParams.minHeight;
+
+            // Stronger tree noise => taller tree
+            float normalized = Clamp((treeNoiseValue - treeThreshold) / (1f - treeThreshold), 0f, 1f);
+            return treeParams.minHeight + (int)MathF.Round(normalized * (treeParams.maxHeight - treeParams.minHeight));
+        }
+
+        private void PlaceProceduralTree(ref ChunkGenerator.CompletedChunkBlocks blocks, int baseX, int baseY, int baseZ, float treeNoiseValue)
+        {
+            int trunkHeight = GetTreeHeight(treeNoiseValue);
+
+            int trunkMinOffset = -(treeParams.trunkThickness / 2);
+            int trunkMaxOffset = trunkMinOffset + treeParams.trunkThickness - 1;
+
+            // Build trunk
+            for (int ty = 0; ty <= trunkHeight; ty++)
+            {
+                for (int tx = trunkMinOffset; tx <= trunkMaxOffset; tx++)
+                {
+                    for (int tz = trunkMinOffset; tz <= trunkMaxOffset; tz++)
+                    {
+                        blocks.SetBlock((baseX + tx, baseY + ty, baseZ + tz), BlockType.LOG);
+                    }
+                }
+            }
+
+            int leafStart = treeParams.leafStartHeight;
+
+            // Let canopy extend a little above the trunk
+            int leafTop = trunkHeight+1;
+            int canopyHeight = Math.Max(1, leafTop - leafStart);
+
+            // Build a cone tree
+            for (int ly = leafStart; ly <= leafTop; ly+=2)
+            {
+                float normalizedHeight = (ly - leafStart) / (float)canopyHeight;
+                float widthFactor = 1f - (normalizedHeight * normalizedHeight);
+                float layerRadius = MathF.Max(1f, treeParams.maxLeafRadius * widthFactor);
+
+                for (int dx = -treeParams.maxLeafRadius; dx <= treeParams.maxLeafRadius; dx++)
+                {
+                    for (int dz = -treeParams.maxLeafRadius; dz <= treeParams.maxLeafRadius; dz++)
+                    {
+                        float dist = MathF.Sqrt(dx * dx + dz * dz);
+                        if (dist > layerRadius + 0.2f) continue;
+
+                        bool insideTrunkFootprint =
+                            dx >= trunkMinOffset && dx <= trunkMaxOffset &&
+                            dz >= trunkMinOffset && dz <= trunkMaxOffset;
+
+                        // Don't overwrite trunk blocks below the top
+                        if (insideTrunkFootprint && ly < trunkHeight)
+                            continue;
+
+                        blocks.SetBlock((baseX + dx, baseY + ly, baseZ + dz), BlockType.LEAVES);
+                    }
+                }
+            }
+        }
+
         // grows trees
         public ChunkGenerator.CompletedChunkBlocks GrowFlora(ChunkGenerator.CompletedChunkBlocks blocks, ChunkManager manager)
         {
@@ -295,36 +326,21 @@ namespace Minecraft_Clone.World
                         // determine if there's tallgrass here
                         if (growableSurface)
                         {
+
+                            float t = GetNoiseAt(NoiseLayer.TREE, worldOffset.X + x, worldOffset.Z + z);
+                            if (t > treeThreshold && growableSurface)
+                            {
+                                PlaceProceduralTree(ref blocks, x, y, z, t);
+                                blocks.SetBlock((x, y - 1, z), BlockType.DIRT);
+                                continue;
+                            }
+
                             float f = GetNoiseAt(NoiseLayer.TALLGRASS, worldOffset.X + x, worldOffset.Z + z);
                             if (f > 0.5f - tallgrassThreshold && f < 0.5f + tallgrassThreshold)
                             {
                                 blocks.SetBlock((x, y, z), BlockType.TALLGRASS);
-                                continue;
                             }
                         }
-
-                        float t = GetNoiseAt(NoiseLayer.TREE, worldOffset.X + x, worldOffset.Z + z);
-
-                        if (t > treeThreshold)
-                        {
-                            if (growableSurface)
-                            {
-                                for (int tx = 0; tx < 5; tx++)
-                                {
-                                    for (int ty = 0; ty < 6; ty++)
-                                    {
-                                        for (int tz = 0; tz < 5; tz++)
-                                        {
-                                            int blockidx = (ty * 5 + tz) * 5 + tx;
-                                            var blockType = treeBlocks[blockidx];
-                                            if (blockType != BlockType.AIR) blocks.SetBlock((x + tx - 2, y + ty, z + tz - 2), blockType);
-                                        }
-                                    }
-                                }
-                                blocks.SetBlock((x, y - 1, z), BlockType.DIRT);
-                            }
-                        }
-
                     }
                 }
             }

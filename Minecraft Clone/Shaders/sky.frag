@@ -79,7 +79,10 @@ void main()
     float cloudScale = 120;    
     float cloudiness = pow(fbm((hit.xz + cameraPos.xz)/cloudScale, 7, 2.6, 0.6), 1.2) * bz;
     
-    vec3 sky = mix(horizonColor, zenithColor, bz);
+    vec3 sky = mix(
+    mix((horizonColor + sunsetColor * c * (1.0 - sqrt(clamp(h, 0.0, 1.0)))), zenithColor, bz), 
+    sunColor, c*c*c);
+
     vec3 col = sky + sunGlow + sunDisc * sunColor;
     FragColor = vec4(col + vec3(cloudiness) * up, 1.0);
 }
