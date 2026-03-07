@@ -6,7 +6,7 @@ namespace Minecraft_Clone.Graphics
     public class Texture
     {
         public int ID;
-        static readonly string pathPrefix = "../../../Textures/";
+        static readonly string pathPrefix = Path.Join(AppContext.BaseDirectory, "../../../Textures/");
 
         public void Bind() {
             GL.BindTexture(TextureTarget.Texture2D, ID);

@@ -6,7 +6,7 @@ namespace Minecraft_Clone.Graphics
     public class Shader
     {
         public int ID;
-        string pathPrefix = "../../../Shaders/";
+        string pathPrefix = Path.Join(AppContext.BaseDirectory, "../../../Shaders/");
 
         /// <summary>
         /// Create a shader with vertex and fragment. Binds the shader to the graph
